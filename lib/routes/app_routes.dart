@@ -1,0 +1,31 @@
+abstract final class AppRoutes {
+  static const home = '/';
+  static const appointments = '/appointments';
+  static const doctors = '/doctors';
+  static const records = '/records';
+  static const prescription = '/prescription';
+  static const payment = '/payment';
+  static const specialty = '/specialty';
+  static const splash = '/splash';
+  static const intro = '/intro';
+  static const login = '/login';
+  static const register = '/register';
+  static const forgotPassword = '/forgot-password';
+  static const otp = '/otp';
+  static const search = '/search';
+  static const specialtyList = '/specialties';
+  static const specialtyDetail = '/specialty-detail';
+  static const confirmAppointment = '/confirm-appointment';
+  static const bookingSuccess = '/booking-success';
+  static const myAppointments = '/my-appointments';
+  static const appointmentDetail = '/appointment-detail';
+  static const cancelAppointment = '/cancel-appointment';
+  static const visitHistory = '/visit-history';
+  static const doctorRating = '/doctor-rating';
+  static const profile = '/profile';
+  static const labResults = '/lab-results';
+  static const labDetail = '/lab-detail';
+  static const prescriptionDetail = '/prescription-detail';
+  static const notifications = '/notifications';
+  static const settings = '/settings';
+}

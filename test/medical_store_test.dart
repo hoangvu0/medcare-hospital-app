@@ -1,0 +1,25 @@
+import 'package:flutter_test/flutter_test.dart';
+import 'package:bt2_2324801030077/models/medical_models.dart';
+import 'package:bt2_2324801030077/state/medical_store.dart';
+
+void main() {
+  TestWidgetsFlutterBinding.ensureInitialized();
+
+  test('đặt rồi hủy lịch cập nhật state và thông báo', () {
+    final store = MedicalStore();
+    final appointment = store.book(
+      doctor: store.doctors.first,
+      dateTime: DateTime(2026, 10, 1, 9),
+      patientName: store.profile.name,
+      reason: 'Khám định kỳ',
+      useInsurance: false,
+    );
+
+    expect(store.appointments, hasLength(1));
+    expect(store.notifications, hasLength(1));
+    expect(appointment.status, AppointmentStatus.confirmed);
+    store.cancelAppointment(appointment.id);
+    expect(store.appointments.single.status, AppointmentStatus.cancelled);
+    expect(store.notifications, hasLength(2));
+  });
+}
