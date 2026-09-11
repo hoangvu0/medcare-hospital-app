@@ -28,4 +28,5 @@ abstract final class AppRoutes {
   static const prescriptionDetail = '/prescription-detail';
   static const notifications = '/notifications';
   static const settings = '/settings';
+  static const diagnostics = '/diagnostics';
 }

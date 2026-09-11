@@ -1,9 +1,14 @@
 import 'package:flutter_test/flutter_test.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:bt2_2324801030077/models/medical_models.dart';
 import 'package:bt2_2324801030077/state/medical_store.dart';
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
+
+  setUp(() {
+    SharedPreferences.setMockInitialValues({});
+  });
 
   test('đặt rồi hủy lịch cập nhật state và thông báo', () {
     final store = MedicalStore();

@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../routes/app_routes.dart';
 import '../state/medical_store.dart';
 import '../models/medical_models.dart';
+import '../state/app_settings_store.dart';
 
 const _primary = Color(0xFF0D6EFD);
 const _heading = TextStyle(fontSize: 18, fontWeight: FontWeight.bold);
@@ -527,8 +528,29 @@ class _PatientProfilePageState extends State<PatientProfilePage> {
   @override
   Widget build(BuildContext context) {
     final profile = MedicalScope.of(context).profile;
+    final settings = AppSettingsScope.of(context);
+    final phoneDisplay = settings.maskText(profile.phone);
+    final insuranceDisplay = settings.maskText(profile.insuranceNumber);
+
     return Scaffold(
-      appBar: AppBar(title: const Text('Hồ sơ cá nhân')),
+      appBar: AppBar(
+        title: const Text('Hồ sơ cá nhân'),
+        actions: [
+          IconButton(
+            tooltip: settings.isMaskingSensitiveData
+                ? 'Hiện thông tin nhạy cảm'
+                : 'Ẩn thông tin nhạy cảm',
+            icon: Icon(
+              settings.isMaskingSensitiveData
+                  ? Icons.visibility_off_outlined
+                  : Icons.visibility_outlined,
+            ),
+            onPressed: () {
+              settings.setMaskingSensitiveData(!settings.isMaskingSensitiveData);
+            },
+          ),
+        ],
+      ),
       body: ListView(
         padding: const EdgeInsets.all(20),
         children: [
@@ -548,7 +570,7 @@ class _PatientProfilePageState extends State<PatientProfilePage> {
           _FeatureCard(
             title: 'Thông tin bệnh nhân',
             text:
-                'Mã bệnh nhân: ${profile.id}\nSố điện thoại: ${profile.phone}\nEmail: ${profile.email}\nBHYT: ${profile.insuranceNumber}',
+                'Mã bệnh nhân: ${profile.id}\nSố điện thoại: $phoneDisplay\nEmail: ${profile.email}\nBHYT: $insuranceDisplay',
           ),
           const SizedBox(height: 18),
           FilledButton.icon(
@@ -722,53 +744,215 @@ class SettingsPage extends StatefulWidget {
 
 class _SettingsPageState extends State<SettingsPage> {
   bool _notifications = true;
+
   @override
-  Widget build(BuildContext context) => Scaffold(
-    appBar: AppBar(title: const Text('Cài đặt tài khoản')),
-    body: ListView(
-      children: [
-        ListTile(
-          leading: const Icon(Icons.person_outline),
-          title: const Text('Thông tin cá nhân'),
-          trailing: const Icon(Icons.chevron_right),
-          onTap: () => Navigator.pushNamed(context, AppRoutes.profile),
-        ),
-        ListTile(
-          leading: const Icon(Icons.lock_outline),
-          title: const Text('Bảo mật tài khoản'),
-          trailing: const Icon(Icons.chevron_right),
-          onTap: _showSecurity,
-        ),
-        SwitchListTile(
-          value: _notifications,
-          onChanged: (value) => setState(() => _notifications = value),
-          title: const Text('Thông báo'),
-          subtitle: const Text('Lịch khám, xét nghiệm và nhắc thuốc'),
-        ),
-        const Divider(),
-        ListTile(
-          leading: const Icon(Icons.logout, color: Colors.red),
-          title: const Text('Đăng xuất', style: TextStyle(color: Colors.red)),
-          onTap: _confirmLogout,
-        ),
-      ],
-    ),
-  );
-  void _showSecurity() => showDialog<void>(
-    context: context,
-    builder: (dialogContext) => AlertDialog(
-      title: const Text('Bảo mật tài khoản'),
-      content: const Text(
-        'Tài khoản đang được bảo vệ bằng mật khẩu và xác thực OTP.',
+  Widget build(BuildContext context) {
+    final settings = AppSettingsScope.of(context);
+
+    return Scaffold(
+      appBar: AppBar(
+        title: Text(settings.tr('settings_title')),
       ),
-      actions: [
-        FilledButton(
-          onPressed: () => Navigator.pop(dialogContext),
-          child: const Text('Đã hiểu'),
+      body: ListView(
+        children: [
+          _sectionHeader(settings.tr('settings_appearance')),
+          SwitchListTile(
+            secondary: const Icon(Icons.dark_mode_outlined),
+            title: Text(settings.tr('dark_mode')),
+            subtitle: Text(settings.tr('dark_mode_desc')),
+            value: settings.themeMode == ThemeMode.dark,
+            onChanged: (val) {
+              settings.setThemeMode(val ? ThemeMode.dark : ThemeMode.light);
+            },
+          ),
+          ListTile(
+            leading: const Icon(Icons.language_outlined),
+            title: Text(settings.tr('language')),
+            subtitle: Text(settings.locale == 'vi' ? 'Tiếng Việt 🇻🇳' : 'English 🇬🇧'),
+            trailing: DropdownButton<String>(
+              value: settings.locale,
+              underline: const SizedBox(),
+              items: const [
+                DropdownMenuItem(value: 'vi', child: Text('Tiếng Việt 🇻🇳')),
+                DropdownMenuItem(value: 'en', child: Text('English 🇬🇧')),
+              ],
+              onChanged: (val) {
+                if (val != null) settings.setLocale(val);
+              },
+            ),
+          ),
+          const Divider(),
+          _sectionHeader(settings.tr('accessibility')),
+          SwitchListTile(
+            secondary: const Icon(Icons.format_size_rounded),
+            title: Text(settings.tr('large_text')),
+            subtitle: Text(settings.tr('large_text_desc')),
+            value: settings.isLargeText,
+            onChanged: (val) => settings.setLargeText(val),
+          ),
+          SwitchListTile(
+            secondary: const Icon(Icons.contrast_rounded),
+            title: Text(settings.tr('high_contrast')),
+            subtitle: Text(settings.tr('high_contrast_desc')),
+            value: settings.isHighContrast,
+            onChanged: (val) => settings.setHighContrast(val),
+          ),
+          SwitchListTile(
+            secondary: const Icon(Icons.vibration_rounded),
+            title: Text(settings.tr('haptics')),
+            subtitle: Text(settings.tr('haptics_desc')),
+            value: settings.hapticsEnabled,
+            onChanged: (val) => settings.setHapticsEnabled(val),
+          ),
+          const Divider(),
+          _sectionHeader(settings.tr('security')),
+          SwitchListTile(
+            secondary: const Icon(Icons.visibility_off_outlined),
+            title: Text(settings.tr('mask_data')),
+            subtitle: Text(settings.tr('mask_data_desc')),
+            value: settings.isMaskingSensitiveData,
+            onChanged: (val) => settings.setMaskingSensitiveData(val),
+          ),
+          ListTile(
+            leading: const Icon(Icons.pin_outlined),
+            title: Text(settings.tr('pin_lock')),
+            subtitle: Text(
+              settings.pinCode != null
+                  ? 'Mã PIN đang bật • Bấm để đổi hoặc tắt'
+                  : settings.tr('pin_lock_desc'),
+            ),
+            trailing: settings.pinCode != null
+                ? const Icon(Icons.check_circle, color: Colors.green)
+                : const Icon(Icons.chevron_right),
+            onTap: () => _managePinDialog(settings),
+          ),
+          const Divider(),
+          _sectionHeader(settings.tr('performance_diagnostics')),
+          ListTile(
+            leading: const Icon(Icons.speed_rounded, color: Colors.blue),
+            title: Text(settings.tr('diagnostics_title')),
+            subtitle: Text(settings.tr('diagnostics_desc')),
+            trailing: const Icon(Icons.chevron_right),
+            onTap: () => Navigator.pushNamed(context, AppRoutes.diagnostics),
+          ),
+          ListTile(
+            leading: const Icon(Icons.cleaning_services_outlined, color: Colors.orange),
+            title: Text(settings.tr('clear_cache')),
+            subtitle: const Text('Giải phóng dung lượng bộ nhớ đệm'),
+            onTap: () async {
+              await settings.clearCache();
+              if (context.mounted) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text(settings.tr('clear_cache_success')),
+                    backgroundColor: Colors.green,
+                  ),
+                );
+              }
+            },
+          ),
+          const Divider(),
+          _sectionHeader('Tài khoản & Thông báo'),
+          SwitchListTile(
+            secondary: const Icon(Icons.notifications_active_outlined),
+            value: _notifications,
+            onChanged: (value) => setState(() => _notifications = value),
+            title: const Text('Thông báo đẩy'),
+            subtitle: const Text('Lịch khám, xét nghiệm và nhắc thuốc'),
+          ),
+          ListTile(
+            leading: const Icon(Icons.person_outline),
+            title: const Text('Hồ sơ bệnh nhân'),
+            trailing: const Icon(Icons.chevron_right),
+            onTap: () => Navigator.pushNamed(context, AppRoutes.profile),
+          ),
+          ListTile(
+            leading: const Icon(Icons.logout, color: Colors.red),
+            title: const Text('Đăng xuất', style: TextStyle(color: Colors.red)),
+            onTap: _confirmLogout,
+          ),
+          const SizedBox(height: 32),
+        ],
+      ),
+    );
+  }
+
+  Widget _sectionHeader(String title) {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 12, 16, 4),
+      child: Text(
+        title.toUpperCase(),
+        style: const TextStyle(
+          fontSize: 12,
+          fontWeight: FontWeight.bold,
+          color: Color(0xFF0057CD),
+          letterSpacing: 0.5,
         ),
-      ],
-    ),
-  );
+      ),
+    );
+  }
+
+  void _managePinDialog(AppSettingsStore settings) {
+    final controller = TextEditingController(text: settings.pinCode ?? '');
+    showDialog<void>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('Thiết lập mã PIN bảo mật'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text('Nhập mã PIN 4 chữ số để khóa bảo vệ ứng dụng:'),
+            const SizedBox(height: 12),
+            TextField(
+              controller: controller,
+              keyboardType: TextInputType.number,
+              maxLength: 4,
+              obscureText: true,
+              decoration: const InputDecoration(
+                hintText: 'VD: 1234',
+                counterText: '',
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          if (settings.pinCode != null)
+            TextButton(
+              onPressed: () {
+                settings.setPinCode(null);
+                Navigator.pop(dialogContext);
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('Đã gỡ bỏ mã PIN bảo vệ!')),
+                );
+              },
+              child: const Text('Tắt mã PIN', style: TextStyle(color: Colors.red)),
+            ),
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext),
+            child: const Text('Hủy'),
+          ),
+          FilledButton(
+            onPressed: () {
+              final pin = controller.text.trim();
+              if (pin.length == 4) {
+                settings.setPinCode(pin);
+                Navigator.pop(dialogContext);
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content: Text('Đã cập nhật mã PIN bảo mật thành công!'),
+                    backgroundColor: Colors.green,
+                  ),
+                );
+              }
+            },
+            child: const Text('Lưu mã PIN'),
+          ),
+        ],
+      ),
+    );
+  }
+
   void _confirmLogout() => showDialog<void>(
     context: context,
     builder: (dialogContext) => AlertDialog(

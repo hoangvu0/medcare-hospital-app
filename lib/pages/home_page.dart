@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../routes/app_routes.dart';
 import '../state/medical_store.dart';
+import '../state/app_settings_store.dart';
 import 'doctor_detail_page.dart';
 
 class HomePage extends StatefulWidget {
@@ -17,28 +18,58 @@ class _HomePageState extends State<HomePage> {
   static const grey = Color(0xFF424655);
 
   @override
-  Widget build(BuildContext context) => Scaffold(
-    backgroundColor: const Color(0xFFFAF8FF),
-    body: SafeArea(
-      bottom: false,
-      child: Stack(
-        children: [
-          ListView(
-            padding: const EdgeInsets.only(top: 80, bottom: 84),
-            children: [
-              _greeting(),
-              _emergency(),
-              _appointment(),
-              _quickActions(),
-              _specialties(),
-              _topDoctors(),
-              _healthTips(),
-            ],
-          ),
-          _header(),
-          _bottomNavigation(),
-        ],
+  Widget build(BuildContext context) {
+    final settings = AppSettingsScope.of(context);
+    return Scaffold(
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
+      body: SafeArea(
+        bottom: false,
+        child: Stack(
+          children: [
+            ListView(
+              padding: const EdgeInsets.only(top: 80, bottom: 84),
+              children: [
+                if (settings.isOfflineSimulated) _offlineBanner(settings),
+                _greeting(),
+                _emergency(),
+                _appointment(),
+                _quickActions(),
+                _specialties(),
+                _topDoctors(),
+                _healthTips(),
+              ],
+            ),
+            _header(),
+            _bottomNavigation(),
+          ],
+        ),
       ),
+    );
+  }
+
+  Widget _offlineBanner(AppSettingsStore settings) => Container(
+    margin: const EdgeInsets.fromLTRB(16, 0, 16, 12),
+    padding: const EdgeInsets.all(12),
+    decoration: BoxDecoration(
+      color: const Color(0xFFFEF3C7),
+      borderRadius: BorderRadius.circular(12),
+      border: Border.all(color: const Color(0xFFF59E0B)),
+    ),
+    child: Row(
+      children: [
+        const Icon(Icons.wifi_off_rounded, color: Color(0xFFB45309)),
+        const SizedBox(width: 10),
+        Expanded(
+          child: Text(
+            settings.tr('offline_banner'),
+            style: const TextStyle(
+              fontSize: 12,
+              fontWeight: FontWeight.w600,
+              color: Color(0xFF92400E),
+            ),
+          ),
+        ),
+      ],
     ),
   );
 
@@ -46,7 +77,7 @@ class _HomePageState extends State<HomePage> {
     height: 80,
     padding: const EdgeInsets.symmetric(horizontal: 16),
     decoration: BoxDecoration(
-      color: Colors.white.withValues(alpha: .94),
+      color: Theme.of(context).cardColor.withValues(alpha: .94),
       boxShadow: const [BoxShadow(color: Color(0x0A000000), blurRadius: 8)],
     ),
     child: Row(
@@ -84,6 +115,11 @@ class _HomePageState extends State<HomePage> {
           icon: const Icon(Icons.notifications_none_rounded, color: dark),
         ),
         IconButton(
+          onPressed: () => Navigator.pushNamed(context, AppRoutes.settings),
+          tooltip: 'Cài đặt hệ thống',
+          icon: const Icon(Icons.settings_outlined, color: dark),
+        ),
+        IconButton(
           onPressed: () => Navigator.pushNamed(context, AppRoutes.profile),
           icon: const Icon(Icons.person_outline, color: primary),
         ),
@@ -91,53 +127,60 @@ class _HomePageState extends State<HomePage> {
     ),
   );
 
-  Widget _greeting() => Padding(
-    padding: const EdgeInsets.fromLTRB(16, 8, 16, 18),
-    child: Column(
-      children: [
-        Row(
-          children: [
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    'Xin chào 👋',
-                    style: TextStyle(color: grey, fontSize: 13),
-                  ),
-                  SizedBox(height: 3),
-                  Text(
-                    MedicalScope.of(context).profile.name,
-                    style: TextStyle(
-                      color: dark,
-                      fontSize: 21,
-                      fontWeight: FontWeight.bold,
+  Widget _greeting() {
+    final settings = AppSettingsScope.of(context);
+    final profile = MedicalScope.of(context).profile;
+    final bhytText = settings.isMaskingSensitiveData
+        ? 'BHYT: ${settings.maskText(profile.insuranceNumber, visiblePrefix: 4, visibleSuffix: 3)}'
+        : 'BHYT: Đã liên kết';
+
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 8, 16, 18),
+      child: Column(
+        children: [
+          Row(
+            children: [
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text(
+                      'Xin chào 👋',
+                      style: TextStyle(color: grey, fontSize: 13),
                     ),
-                  ),
-                ],
+                    const SizedBox(height: 3),
+                    Text(
+                      profile.name,
+                      style: const TextStyle(
+                        color: dark,
+                        fontSize: 21,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ],
+                ),
               ),
-            ),
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-              decoration: BoxDecoration(
-                color: const Color(0xFFE2E7FF),
-                borderRadius: BorderRadius.circular(50),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFE2E7FF),
+                  borderRadius: BorderRadius.circular(50),
+                ),
+                child: Row(
+                  children: [
+                    const Icon(Icons.verified, size: 14, color: Color(0xFF006C49)),
+                    const SizedBox(width: 5),
+                    Text(
+                      bhytText,
+                      style: const TextStyle(fontSize: 10, fontWeight: FontWeight.bold),
+                    ),
+                  ],
+                ),
               ),
-              child: const Row(
-                children: [
-                  Icon(Icons.verified, size: 14, color: Color(0xFF006C49)),
-                  SizedBox(width: 5),
-                  Text(
-                    'BHYT: Đã liên kết',
-                    style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold),
-                  ),
-                ],
-              ),
-            ),
-          ],
-        ),
-        const SizedBox(height: 14),
-        InkWell(
+            ],
+          ),
+          const SizedBox(height: 14),
+          InkWell(
           onTap: () => Navigator.pushNamed(context, AppRoutes.search),
           borderRadius: BorderRadius.circular(12),
           child: Container(
@@ -165,6 +208,7 @@ class _HomePageState extends State<HomePage> {
       ],
     ),
   );
+}
 
   Widget _emergency() => Padding(
     padding: const EdgeInsets.symmetric(horizontal: 16),
@@ -647,42 +691,54 @@ class _HomePageState extends State<HomePage> {
   );
 
   Widget _bottomNavigation() {
+    final settings = AppSettingsScope.of(context);
+    final cardColor = Theme.of(context).cardColor;
+
     return Positioned(
       left: 0,
       right: 0,
       bottom: 0,
       child: Container(
         height: 64,
-        decoration: const BoxDecoration(
-          color: Colors.white,
-          boxShadow: [BoxShadow(color: Color(0x120F172A), blurRadius: 12)],
+        decoration: BoxDecoration(
+          color: cardColor,
+          boxShadow: const [BoxShadow(color: Color(0x120F172A), blurRadius: 12)],
         ),
         child: Row(
           mainAxisAlignment: MainAxisAlignment.spaceAround,
           children: [
             _BottomItem(
               icon: Icons.home_outlined,
-              title: 'Trang chủ',
+              title: settings.tr('home'),
               active: selectedIndex == 0,
-              onTap: () {},
+              onTap: () => settings.triggerHaptic(),
             ),
             _BottomItem(
               icon: Icons.medical_services_outlined,
-              title: 'Bác sĩ',
+              title: settings.tr('doctors'),
               active: selectedIndex == 1,
-              onTap: () => Navigator.pushNamed(context, AppRoutes.doctors),
+              onTap: () {
+                settings.triggerHaptic();
+                Navigator.pushNamed(context, AppRoutes.doctors);
+              },
             ),
             _BottomItem(
               icon: Icons.calendar_month_outlined,
-              title: 'Lịch hẹn',
+              title: settings.tr('appointments'),
               active: selectedIndex == 2,
-              onTap: () => Navigator.pushNamed(context, AppRoutes.appointments),
+              onTap: () {
+                settings.triggerHaptic();
+                Navigator.pushNamed(context, AppRoutes.appointments);
+              },
             ),
             _BottomItem(
               icon: Icons.description_outlined,
-              title: 'Bệnh án',
+              title: settings.tr('records'),
               active: selectedIndex == 3,
-              onTap: () => Navigator.pushNamed(context, AppRoutes.records),
+              onTap: () {
+                settings.triggerHaptic();
+                Navigator.pushNamed(context, AppRoutes.records);
+              },
             ),
           ],
         ),

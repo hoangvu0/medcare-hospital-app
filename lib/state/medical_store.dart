@@ -111,14 +111,18 @@ class MedicalStore extends ChangeNotifier {
   }
 
   Future<void> _persist() async {
-    final prefs = await SharedPreferences.getInstance();
-    final data = <String, dynamic>{
-      'authenticated': _authenticated,
-      'profile': _profileToJson(_profile),
-      'appointments': _appointments.map(_appointmentToJson).toList(),
-      'notifications': _notifications.map(_notificationToJson).toList(),
-    };
-    await prefs.setString(_storageKey, jsonEncode(data));
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final data = <String, dynamic>{
+        'authenticated': _authenticated,
+        'profile': _profileToJson(_profile),
+        'appointments': _appointments.map(_appointmentToJson).toList(),
+        'notifications': _notifications.map(_notificationToJson).toList(),
+      };
+      await prefs.setString(_storageKey, jsonEncode(data));
+    } catch (_) {
+      // The application stays resilient when local storage is temporarily busy
+    }
   }
 
   void _commit() {
