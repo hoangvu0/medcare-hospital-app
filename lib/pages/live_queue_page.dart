@@ -244,3 +244,4 @@ class LiveQueuePage extends StatelessWidget {
     );
   }
 }
+

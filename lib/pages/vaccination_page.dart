@@ -252,3 +252,4 @@ class VaccinationPage extends StatelessWidget {
     );
   }
 }
+
