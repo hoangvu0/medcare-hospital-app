@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
 
+import '../models/medical_models.dart';
 import '../routes/app_routes.dart';
+import '../state/app_settings_store.dart';
+import '../state/medical_store.dart';
 
 class PatientRecordsPage extends StatefulWidget {
   const PatientRecordsPage({super.key});
@@ -15,18 +18,38 @@ class _PatientRecordsPageState extends State<PatientRecordsPage> {
     'Lịch sử khám',
     'Kết quả xét nghiệm',
     'Đơn thuốc điện tử',
-    'X-Quang / MRI',
+    'X-Quang / Nội soi',
   ];
 
   @override
   Widget build(BuildContext context) {
+    final store = MedicalScope.of(context);
+    final settings = AppSettingsScope.of(context);
+    final profile = store.profile;
+
     return Scaffold(
-      backgroundColor: const Color(0xFFFAF8FF),
-      appBar: AppBar(title: const Text('Hồ sơ bệnh án - MedCare')),
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
+      appBar: AppBar(
+        title: const Text('Hồ sơ bệnh án điện tử (EMR)'),
+        actions: [
+          IconButton(
+            tooltip: 'Xuất PDF có chữ ký số',
+            icon: const Icon(Icons.picture_as_pdf_outlined),
+            onPressed: () {
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(
+                  content: Text('Đang tải trích sao Bệnh án điện tử có chữ ký số Bộ Y Tế...'),
+                  backgroundColor: Color(0xFF0057CD),
+                ),
+              );
+            },
+          ),
+        ],
+      ),
       body: ListView(
         padding: const EdgeInsets.fromLTRB(16, 8, 16, 30),
         children: [
-          _patientHeader(),
+          _patientHeader(profile, settings),
           const SizedBox(height: 12),
           SizedBox(
             height: 42,
@@ -48,18 +71,23 @@ class _PatientRecordsPageState extends State<PatientRecordsPage> {
             ),
           ),
           const SizedBox(height: 16),
-          if (selectedTab == 0) _history() else _emptyTab(),
+          if (selectedTab == 0)
+            _history(store.medicalRecords)
+          else if (selectedTab == 1)
+            _labResults(store.labTests)
+          else if (selectedTab == 3)
+            _imagingResults(),
           const SizedBox(height: 16),
           _securityBanner(),
           const SizedBox(height: 12),
-          _aiBanner(),
+          _aiSummaryBanner(),
         ],
       ),
     );
   }
 
-  Widget _patientHeader() => Card(
-    color: const Color(0xFFF2F3FF),
+  Widget _patientHeader(PatientProfile profile, AppSettingsStore settings) => Card(
+    elevation: 1,
     child: Padding(
       padding: const EdgeInsets.all(16),
       child: Column(
@@ -67,57 +95,70 @@ class _PatientRecordsPageState extends State<PatientRecordsPage> {
           Row(
             children: [
               const CircleAvatar(
-                radius: 25,
+                radius: 26,
                 backgroundColor: Color(0xFFDAE2FF),
-                child: Icon(Icons.person, color: Color(0xFF0057CD)),
+                child: Icon(Icons.person, size: 30, color: Color(0xFF0057CD)),
               ),
-              const SizedBox(width: 12),
-              const Expanded(
+              const SizedBox(width: 14),
+              Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(
-                      'Trần Hoàng Minh  ✓',
-                      style: TextStyle(
-                        fontSize: 18,
-                        fontWeight: FontWeight.bold,
-                      ),
+                    Row(
+                      children: [
+                        Text(
+                          profile.name,
+                          style: const TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                        const SizedBox(width: 6),
+                        const Icon(Icons.verified, size: 16, color: Color(0xFF006C49)),
+                      ],
                     ),
-                    SizedBox(height: 4),
+                    const SizedBox(height: 4),
                     Text(
-                      'Mã BN: MC-89241',
-                      style: TextStyle(color: Color(0xFF0057CD)),
+                      'Mã BN: ${profile.id} • ${profile.gender} • 24 tuổi',
+                      style: const TextStyle(color: Color(0xFF0057CD), fontSize: 12, fontWeight: FontWeight.w600),
+                    ),
+                    Text(
+                      profile.address,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(color: Colors.grey, fontSize: 11),
                     ),
                   ],
                 ),
               ),
               IconButton(
-                onPressed: () => _message('Mã QR y tế của bệnh nhân'),
-                icon: const Icon(Icons.qr_code_2, color: Color(0xFF0057CD)),
+                onPressed: () => _showPatientQrDialog(profile),
+                tooltip: 'Mã QR tiếp đón',
+                icon: const Icon(Icons.qr_code_2, size: 28, color: Color(0xFF0057CD)),
               ),
             ],
           ),
           const SizedBox(height: 14),
           Row(
             children: [
-              Expanded(child: _highlight('Nhóm máu', 'O+', Icons.bloodtype)),
+              Expanded(child: _highlight('Nhóm máu', profile.bloodType, Icons.bloodtype, const Color(0xFFFFEBEE), const Color(0xFFC62828))),
               const SizedBox(width: 8),
               Expanded(
                 child: _highlight(
                   'Thẻ BHYT',
-                  'Hạn 12/2025',
+                  settings.maskText(profile.insuranceNumber, visiblePrefix: 4, visibleSuffix: 3),
                   Icons.verified_user,
-                  color: const Color(0xFFE4F5EC),
+                  const Color(0xFFE8F5E9),
+                  const Color(0xFF2E7D32),
                 ),
               ),
               const SizedBox(width: 8),
               Expanded(
                 child: _highlight(
                   'Dị ứng',
-                  'Penicillin',
+                  profile.allergies,
                   Icons.warning_amber,
-                  color: const Color(0xFFFFDAD6),
-                  textColor: const Color(0xFFBA1A1A),
+                  const Color(0xFFFFF3E0),
+                  const Color(0xFFE65100),
                 ),
               ),
             ],
@@ -130,18 +171,19 @@ class _PatientRecordsPageState extends State<PatientRecordsPage> {
   Widget _highlight(
     String label,
     String value,
-    IconData icon, {
-    Color color = Colors.white,
-    Color textColor = const Color(0xFF131B2E),
-  }) {
+    IconData icon,
+    Color color,
+    Color textColor,
+  ) {
     return Container(
       height: 72,
-      padding: const EdgeInsets.all(8),
+      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 8),
       decoration: BoxDecoration(
         color: color,
         borderRadius: BorderRadius.circular(12),
       ),
       child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
         children: [
           Text(
             label,
@@ -149,10 +191,11 @@ class _PatientRecordsPageState extends State<PatientRecordsPage> {
             overflow: TextOverflow.ellipsis,
             style: TextStyle(
               fontSize: 10,
-              color: textColor.withValues(alpha: .75),
+              fontWeight: FontWeight.w600,
+              color: textColor.withValues(alpha: 0.8),
             ),
           ),
-          const SizedBox(height: 5),
+          const SizedBox(height: 4),
           Row(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
@@ -163,7 +206,7 @@ class _PatientRecordsPageState extends State<PatientRecordsPage> {
                   value,
                   overflow: TextOverflow.ellipsis,
                   style: TextStyle(
-                    fontSize: 13,
+                    fontSize: 12,
                     fontWeight: FontWeight.bold,
                     color: textColor,
                   ),
@@ -176,41 +219,34 @@ class _PatientRecordsPageState extends State<PatientRecordsPage> {
     );
   }
 
-  Widget _history() => Column(
+  Widget _history(List<MedicalRecord> records) => Column(
     crossAxisAlignment: CrossAxisAlignment.start,
     children: [
-      const Text('Các đợt khám gần đây', style: _heading),
+      Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          const Text(
+            'Các đợt khám bệnh gần đây',
+            style: TextStyle(fontSize: 17, fontWeight: FontWeight.bold),
+          ),
+          Chip(
+            label: Text('${records.length} đợt khám'),
+            backgroundColor: const Color(0xFFE2E7FF),
+          ),
+        ],
+      ),
       const SizedBox(height: 12),
-      _episode(
-        '15/10/2024',
-        'Khám định kỳ & Tái khám',
-        'Nội Tim Mạch',
-        'BS. CKI Nguyễn Văn An',
-        'Tăng huyết áp độ 1 - Rối loạn lipid máu nhẹ',
-        true,
-      ),
-      const SizedBox(height: 14),
-      _episode(
-        '28/07/2024',
-        'Khám cấp tính đường hô hấp',
-        'Tai Mũi Họng',
-        'ThS.BS Phạm Hoài Nam',
-        'Viêm xoang dị ứng cấp',
-        false,
-      ),
+      for (final item in records) ...[
+        _recordCard(item),
+        const SizedBox(height: 14),
+      ],
     ],
   );
 
-  Widget _episode(
-    String date,
-    String title,
-    String specialty,
-    String doctor,
-    String diagnosis,
-    bool active,
-  ) => Card(
+  Widget _recordCard(MedicalRecord record) => Card(
+    elevation: 1,
     child: Padding(
-      padding: const EdgeInsets.all(14),
+      padding: const EdgeInsets.all(16),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -221,141 +257,325 @@ class _PatientRecordsPageState extends State<PatientRecordsPage> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      specialty,
+                      record.department.toUpperCase(),
                       style: const TextStyle(
                         color: Color(0xFF0057CD),
                         fontWeight: FontWeight.bold,
                         fontSize: 11,
+                        letterSpacing: 0.5,
                       ),
                     ),
                     const SizedBox(height: 4),
                     Text(
-                      title,
+                      record.diagnosis,
                       style: const TextStyle(
-                        fontSize: 17,
+                        fontSize: 16,
                         fontWeight: FontWeight.bold,
                       ),
                     ),
+                    const SizedBox(height: 2),
                     Text(
-                      date,
-                      style: const TextStyle(
-                        color: Colors.black54,
-                        fontSize: 12,
+                      'Ngày khám: ${record.date} • Mã: ${record.id}',
+                      style: const TextStyle(color: Colors.black54, fontSize: 12),
+                    ),
+                  ],
+                ),
+              ),
+              const Chip(
+                label: Text('Đã hoàn thành', style: TextStyle(fontSize: 11)),
+                backgroundColor: Color(0xFFE8F5E9),
+              ),
+            ],
+          ),
+          const Divider(height: 20),
+          Row(
+            children: [
+              const Icon(Icons.person_pin_circle_outlined, size: 18, color: Color(0xFF0057CD)),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  'Bác sĩ điều trị: ${record.doctorName}',
+                  style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          Container(
+            padding: const EdgeInsets.all(10),
+            decoration: BoxDecoration(
+              color: const Color(0xFFF8FAFC),
+              borderRadius: BorderRadius.circular(8),
+              border: Border.all(color: Colors.black12),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  '• Triệu chứng: ${record.symptoms}',
+                  style: const TextStyle(fontSize: 12, color: Colors.black87),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  '• Hướng điều trị: ${record.treatmentPlan}',
+                  style: const TextStyle(fontSize: 12, color: Colors.black87),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  '• Tái khám: ${record.followUpDate} • Mã toa: ${record.prescriptionCode}',
+                  style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Color(0xFF0057CD)),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 12),
+          Row(
+            children: [
+              Expanded(
+                child: OutlinedButton.icon(
+                  onPressed: () => Navigator.pushNamed(context, AppRoutes.prescription),
+                  icon: const Icon(Icons.medication_outlined, size: 16),
+                  label: const Text('Xem đơn thuốc', style: TextStyle(fontSize: 12)),
+                ),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: OutlinedButton.icon(
+                  onPressed: () => setState(() => selectedTab = 1),
+                  icon: const Icon(Icons.science_outlined, size: 16),
+                  label: const Text('Xem xét nghiệm', style: TextStyle(fontSize: 12)),
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    ),
+  );
+
+  Widget _labResults(List<LabTestItem> items) => Column(
+    crossAxisAlignment: CrossAxisAlignment.start,
+    children: [
+      Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          const Text(
+            'Chỉ số sinh hóa máu & Xét nghiệm',
+            style: TextStyle(fontSize: 17, fontWeight: FontWeight.bold),
+          ),
+          Text(
+            'Lần đo: 10/02/2026',
+            style: TextStyle(fontSize: 12, color: Colors.grey.shade600),
+          ),
+        ],
+      ),
+      const SizedBox(height: 12),
+      Card(
+        elevation: 1,
+        child: Column(
+          children: [
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+              color: const Color(0xFFF1F5F9),
+              child: const Row(
+                children: [
+                  Expanded(flex: 4, child: Text('TÊN CHỈ SỐ', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 11))),
+                  Expanded(flex: 3, child: Text('KẾT QUẢ', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 11))),
+                  Expanded(flex: 3, child: Text('THAM CHIẾU', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 11))),
+                ],
+              ),
+            ),
+            for (final test in items) ...[
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                child: Row(
+                  children: [
+                    Expanded(
+                      flex: 4,
+                      child: Text(
+                        test.name,
+                        style: TextStyle(
+                          fontSize: 13,
+                          fontWeight: test.isAbnormal ? FontWeight.bold : FontWeight.normal,
+                          color: test.isAbnormal ? Colors.red : Colors.black87,
+                        ),
+                      ),
+                    ),
+                    Expanded(
+                      flex: 3,
+                      child: Row(
+                        children: [
+                          Text(
+                            test.value,
+                            style: TextStyle(
+                              fontSize: 13,
+                              fontWeight: FontWeight.bold,
+                              color: test.isAbnormal ? Colors.red : const Color(0xFF006C49),
+                            ),
+                          ),
+                          if (test.isAbnormal) ...[
+                            const SizedBox(width: 4),
+                            const Icon(Icons.arrow_upward, size: 14, color: Colors.red),
+                          ],
+                        ],
+                      ),
+                    ),
+                    Expanded(
+                      flex: 3,
+                      child: Text(
+                        '${test.normalRange} ${test.unit}',
+                        style: const TextStyle(fontSize: 11, color: Colors.black54),
                       ),
                     ),
                   ],
                 ),
               ),
-              Chip(label: Text(active ? 'Hoàn thành' : 'Đã khỏi bệnh')),
+              const Divider(height: 1),
             ],
-          ),
-          const Divider(height: 20),
-          ListTile(
-            contentPadding: EdgeInsets.zero,
-            leading: const CircleAvatar(
-              backgroundColor: Color(0xFFEAEFFF),
-              child: Icon(Icons.person, color: Color(0xFF0057CD)),
-            ),
-            title: Text(doctor),
-            subtitle: Text(diagnosis),
-          ),
-          const SizedBox(height: 8),
-          Row(
+          ],
+        ),
+      ),
+    ],
+  );
+
+  Widget _imagingResults() => Column(
+    crossAxisAlignment: CrossAxisAlignment.start,
+    children: [
+      const Text(
+        'Chẩn đoán hình ảnh & Thăm dò chức năng',
+        style: TextStyle(fontSize: 17, fontWeight: FontWeight.bold),
+      ),
+      const SizedBox(height: 12),
+      Card(
+        elevation: 1,
+        child: Padding(
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Expanded(child: _action('Đơn thuốc', Icons.medication_outlined)),
-              const SizedBox(width: 8),
-              Expanded(
-                child: _action('Kết quả xét nghiệm', Icons.science_outlined),
+              const Row(
+                children: [
+                  Icon(Icons.monitor_heart_outlined, color: Color(0xFF0057CD)),
+                  SizedBox(width: 8),
+                  Text('Nội soi Dạ dày - Tá tràng không đau', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15)),
+                ],
+              ),
+              const SizedBox(height: 6),
+              const Text('Thời gian thực hiện: 10/02/2026 09:15 • BS. Nguyễn Văn An'),
+              const Divider(height: 20),
+              const Text(
+                '• Niêm mạc thực quản bình thường, không trào ngược độ nặng.\n• Niêm mạc hang vị dạ dày phù nề, sung huyết lan tỏa, có vài trợt nông đáy sạch.\n• Môn vị tròn đều, co bóp tốt.\n• Hành tá tràng và tá tràng bình thường.\n• Test vi khuẩn Helicobacter Pylori (CLO-Test): DƯƠNG TÍNH (+).',
+                style: TextStyle(fontSize: 13, height: 1.4),
               ),
             ],
           ),
-          const SizedBox(height: 8),
-          _fullAction(
-            'Tải bản sao Bệnh án điện tử (PDF ký số)',
-            Icons.download_outlined,
+        ),
+      ),
+      const SizedBox(height: 12),
+      Card(
+        elevation: 1,
+        child: Padding(
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Row(
+                children: [
+                  Icon(Icons.camera_alt_outlined, color: Color(0xFF0057CD)),
+                  SizedBox(width: 8),
+                  Text('X-Quang Tim Phổi thẳng (Kỹ thuật số)', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15)),
+                ],
+              ),
+              const SizedBox(height: 6),
+              const Text('Thời gian thực hiện: 10/02/2026 08:30 • Khoa CĐHA'),
+              const Divider(height: 20),
+              const Text(
+                '• Trường phổi hai bên sáng đều, không thấy tổn thương khu trú dạng thâm nhiễm hay nốt mờ.\n• Rốn phổi hai bên bình thường.\n• Chỉ số tim ngực trong giới hạn bình thường (< 0.5).\n• Góc tâm hoành và sườn hoành hai bên sáng nhọn.',
+                style: TextStyle(fontSize: 13, height: 1.4),
+              ),
+            ],
+          ),
+        ),
+      ),
+    ],
+  );
+
+  Widget _securityBanner() => Container(
+    padding: const EdgeInsets.all(14),
+    decoration: BoxDecoration(
+      color: const Color(0xFFE2E7FF),
+      borderRadius: BorderRadius.circular(12),
+    ),
+    child: const Row(
+      children: [
+        Icon(Icons.shield_outlined, color: Color(0xFF0057CD)),
+        SizedBox(width: 12),
+        Expanded(
+          child: Text(
+            'Hồ sơ bệnh án được bảo mật 2 lớp theo tiêu chuẩn HIPAA & Nghị định 13/2023/NĐ-CP của Bộ Y Tế.',
+            style: TextStyle(fontSize: 11, color: Color(0xFF0057CD), fontWeight: FontWeight.w600),
+          ),
+        ),
+      ],
+    ),
+  );
+
+  Widget _aiSummaryBanner() => Container(
+    padding: const EdgeInsets.all(14),
+    decoration: BoxDecoration(
+      color: const Color(0xFFF3E8FF),
+      borderRadius: BorderRadius.circular(12),
+      border: Border.all(color: const Color(0xFFD8B4FE)),
+    ),
+    child: const Row(
+      children: [
+        Icon(Icons.auto_awesome, color: Color(0xFF9333EA)),
+        SizedBox(width: 12),
+        Expanded(
+          child: Text(
+            'Tóm tắt thông minh AI: Tình trạng dạ dày đang đáp ứng tốt với phác đồ Hp. Bạn nhớ uống thuốc đúng giờ và kiêng đồ cay nóng.',
+            style: TextStyle(fontSize: 11, color: Color(0xFF6B21A8), fontWeight: FontWeight.w600),
+          ),
+        ),
+      ],
+    ),
+  );
+
+  void _showPatientQrDialog(PatientProfile profile) {
+    showDialog<void>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Mã QR Bệnh nhân'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              padding: const EdgeInsets.all(20),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(16),
+                border: Border.all(color: Colors.black12),
+              ),
+              child: const Icon(Icons.qr_code_2, size: 140, color: Color(0xFF0057CD)),
+            ),
+            const SizedBox(height: 12),
+            Text(profile.name, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+            Text('Mã BN: ${profile.id} • BHYT: ${profile.insuranceNumber}'),
+            const SizedBox(height: 6),
+            const Text(
+              'Xuất trình mã này tại Kiosk hoặc Quầy tiếp đón để lấy số thứ tự tự động.',
+              textAlign: TextAlign.center,
+              style: TextStyle(fontSize: 11, color: Colors.grey),
+            ),
+          ],
+        ),
+        actions: [
+          FilledButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('Đóng'),
           ),
         ],
       ),
-    ),
-  );
-
-  Widget _action(String title, IconData icon) => OutlinedButton.icon(
-    onPressed: () => _message('Đang mở $title'),
-    icon: Icon(icon, size: 15),
-    label: Text(title, overflow: TextOverflow.ellipsis),
-  );
-  Widget _fullAction(String title, IconData icon) => SizedBox(
-    width: double.infinity,
-    child: OutlinedButton.icon(
-      onPressed: () => _message('Đang chuẩn bị file PDF bệnh án'),
-      icon: Icon(icon, size: 15),
-      label: Text(title),
-    ),
-  );
-
-  Widget _emptyTab() => Card(
-    child: Padding(
-      padding: const EdgeInsets.all(30),
-      child: Column(
-        children: [
-          const Icon(
-            Icons.medical_information_outlined,
-            size: 48,
-            color: Color(0xFF0057CD),
-          ),
-          const SizedBox(height: 12),
-          Text(
-            tabs[selectedTab],
-            style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-          ),
-          const SizedBox(height: 8),
-          const Text(
-            'Chọn một hồ sơ để xem thông tin y tế chi tiết.',
-            textAlign: TextAlign.center,
-          ),
-        ],
-      ),
-    ),
-  );
-
-  Widget _securityBanner() => const Card(
-    color: Color(0xFFE2E7FF),
-    child: ListTile(
-      leading: CircleAvatar(
-        backgroundColor: Color(0xFF39B8FD),
-        child: Icon(Icons.security, color: Colors.white),
-      ),
-      title: Text(
-        'Bảo mật y tế cấp quốc gia',
-        style: TextStyle(fontWeight: FontWeight.bold),
-      ),
-      subtitle: Text(
-        'Hồ sơ được mã hóa 256-bit. Chỉ người bệnh và bác sĩ được ủy quyền có quyền truy cập.',
-      ),
-    ),
-  );
-  Widget _aiBanner() => Card(
-    color: const Color(0xFF0057CD),
-    child: ListTile(
-      leading: const Icon(Icons.smart_toy_outlined, color: Colors.white),
-      title: const Text(
-        'Hỏi đáp về bệnh án với AI',
-        style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
-      ),
-      subtitle: const Text(
-        'Giải thích chỉ số máu và lưu ý dùng thuốc',
-        style: TextStyle(color: Colors.white70),
-      ),
-      trailing: TextButton(
-        onPressed: () => _message('Tính năng hỏi đáp AI đang được mở'),
-        child: const Text('Tra cứu', style: TextStyle(color: Colors.white)),
-      ),
-    ),
-  );
-
-  void _message(String message) => ScaffoldMessenger.of(context).showSnackBar(
-    SnackBar(content: Text(message), behavior: SnackBarBehavior.floating),
-  );
+    );
+  }
 }
-
-const _heading = TextStyle(fontSize: 18, fontWeight: FontWeight.bold);

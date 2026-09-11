@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 
+import '../models/medical_models.dart';
 import '../routes/app_routes.dart';
+import '../state/medical_store.dart';
 
 class EPrescriptionPage extends StatefulWidget {
   const EPrescriptionPage({super.key});
@@ -13,110 +15,97 @@ class _EPrescriptionPageState extends State<EPrescriptionPage> {
   static const _primary = Color(0xFF0D6EFD);
   static const _success = Color(0xFF10B981);
   bool _reminderEnabled = true;
-  final Set<String> _reminderTimes = {'08:00', '18:00'};
+  final Set<String> _reminderTimes = {'07:30', '12:00', '19:00'};
 
   @override
-  Widget build(BuildContext context) => Scaffold(
-    backgroundColor: const Color(0xFFF8FAFC),
-    appBar: AppBar(
-      title: const Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            'HỒ SƠ Y TẾ ĐIỆN TỬ',
-            style: TextStyle(fontSize: 10, color: _primary),
+  Widget build(BuildContext context) {
+    final store = MedicalScope.of(context);
+    final profile = store.profile;
+    final medicines = store.medicines;
+
+    return Scaffold(
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
+      appBar: AppBar(
+        title: const Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'HỒ SƠ DƯỢC LÂM SÀNG',
+              style: TextStyle(fontSize: 10, color: _primary, fontWeight: FontWeight.bold),
+            ),
+            Text(
+              'Đơn thuốc điện tử',
+              style: TextStyle(fontSize: 19, fontWeight: FontWeight.bold),
+            ),
+          ],
+        ),
+        actions: [
+          IconButton(
+            onPressed: _sharePrescription,
+            tooltip: 'Chia sẻ đơn thuốc',
+            icon: const Icon(Icons.share_outlined),
           ),
-          Text(
-            'Đơn thuốc điện tử',
-            style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+          IconButton(
+            onPressed: () => _showBarcodeDialog(profile.id),
+            tooltip: 'Mở mã xuất thuốc',
+            icon: const Icon(Icons.qr_code_2),
           ),
         ],
       ),
-      actions: [
-        IconButton(
-          onPressed: _sharePrescription,
-          tooltip: 'Chia sẻ đơn thuốc',
-          icon: const Icon(Icons.share_outlined),
-        ),
-        IconButton(
-          onPressed: _showBarcodeDialog,
-          tooltip: 'Mở mã xuất thuốc',
-          icon: const Icon(Icons.qr_code_2),
-        ),
-      ],
-    ),
-    body: ListView(
-      padding: const EdgeInsets.fromLTRB(16, 8, 16, 28),
-      children: [
-        _prescriptionIdentity(),
-        const SizedBox(height: 14),
-        _dispensingCode(),
-        const SizedBox(height: 14),
-        _reminderCard(),
-        const SizedBox(height: 20),
-        const Row(
-          children: [
-            Text(
-              'Danh mục thuốc',
-              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+      body: ListView(
+        padding: const EdgeInsets.fromLTRB(16, 8, 16, 28),
+        children: [
+          _prescriptionIdentity(profile),
+          const SizedBox(height: 14),
+          _dispensingCode(profile.id),
+          const SizedBox(height: 14),
+          _reminderCard(),
+          const SizedBox(height: 20),
+          Row(
+            children: [
+              const Text(
+                'Danh mục thuốc kê đơn',
+                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+              ),
+              const SizedBox(width: 8),
+              Chip(label: Text('${medicines.length} loại')),
+            ],
+          ),
+          const SizedBox(height: 8),
+          for (var i = 0; i < medicines.length; i++) ...[
+            _medicineCard(
+              number: '${i + 1}',
+              name: medicines[i].name,
+              category: medicines[i].category,
+              quantity: medicines[i].quantity,
+              instruction: medicines[i].instruction,
+              note: medicines[i].warning,
+              warning: medicines[i].warning != null,
             ),
-            SizedBox(width: 8),
-            Chip(label: Text('4 loại')),
           ],
-        ),
-        const SizedBox(height: 8),
-        _medicineCard(
-          number: '1',
-          name: 'Hapacol 250mg',
-          category: 'Hạ sốt',
-          quantity: '10 gói',
-          instruction: 'Uống 1 gói/lần khi sốt từ 38.5°C. Các liều cách nhau tối thiểu 4–6 giờ.',
-          note: 'Không dùng quá liều khuyến nghị trong 24 giờ.',
-        ),
-        _medicineCard(
-          number: '2',
-          name: 'Augmentin 250mg/31.25mg',
-          category: 'Kháng sinh',
-          quantity: '1 chai',
-          instruction: 'Uống 5 ml lúc 08:00 và 18:00, sau ăn. Dùng đủ 7 ngày theo chỉ định.',
-          note: 'Không tự ý ngừng thuốc dù đã giảm triệu chứng.',
-          warning: true,
-        ),
-        _medicineCard(
-          number: '3',
-          name: 'Siro Prospan 100ml',
-          category: 'Trị ho thảo dược',
-          quantity: '1 chai',
-          instruction: 'Uống 2.5 ml/lần, ngày 3 lần sau bữa ăn.',
-        ),
-        _medicineCard(
-          number: '4',
-          name: 'BioGaia Protectis Drops',
-          category: 'Men vi sinh',
-          quantity: '1 lọ',
-          instruction: 'Dùng 5 giọt/ngày vào buổi sáng để cân bằng đường ruột khi sử dụng kháng sinh.',
-        ),
-        const SizedBox(height: 4),
-        _adviceAndFollowUp(),
-        const SizedBox(height: 14),
-        _costSummary(),
-        const SizedBox(height: 18),
-        FilledButton.icon(
-          onPressed: _orderDelivery,
-          icon: const Icon(Icons.local_shipping_outlined),
-          label: const Text('Đặt mua & Giao thuốc tận nhà (2h)'),
-        ),
-        const SizedBox(height: 8),
-        OutlinedButton.icon(
-          onPressed: _downloadPrescription,
-          icon: const Icon(Icons.picture_as_pdf_outlined),
-          label: const Text('Tải đơn PDF có chữ ký số'),
-        ),
-      ],
-    ),
-  );
+          const SizedBox(height: 4),
+          _adviceAndFollowUp(),
+          const SizedBox(height: 14),
+          _costSummary(),
+          const SizedBox(height: 18),
+          FilledButton.icon(
+            onPressed: _orderDelivery,
+            icon: const Icon(Icons.local_shipping_outlined),
+            label: const Text('Đặt mua & Giao thuốc tận nhà (2h)'),
+          ),
+          const SizedBox(height: 8),
+          OutlinedButton.icon(
+            onPressed: _downloadPrescription,
+            icon: const Icon(Icons.picture_as_pdf_outlined),
+            label: const Text('Tải đơn PDF có chữ ký số Bộ Y Tế'),
+          ),
+        ],
+      ),
+    );
+  }
 
-  Widget _prescriptionIdentity() => Card(
+  Widget _prescriptionIdentity(PatientProfile profile) => Card(
+    elevation: 1,
     child: Padding(
       padding: const EdgeInsets.all(16),
       child: Column(
@@ -126,50 +115,50 @@ class _EPrescriptionPageState extends State<EPrescriptionPage> {
               const CircleAvatar(
                 radius: 25,
                 backgroundColor: Color(0xFFE7F0FF),
-                child: Icon(Icons.child_care, color: _primary),
+                child: Icon(Icons.person, color: _primary),
               ),
               const SizedBox(width: 12),
-              const Expanded(
+              Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      'Trần Minh Quân',
-                      style: TextStyle(
+                      profile.name,
+                      style: const TextStyle(
                         fontSize: 18,
                         fontWeight: FontWeight.bold,
                       ),
                     ),
                     Text(
-                      'Bé Ben • 28 tháng • Nam • 13.5 kg',
-                      style: TextStyle(color: Colors.black54),
+                      '${profile.gender} • 24 tuổi • Mã BN: ${profile.id} • BHYT: ${profile.insuranceNumber}',
+                      style: const TextStyle(color: Colors.black54, fontSize: 12),
                     ),
                   ],
                 ),
               ),
               const Text(
-                '#RX-2024-89241',
-                style: TextStyle(color: _primary, fontWeight: FontWeight.bold),
+                '#DT-2026-89241',
+                style: TextStyle(color: _primary, fontWeight: FontWeight.bold, fontSize: 13),
               ),
             ],
           ),
-          const Divider(height: 28),
+          const Divider(height: 24),
           const _DataRow(
             icon: Icons.event_note_outlined,
             title: 'Ngày kê đơn',
-            value: '24/10/2024',
+            value: '10/02/2026',
           ),
-          const SizedBox(height: 10),
+          const SizedBox(height: 8),
           const _DataRow(
             icon: Icons.timer_outlined,
             title: 'Hiệu lực đơn thuốc',
-            value: 'Đến hết 31/10/2024',
+            value: 'Đến hết 24/02/2026 (14 ngày)',
           ),
-          const SizedBox(height: 10),
+          const SizedBox(height: 8),
           const _DataRow(
             icon: Icons.medical_information_outlined,
-            title: 'Chẩn đoán',
-            value: 'Viêm họng cấp / Sốt siêu vi (J02.9)',
+            title: 'Chẩn đoán ICD-10',
+            value: 'K29.0 - Viêm loét dạ dày tá tràng sung huyết, Hp (+)',
           ),
           const SizedBox(height: 12),
           Container(
@@ -185,8 +174,8 @@ class _EPrescriptionPageState extends State<EPrescriptionPage> {
                 SizedBox(width: 8),
                 Expanded(
                   child: Text(
-                    'Đã ký số bởi ThS.BS Lê Thu Trang • Khoa Nhi & Sơ sinh',
-                    style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600),
+                    'Đã ký số bởi PGS.TS.BS Nguyễn Văn An • Chủ nhiệm Khoa Tiêu hóa',
+                    style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: Color(0xFF065F46)),
                   ),
                 ),
               ],
@@ -197,34 +186,35 @@ class _EPrescriptionPageState extends State<EPrescriptionPage> {
     ),
   );
 
-  Widget _dispensingCode() => Card(
+  Widget _dispensingCode(String patientId) => Card(
     color: const Color(0xFFEFF6FF),
+    elevation: 1,
     child: InkWell(
       borderRadius: BorderRadius.circular(12),
-      onTap: _showBarcodeDialog,
+      onTap: () => _showBarcodeDialog(patientId),
       child: const Padding(
         padding: EdgeInsets.all(16),
         child: Row(
           children: [
-            Icon(Icons.qr_code_scanner_rounded, size: 42, color: _primary),
+            Icon(Icons.qr_code_scanner_rounded, size: 40, color: _primary),
             SizedBox(width: 12),
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    'Mã xuất thuốc tại quầy Dược',
-                    style: TextStyle(fontWeight: FontWeight.bold),
+                    'Mã xuất thuốc tại Nhà thuốc Bệnh viện',
+                    style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
                   ),
                   SizedBox(height: 3),
                   Text(
-                    'Đưa mã cho dược sĩ tại tầng 1 để nhận thuốc.',
-                    style: TextStyle(fontSize: 12),
+                    'Chạm để mở mã vạch / QR cấp thuốc không chờ đợi',
+                    style: TextStyle(fontSize: 12, color: Colors.black54),
                   ),
                 ],
               ),
             ),
-            Icon(Icons.open_in_full, size: 18),
+            Icon(Icons.chevron_right, color: _primary),
           ],
         ),
       ),
@@ -232,11 +222,13 @@ class _EPrescriptionPageState extends State<EPrescriptionPage> {
   );
 
   Widget _reminderCard() => Card(
+    elevation: 1,
     child: Padding(
       padding: const EdgeInsets.all(16),
       child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          SwitchListTile.adaptive(
+          SwitchListTile(
             contentPadding: EdgeInsets.zero,
             title: const Text(
               'Nhắc uống thuốc tự động',
@@ -244,7 +236,7 @@ class _EPrescriptionPageState extends State<EPrescriptionPage> {
             ),
             subtitle: Text(
               _reminderEnabled
-                  ? 'Đang nhắc lúc ${_reminderTimes.join(', ')}'
+                  ? 'Đang nhắc cữ: ${_reminderTimes.join(', ')}'
                   : 'Chưa bật nhắc thuốc',
             ),
             value: _reminderEnabled,
@@ -257,7 +249,7 @@ class _EPrescriptionPageState extends State<EPrescriptionPage> {
               alignment: Alignment.centerLeft,
               child: Wrap(
                 spacing: 8,
-                children: ['08:00', '13:00', '18:00']
+                children: ['07:30', '12:00', '19:00', '21:00']
                     .map(
                       (time) => FilterChip(
                         label: Text(time),
@@ -288,6 +280,7 @@ class _EPrescriptionPageState extends State<EPrescriptionPage> {
     bool warning = false,
   }) => Card(
     margin: const EdgeInsets.only(bottom: 12),
+    elevation: 1,
     child: Padding(
       padding: const EdgeInsets.all(14),
       child: Column(
@@ -313,7 +306,7 @@ class _EPrescriptionPageState extends State<EPrescriptionPage> {
                     Text(
                       name,
                       style: const TextStyle(
-                        fontSize: 16,
+                        fontSize: 15,
                         fontWeight: FontWeight.bold,
                       ),
                     ),
@@ -341,13 +334,13 @@ class _EPrescriptionPageState extends State<EPrescriptionPage> {
               color: const Color(0xFFF1F5F9),
               borderRadius: BorderRadius.circular(10),
             ),
-            child: Text(instruction, style: const TextStyle(height: 1.4)),
+            child: Text(instruction, style: const TextStyle(height: 1.4, fontSize: 13)),
           ),
           if (note != null)
             Padding(
               padding: const EdgeInsets.only(top: 8),
               child: Text(
-                note,
+                '⚠️ Lưu ý: $note',
                 style: TextStyle(
                   color: warning ? const Color(0xFFDC2626) : Colors.black54,
                   fontSize: 12,
@@ -361,29 +354,30 @@ class _EPrescriptionPageState extends State<EPrescriptionPage> {
   );
 
   Widget _adviceAndFollowUp() => Card(
+    elevation: 1,
     child: Padding(
       padding: const EdgeInsets.all(16),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           const Text(
-            'Lời dặn bác sĩ',
-            style: TextStyle(fontSize: 17, fontWeight: FontWeight.bold),
+            'Lời dặn của Bác sĩ điều trị',
+            style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
           ),
           const SizedBox(height: 8),
           const Text(
-            '• Cho bé uống nhiều nước ấm, chia nhỏ cữ uống.\n• Vệ sinh mũi họng bằng nước muối sinh lý.\n• Đưa trẻ đi khám ngay nếu sốt cao kéo dài, khó thở hoặc bỏ ăn.',
-            style: TextStyle(height: 1.55),
+            '• Tuyệt đối uống thuốc đúng giờ, dùng đủ 14 ngày phác đồ kháng sinh diệt Hp.\n• Kiêng hoàn toàn rượu bia, cà phê, ớt, tiêu, đồ chua lên men và nước ngọt có gas.\n• Ăn đúng bữa, nhai kỹ, không ăn quá no và không nằm ngay sau bữa ăn.\n• Sau khi hết thuốc 4 tuần, đến viện làm test thở C13 để kiểm tra độ sạch khuẩn Hp.',
+            style: TextStyle(height: 1.5, fontSize: 13),
           ),
-          const Divider(height: 28),
+          const Divider(height: 24),
           const Row(
             children: [
               Icon(Icons.event_available_outlined, color: _primary),
               SizedBox(width: 8),
               Expanded(
                 child: Text(
-                  'Tái khám: Thứ Hai, 28/10/2024 (buổi sáng)',
-                  style: TextStyle(fontWeight: FontWeight.w600),
+                  'Hẹn tái khám: 10/03/2026 (Buổi sáng)',
+                  style: TextStyle(fontWeight: FontWeight.bold),
                 ),
               ),
             ],
@@ -395,7 +389,7 @@ class _EPrescriptionPageState extends State<EPrescriptionPage> {
               onPressed: () =>
                   Navigator.pushNamed(context, AppRoutes.appointments),
               icon: const Icon(Icons.calendar_month_outlined),
-              label: const Text('Đặt lịch tái khám 28/10'),
+              label: const Text('Đặt lịch tái khám định kỳ'),
             ),
           ),
         ],
@@ -404,56 +398,63 @@ class _EPrescriptionPageState extends State<EPrescriptionPage> {
   );
 
   Widget _costSummary() => const Card(
+    elevation: 1,
     child: Padding(
       padding: EdgeInsets.all(16),
       child: Column(
         children: [
-          _SummaryRow('Tạm tính thuốc kê đơn (4 mục)', '415.000đ'),
+          _SummaryRow('Tổng tiền thuốc kê đơn (4 loại)', '850.000đ'),
           SizedBox(height: 8),
-          _SummaryRow('BHYT / trợ giá viện', '-85.000đ', success: true),
+          _SummaryRow('BHYT chi trả theo quy định (80%)', '-680.000đ', success: true),
           Divider(height: 22),
-          _SummaryRow('Tổng tiền cần thanh toán', '330.000đ', bold: true),
+          _SummaryRow('Số tiền bệnh nhân cùng chi trả', '170.000đ', bold: true),
         ],
       ),
     ),
   );
 
-  void _showBarcodeDialog() => showDialog<void>(
+  void _showBarcodeDialog(String patientId) => showDialog<void>(
     context: context,
     builder: (dialogContext) => AlertDialog(
-      title: const Text('Mã xuất thuốc'),
+      title: const Text('Mã xuất thuốc điện tử'),
       content: Column(
         mainAxisSize: MainAxisSize.min,
-        children: const [
-          _BarcodeStrip(code: 'RX202489241'),
-          SizedBox(height: 12),
+        children: [
+          const Icon(Icons.qr_code_2, size: 120, color: _primary),
+          const SizedBox(height: 12),
           Text(
-            '#RX-2024-89241',
-            style: TextStyle(color: _primary, fontWeight: FontWeight.bold),
+            '#DT-2026-$patientId',
+            style: const TextStyle(color: _primary, fontWeight: FontWeight.bold, fontSize: 16),
           ),
-          SizedBox(height: 6),
-          Text(
-            'Dược sĩ quét mã để xác nhận xuất thuốc.',
+          const SizedBox(height: 6),
+          const Text(
+            'Đưa mã này cho Dược sĩ tại Quầy phát thuốc Tầng 1 để nhận thuốc nhanh.',
             textAlign: TextAlign.center,
+            style: TextStyle(fontSize: 12, color: Colors.grey),
           ),
         ],
       ),
       actions: [
-        TextButton(
+        FilledButton(
           onPressed: () => Navigator.pop(dialogContext),
           child: const Text('Đóng'),
         ),
       ],
     ),
   );
+
   void _sharePrescription() =>
-      _message('Đã chuẩn bị liên kết chia sẻ đơn thuốc an toàn.');
-  void _orderDelivery() =>
-      _message('Đã tạo yêu cầu giao thuốc. Dược sĩ sẽ xác nhận trong ít phút.');
+      _message('Đã tạo liên kết chia sẻ đơn thuốc có bảo mật mã PIN.');
+
+  void _orderDelivery() => _message(
+    'Đã tiếp nhận yêu cầu giao thuốc đến địa chỉ của bạn. Dược sĩ sẽ liên hệ sau 15 phút.',
+  );
+
   void _downloadPrescription() =>
-      _message('Đang chuẩn bị bản PDF có chữ ký số.');
+      _message('Đang tải file PDF đơn thuốc có chữ ký số điện tử...');
+
   void _message(String text) => ScaffoldMessenger.of(context).showSnackBar(
-    SnackBar(content: Text(text), behavior: SnackBarBehavior.floating),
+    SnackBar(content: Text(text), duration: const Duration(seconds: 2)),
   );
 }
 
@@ -463,77 +464,62 @@ class _DataRow extends StatelessWidget {
     required this.title,
     required this.value,
   });
+
   final IconData icon;
   final String title;
   final String value;
+
   @override
   Widget build(BuildContext context) => Row(
+    crossAxisAlignment: CrossAxisAlignment.start,
     children: [
-      Icon(icon, size: 18, color: const Color(0xFF0D6EFD)),
+      Icon(icon, size: 18, color: Colors.grey),
       const SizedBox(width: 8),
+      Text('$title: ', style: const TextStyle(color: Colors.black54, fontSize: 13)),
       Expanded(
-        child: Text(title, style: const TextStyle(color: Colors.black54)),
+        child: Text(
+          value,
+          style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
+        ),
       ),
-      Text(value, style: const TextStyle(fontWeight: FontWeight.w600)),
     ],
   );
 }
 
 class _SummaryRow extends StatelessWidget {
   const _SummaryRow(
-    this.label,
+    this.title,
     this.value, {
     this.success = false,
     this.bold = false,
   });
-  final String label;
+
+  final String title;
   final String value;
   final bool success;
   final bool bold;
+
   @override
   Widget build(BuildContext context) => Row(
     mainAxisAlignment: MainAxisAlignment.spaceBetween,
     children: [
       Text(
-        label,
+        title,
         style: TextStyle(
+          fontSize: bold ? 15 : 13,
           fontWeight: bold ? FontWeight.bold : FontWeight.normal,
         ),
       ),
       Text(
         value,
         style: TextStyle(
+          fontSize: bold ? 18 : 13,
+          fontWeight: FontWeight.bold,
           color: success
               ? const Color(0xFF10B981)
-              : (bold ? const Color(0xFF0D6EFD) : null),
-          fontWeight: bold || success ? FontWeight.bold : FontWeight.normal,
-          fontSize: bold ? 17 : 14,
+              : (bold ? const Color(0xFF0D6EFD) : Colors.black87),
         ),
       ),
     ],
-  );
-}
-
-class _BarcodeStrip extends StatelessWidget {
-  const _BarcodeStrip({required this.code});
-  final String code;
-  @override
-  Widget build(BuildContext context) => Container(
-    height: 96,
-    width: 250,
-    color: Colors.white,
-    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-    child: Row(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        for (final unit in code.codeUnits) ...[
-          Expanded(
-            flex: unit.isEven ? 2 : 1,
-            child: const ColoredBox(color: Colors.black),
-          ),
-          const Spacer(),
-        ],
-      ],
-    ),
   );
 }

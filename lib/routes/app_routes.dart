@@ -2,6 +2,7 @@ abstract final class AppRoutes {
   static const home = '/';
   static const appointments = '/appointments';
   static const doctors = '/doctors';
+  static const doctorDetail = '/doctor-detail';
   static const records = '/records';
   static const prescription = '/prescription';
   static const payment = '/payment';

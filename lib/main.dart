@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'pages/appointment_page.dart';
 import 'pages/additional_pages.dart';
 import 'pages/diagnostics_page.dart';
+import 'pages/doctor_detail_page.dart';
 import 'pages/doctors_page.dart';
 import 'pages/e_prescription_page.dart';
 import 'pages/home_page.dart';
@@ -94,6 +95,7 @@ class _HospitalAppState extends State<HospitalApp> {
                 AppRoutes.home: (context) => const HomePage(),
                 AppRoutes.appointments: (context) => const AppointmentPage(),
                 AppRoutes.doctors: (context) => const DoctorsPage(),
+                AppRoutes.doctorDetail: (context) => const DoctorDetailPage(),
                 AppRoutes.records: (context) => const PatientRecordsPage(),
                 AppRoutes.prescription: (context) => const EPrescriptionPage(),
                 AppRoutes.payment: (context) => const PaymentPage(),

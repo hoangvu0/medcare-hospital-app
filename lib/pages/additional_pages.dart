@@ -257,179 +257,860 @@ class ConfirmAppointmentPage extends StatelessWidget {
   const ConfirmAppointmentPage({super.key});
   @override
   Widget build(BuildContext context) {
+    final store = MedicalScope.of(context);
+    final profile = store.profile;
     final draft =
         ModalRoute.of(context)?.settings.arguments as AppointmentDraft?;
     if (draft == null) {
-      return const Scaffold(
-        body: Center(child: Text('Không tìm thấy thông tin lịch hẹn.')),
+      return Scaffold(
+        appBar: AppBar(title: const Text('Xác nhận đặt lịch')),
+        body: const Center(child: Text('Không tìm thấy thông tin lịch hẹn.')),
       );
     }
     final date =
         '${draft.dateTime.day.toString().padLeft(2, '0')}/${draft.dateTime.month.toString().padLeft(2, '0')}/${draft.dateTime.year}';
     final time =
         '${draft.dateTime.hour.toString().padLeft(2, '0')}:${draft.dateTime.minute.toString().padLeft(2, '0')}';
+
+    final originalPrice = draft.doctor.price;
+    final insuranceDiscount = draft.useInsurance ? (originalPrice * 0.8).round() : 0;
+    final finalPrice = originalPrice - insuranceDiscount;
+
     return Scaffold(
-      appBar: AppBar(title: const Text('Xác nhận đặt lịch')),
+      backgroundColor: const Color(0xFFFAF8FF),
+      appBar: AppBar(title: const Text('Xác nhận đặt lịch khám')),
       body: ListView(
-        padding: const EdgeInsets.all(20),
+        padding: const EdgeInsets.fromLTRB(16, 12, 16, 32),
         children: [
-          const Icon(Icons.fact_check, size: 72, color: _primary),
-          const SizedBox(height: 20),
-          Text(
-            draft.doctor.name,
-            textAlign: TextAlign.center,
-            style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
+          Card(
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+            child: Padding(
+              padding: const EdgeInsets.all(16),
+              child: Row(
+                children: [
+                  Container(
+                    width: 56,
+                    height: 56,
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFE2E7FF),
+                      borderRadius: BorderRadius.circular(16),
+                    ),
+                    child: const Icon(Icons.person, size: 32, color: Color(0xFF0057CD)),
+                  ),
+                  const SizedBox(width: 14),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFFE2E7FF),
+                            borderRadius: BorderRadius.circular(20),
+                          ),
+                          child: Text(
+                            draft.doctor.specialty,
+                            style: const TextStyle(
+                              fontSize: 11,
+                              fontWeight: FontWeight.bold,
+                              color: Color(0xFF0057CD),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          draft.doctor.name,
+                          style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                        ),
+                        Text(
+                          draft.doctor.location,
+                          style: const TextStyle(fontSize: 12, color: Colors.black54),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
           ),
-          const SizedBox(height: 16),
-          _FeatureCard(
-            title: 'Thông tin lịch hẹn',
-            text:
-                'Chuyên khoa: ${draft.doctor.specialty}\nNgày khám: $date\nKhung giờ: $time\nNgười khám: ${draft.patientName}\n${draft.doctor.location}\nTạm tính: ${(draft.useInsurance ? draft.doctor.price * .2 : draft.doctor.price).round()}đ',
+          const SizedBox(height: 12),
+          Card(
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+            child: Padding(
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text('Thời gian khám', style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold)),
+                  const SizedBox(height: 10),
+                  Row(
+                    children: [
+                      const Icon(Icons.calendar_today, size: 16, color: Color(0xFF0057CD)),
+                      const SizedBox(width: 8),
+                      Text('Ngày $date', style: const TextStyle(fontWeight: FontWeight.w600)),
+                      const Spacer(),
+                      const Icon(Icons.access_time, size: 16, color: Color(0xFF0057CD)),
+                      const SizedBox(width: 8),
+                      Text('Khung giờ: $time', style: const TextStyle(fontWeight: FontWeight.bold, color: Color(0xFF0057CD))),
+                    ],
+                  ),
+                ],
+              ),
+            ),
           ),
-          const SizedBox(height: 20),
-          FilledButton.icon(
-            onPressed: () {
-              final appointment = MedicalScope.of(context).book(
-                doctor: draft.doctor,
-                dateTime: draft.dateTime,
-                patientName: draft.patientName,
-                reason: draft.reason,
-                useInsurance: draft.useInsurance,
-              );
-              Navigator.pushNamedAndRemoveUntil(
-                context,
-                AppRoutes.bookingSuccess,
-                ModalRoute.withName(AppRoutes.home),
-                arguments: appointment,
-              );
-            },
-            icon: const Icon(Icons.check),
-            label: const Text('Xác nhận đặt lịch'),
+          const SizedBox(height: 12),
+          Card(
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+            child: Padding(
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text('Thông tin người khám', style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold)),
+                  const SizedBox(height: 10),
+                  _buildKeyValue('Họ và tên:', draft.patientName),
+                  _buildKeyValue('Mã bệnh nhân:', profile.id),
+                  _buildKeyValue('Số điện thoại:', profile.phone),
+                  _buildKeyValue(
+                    'Bảo hiểm y tế:',
+                    draft.useInsurance ? '${profile.insuranceNumber} (Đúng tuyến - Giảm 80%)' : 'Không áp dụng BHYT',
+                    valueColor: draft.useInsurance ? const Color(0xFF006C49) : Colors.black87,
+                  ),
+                  _buildKeyValue('Lý do khám:', draft.reason),
+                ],
+              ),
+            ),
+          ),
+          const SizedBox(height: 12),
+          Card(
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+            child: Padding(
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text('Chi tiết chi phí khám', style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold)),
+                  const SizedBox(height: 10),
+                  _buildKeyValue('Giá khám ban đầu:', '${originalPrice ~/ 1000}.000đ'),
+                  if (draft.useInsurance)
+                    _buildKeyValue(
+                      'BHYT chi trả (80%):',
+                      '- ${insuranceDiscount ~/ 1000}.000đ',
+                      valueColor: const Color(0xFF006C49),
+                    ),
+                  const Divider(),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      const Text('Tạm tính thanh toán:', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15)),
+                      Text(
+                        '${finalPrice ~/ 1000}.000đ',
+                        style: const TextStyle(
+                          fontSize: 20,
+                          fontWeight: FontWeight.bold,
+                          color: Color(0xFF0057CD),
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+          ),
+          const SizedBox(height: 24),
+          SizedBox(
+            height: 50,
+            child: FilledButton.icon(
+              onPressed: () {
+                final appointment = store.book(
+                  doctor: draft.doctor,
+                  dateTime: draft.dateTime,
+                  patientName: draft.patientName,
+                  reason: draft.reason,
+                  useInsurance: draft.useInsurance,
+                );
+                Navigator.pushNamedAndRemoveUntil(
+                  context,
+                  AppRoutes.bookingSuccess,
+                  ModalRoute.withName(AppRoutes.home),
+                  arguments: appointment,
+                );
+              },
+              icon: const Icon(Icons.check_circle_outline),
+              label: const Text('Xác nhận đặt lịch', style: TextStyle(fontSize: 16)),
+            ),
           ),
         ],
       ),
     );
   }
+
+  static Widget _buildKeyValue(String key, String value, {Color? valueColor}) => Padding(
+    padding: const EdgeInsets.symmetric(vertical: 4),
+    child: Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        SizedBox(
+          width: 120,
+          child: Text(key, style: const TextStyle(fontSize: 13, color: Colors.black54)),
+        ),
+        Expanded(
+          child: Text(
+            value,
+            style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: valueColor ?? Colors.black87),
+          ),
+        ),
+      ],
+    ),
+  );
 }
 
 class BookingSuccessPage extends StatelessWidget {
   const BookingSuccessPage({super.key});
+
   @override
   Widget build(BuildContext context) {
-    final appointment =
-        ModalRoute.of(context)?.settings.arguments as Appointment?;
-    return _FeaturePage(
-      title: 'Đặt lịch thành công',
-      icon: Icons.check_circle,
-      message:
-          'Mã lịch hẹn: ${appointment?.id ?? 'MED'}\nVui lòng đến trước giờ khám 15 phút.',
-      actionText: 'Xem lịch hẹn',
-      actionRoute: AppRoutes.myAppointments,
+    final appointment = ModalRoute.of(context)?.settings.arguments as Appointment?;
+    final date = appointment != null
+        ? '${appointment.dateTime.day.toString().padLeft(2, '0')}/${appointment.dateTime.month.toString().padLeft(2, '0')}/${appointment.dateTime.year}'
+        : '20/03/2026';
+    final time = appointment != null
+        ? '${appointment.dateTime.hour.toString().padLeft(2, '0')}:${appointment.dateTime.minute.toString().padLeft(2, '0')}'
+        : '09:00';
+
+    final ticketNo = appointment?.ticketNumber ?? 'KB-0824';
+    final apptId = appointment?.id ?? 'AP-2026-8924';
+
+    return Scaffold(
+      backgroundColor: const Color(0xFFFAF8FF),
+      appBar: AppBar(
+        title: const Text('Đặt lịch thành công'),
+        automaticallyImplyLeading: false,
+      ),
+      body: ListView(
+        padding: const EdgeInsets.all(20),
+        children: [
+          const Center(
+            child: CircleAvatar(
+              radius: 40,
+              backgroundColor: Color(0xFFD1E7DD),
+              child: Icon(Icons.check_rounded, size: 50, color: Color(0xFF0F5132)),
+            ),
+          ),
+          const SizedBox(height: 16),
+          const Center(
+            child: Text(
+              'Đặt lịch khám thành công!',
+              style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: Color(0xFF0F5132)),
+            ),
+          ),
+          const SizedBox(height: 4),
+          const Center(
+            child: Text(
+              'Phiếu khám điện tử của bạn đã được ghi nhận vào hệ thống.',
+              textAlign: TextAlign.center,
+              style: TextStyle(color: Colors.black54),
+            ),
+          ),
+          const SizedBox(height: 20),
+          Card(
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(16),
+              side: const BorderSide(color: Color(0xFF0057CD), width: 1.5),
+            ),
+            child: Padding(
+              padding: const EdgeInsets.all(18),
+              child: Column(
+                children: [
+                  const Text(
+                    'SỐ THỨ TỰ KHÁM TIẾP ĐÓN',
+                    style: TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.bold,
+                      letterSpacing: 1,
+                      color: Color(0xFF0057CD),
+                    ),
+                  ),
+                  const SizedBox(height: 6),
+                  Text(
+                    ticketNo,
+                    style: const TextStyle(
+                      fontSize: 36,
+                      fontWeight: FontWeight.w900,
+                      color: Color(0xFF0057CD),
+                    ),
+                  ),
+                  Text(
+                    'Mã lịch hẹn: $apptId',
+                    style: const TextStyle(fontSize: 12, color: Colors.black54),
+                  ),
+                  const SizedBox(height: 16),
+                  Container(
+                    width: 140,
+                    height: 140,
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(color: Colors.black12),
+                    ),
+                    child: const Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(Icons.qr_code_2, size: 100, color: Colors.black87),
+                        Text(
+                          'Mã QR Check-in',
+                          style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  const Text(
+                    'Quét mã QR tại Kiosk Tiếp đón tầng 1 để nhận phiếu in tự động',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(fontSize: 11, color: Colors.black54),
+                  ),
+                  const Divider(height: 24),
+                  _infoRow('Bác sĩ khám:', appointment?.doctorName ?? 'PGS.TS.BS Nguyễn Văn An'),
+                  _infoRow('Chuyên khoa:', appointment?.specialty ?? 'Tiêu hóa'),
+                  _infoRow('Thời gian:', '$date lúc $time'),
+                  _infoRow('Phòng khám:', appointment?.location ?? 'Phòng 305, Tòa B'),
+                ],
+              ),
+            ),
+          ),
+          const SizedBox(height: 14),
+          Card(
+            color: const Color(0xFFFFF3CD),
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            child: const Padding(
+              padding: EdgeInsets.all(12),
+              child: Row(
+                children: [
+                  Icon(Icons.info_outline, color: Color(0xFF664D03), size: 20),
+                  SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      'Vui lòng mang theo CCCD gắn chip hoặc thẻ BHYT trên ứng dụng VssID và đến trước giờ khám 15 phút.',
+                      style: TextStyle(fontSize: 12, color: Color(0xFF664D03)),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+          const SizedBox(height: 24),
+          FilledButton.icon(
+            onPressed: () => Navigator.pushNamed(context, AppRoutes.myAppointments),
+            icon: const Icon(Icons.calendar_month),
+            label: const Text('Xem lịch hẹn của tôi'),
+          ),
+          const SizedBox(height: 10),
+          OutlinedButton(
+            onPressed: () => Navigator.pushNamedAndRemoveUntil(
+              context,
+              AppRoutes.home,
+              (_) => false,
+            ),
+            child: const Text('Về trang chủ'),
+          ),
+        ],
+      ),
     );
   }
+
+  static Widget _infoRow(String label, String value) => Padding(
+    padding: const EdgeInsets.symmetric(vertical: 3),
+    child: Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      children: [
+        Text(label, style: const TextStyle(fontSize: 12, color: Colors.black54)),
+        Text(value, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
+      ],
+    ),
+  );
 }
 
 class MyAppointmentsPage extends StatelessWidget {
   const MyAppointmentsPage({super.key});
+
   @override
   Widget build(BuildContext context) {
-    final appointments = MedicalScope.of(context).appointments;
-    return Scaffold(
-      appBar: AppBar(title: const Text('Lịch hẹn của tôi')),
-      body: appointments.isEmpty
-          ? const Center(child: Text('Bạn chưa có lịch hẹn nào.'))
-          : ListView(
-              padding: const EdgeInsets.all(16),
-              children: appointments.map((item) {
-                final date =
-                    '${item.dateTime.day.toString().padLeft(2, '0')}/${item.dateTime.month.toString().padLeft(2, '0')}/${item.dateTime.year} • ${item.dateTime.hour.toString().padLeft(2, '0')}:${item.dateTime.minute.toString().padLeft(2, '0')}';
-                final status = switch (item.status) {
-                  AppointmentStatus.confirmed => 'Đã xác nhận',
-                  AppointmentStatus.completed => 'Hoàn thành',
-                  AppointmentStatus.cancelled => 'Đã hủy',
-                };
-                return Card(
-                  child: ListTile(
-                    leading: Icon(
-                      item.status == AppointmentStatus.cancelled
-                          ? Icons.cancel_outlined
-                          : Icons.calendar_month,
-                      color: item.status == AppointmentStatus.cancelled
-                          ? Colors.red
-                          : _primary,
-                    ),
-                    title: Text('${item.doctorName} • $status'),
-                    subtitle: Text('$date\n${item.location}'),
-                    isThreeLine: true,
-                    trailing: const Icon(Icons.chevron_right),
-                    onTap: () => Navigator.pushNamed(
-                      context,
-                      AppRoutes.appointmentDetail,
-                      arguments: item,
-                    ),
-                  ),
-                );
-              }).toList(),
+    final store = MedicalScope.of(context);
+    final appointments = store.appointments;
+
+    final upcoming = appointments.where((a) => a.status == AppointmentStatus.confirmed).toList();
+    final completed = appointments.where((a) => a.status == AppointmentStatus.completed).toList();
+    final cancelled = appointments.where((a) => a.status == AppointmentStatus.cancelled).toList();
+
+    return DefaultTabController(
+      length: 3,
+      child: Scaffold(
+        backgroundColor: const Color(0xFFFAF8FF),
+        appBar: AppBar(
+          title: const Text('Lịch hẹn của tôi'),
+          bottom: TabBar(
+            tabs: [
+              Tab(text: 'Sắp tới (${upcoming.length})'),
+              Tab(text: 'Đã khám (${completed.length})'),
+              Tab(text: 'Đã hủy (${cancelled.length})'),
+            ],
+          ),
+        ),
+        body: TabBarView(
+          children: [
+            _AppointmentList(
+              items: upcoming,
+              emptyMessage: 'Bạn không có lịch hẹn nào sắp tới.',
+              showBookButton: true,
             ),
+            _AppointmentList(
+              items: completed,
+              emptyMessage: 'Chưa có đợt khám nào hoàn thành.',
+            ),
+            _AppointmentList(
+              items: cancelled,
+              emptyMessage: 'Không có lịch hẹn nào đã hủy.',
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _AppointmentList extends StatelessWidget {
+  const _AppointmentList({
+    required this.items,
+    required this.emptyMessage,
+    this.showBookButton = false,
+  });
+
+  final List<Appointment> items;
+  final String emptyMessage;
+  final bool showBookButton;
+
+  @override
+  Widget build(BuildContext context) {
+    if (items.isEmpty) {
+      return Center(
+        child: Padding(
+          padding: const EdgeInsets.all(32),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Icon(Icons.event_busy_outlined, size: 64, color: Colors.black26),
+              const SizedBox(height: 16),
+              Text(emptyMessage, style: const TextStyle(fontSize: 15, color: Colors.black54)),
+              if (showBookButton) ...[
+                const SizedBox(height: 16),
+                FilledButton.icon(
+                  onPressed: () => Navigator.pushNamed(context, AppRoutes.appointments),
+                  icon: const Icon(Icons.add),
+                  label: const Text('Đặt lịch khám mới'),
+                ),
+              ],
+            ],
+          ),
+        ),
+      );
+    }
+
+    return ListView.builder(
+      padding: const EdgeInsets.all(16),
+      itemCount: items.length,
+      itemBuilder: (context, index) {
+        final item = items[index];
+        final date =
+            '${item.dateTime.day.toString().padLeft(2, '0')}/${item.dateTime.month.toString().padLeft(2, '0')}/${item.dateTime.year} • ${item.dateTime.hour.toString().padLeft(2, '0')}:${item.dateTime.minute.toString().padLeft(2, '0')}';
+
+        final (statusText, statusBg, statusFg) = switch (item.status) {
+          AppointmentStatus.confirmed => ('Đã xác nhận', const Color(0xFFD1E7DD), const Color(0xFF0F5132)),
+          AppointmentStatus.completed => ('Đã khám', const Color(0xFFCFE2FF), const Color(0xFF084298)),
+          AppointmentStatus.cancelled => ('Đã hủy', const Color(0xFFF8D7DA), const Color(0xFF842029)),
+        };
+
+        return Card(
+          margin: const EdgeInsets.only(bottom: 12),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          child: InkWell(
+            borderRadius: BorderRadius.circular(16),
+            onTap: () => Navigator.pushNamed(
+              context,
+              AppRoutes.appointmentDetail,
+              arguments: item,
+            ),
+            child: Padding(
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFE2E7FF),
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: Text(
+                          item.ticketNumber ?? 'KB-0824',
+                          style: const TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.bold,
+                            color: Color(0xFF0057CD),
+                          ),
+                        ),
+                      ),
+                      const Spacer(),
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                        decoration: BoxDecoration(
+                          color: statusBg,
+                          borderRadius: BorderRadius.circular(20),
+                        ),
+                        child: Text(
+                          statusText,
+                          style: TextStyle(
+                            fontSize: 11,
+                            fontWeight: FontWeight.bold,
+                            color: statusFg,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 12),
+                  Row(
+                    children: [
+                      const CircleAvatar(
+                        radius: 20,
+                        backgroundColor: Color(0xFFE2E7FF),
+                        child: Icon(Icons.person, color: Color(0xFF0057CD)),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              item.doctorName,
+                              style: const TextStyle(fontSize: 15, fontWeight: FontWeight.bold),
+                            ),
+                            Text(
+                              'Khoa ${item.specialty} • ${item.location}',
+                              style: const TextStyle(fontSize: 12, color: Colors.black54),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 12),
+                  const Divider(height: 1),
+                  const SizedBox(height: 10),
+                  Row(
+                    children: [
+                      const Icon(Icons.calendar_today_outlined, size: 14, color: Color(0xFF0057CD)),
+                      const SizedBox(width: 6),
+                      Text(date, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600)),
+                      const Spacer(),
+                      const Icon(Icons.chevron_right, size: 18, color: Colors.black45),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+          ),
+        );
+      },
     );
   }
 }
 
 class AppointmentDetailPage extends StatelessWidget {
   const AppointmentDetailPage({super.key});
+
   @override
   Widget build(BuildContext context) {
     final item = ModalRoute.of(context)?.settings.arguments as Appointment?;
     if (item == null) {
-      return const Scaffold(
-        body: Center(child: Text('Không tìm thấy lịch hẹn.')),
+      return Scaffold(
+        appBar: AppBar(title: const Text('Chi tiết lịch hẹn')),
+        body: const Center(child: Text('Không tìm thấy lịch hẹn.')),
       );
     }
+
     final date =
         '${item.dateTime.day.toString().padLeft(2, '0')}/${item.dateTime.month.toString().padLeft(2, '0')}/${item.dateTime.year} lúc ${item.dateTime.hour.toString().padLeft(2, '0')}:${item.dateTime.minute.toString().padLeft(2, '0')}';
+
+    final (statusText, statusBg, statusFg) = switch (item.status) {
+      AppointmentStatus.confirmed => ('Đã xác nhận khám', const Color(0xFFD1E7DD), const Color(0xFF0F5132)),
+      AppointmentStatus.completed => ('Đã hoàn thành khám', const Color(0xFFCFE2FF), const Color(0xFF084298)),
+      AppointmentStatus.cancelled => ('Đã hủy hẹn', const Color(0xFFF8D7DA), const Color(0xFF842029)),
+    };
+
     return Scaffold(
+      backgroundColor: const Color(0xFFFAF8FF),
       appBar: AppBar(title: const Text('Chi tiết lịch hẹn')),
       body: ListView(
-        padding: const EdgeInsets.all(20),
+        padding: const EdgeInsets.all(16),
         children: [
-          _FeatureCard(
-            title: item.doctorName,
-            text:
-                '${item.specialty}\n$date\n${item.location}\nMã lịch hẹn: ${item.id}\nLý do khám: ${item.reason}',
+          Card(
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+            child: Padding(
+              padding: const EdgeInsets.all(18),
+              child: Column(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+                    decoration: BoxDecoration(
+                      color: statusBg,
+                      borderRadius: BorderRadius.circular(20),
+                    ),
+                    child: Text(
+                      statusText,
+                      style: TextStyle(fontWeight: FontWeight.bold, color: statusFg),
+                    ),
+                  ),
+                  const SizedBox(height: 14),
+                  Text(
+                    item.ticketNumber ?? 'KB-0824',
+                    style: const TextStyle(fontSize: 28, fontWeight: FontWeight.bold, color: Color(0xFF0057CD)),
+                  ),
+                  Text('Mã phiếu khám: ${item.id}', style: const TextStyle(fontSize: 12, color: Colors.black54)),
+                ],
+              ),
+            ),
           ),
-          const SizedBox(height: 16),
-          if (item.status == AppointmentStatus.completed)
+          const SizedBox(height: 12),
+          Card(
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+            child: Padding(
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text('Thông tin khám', style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold)),
+                  const SizedBox(height: 10),
+                  _row('Bác sĩ:', item.doctorName),
+                  _row('Chuyên khoa:', item.specialty),
+                  _row('Thời gian hẹn:', date),
+                  _row('Phòng khám:', item.location),
+                  _row('Người khám:', item.patientName),
+                  _row('Bảo hiểm y tế:', item.insuranceApplied ? 'Áp dụng đúng tuyến (80%)' : 'Không dùng BHYT'),
+                  _row('Lý do khám:', item.reason),
+                ],
+              ),
+            ),
+          ),
+          const SizedBox(height: 12),
+          Card(
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+            child: const Padding(
+              padding: EdgeInsets.all(16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Icon(Icons.directions, color: Color(0xFF0057CD), size: 20),
+                      SizedBox(width: 8),
+                      Text('Chỉ dẫn di chuyển nội viện', style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold)),
+                    ],
+                  ),
+                  SizedBox(height: 10),
+                  Text(
+                    '1. Gửi xe tại Tòa nhà Bãi đỗ xe MedCare hoặc Cổng số 1.\n2. Đến Kiosk Tầng 1, quét mã QR để in phiếu số thứ tự.\n3. Đi thang máy B lên tầng tương ứng với phòng khám của bác sĩ.\n4. Xuất trình CCCD / VssID tại quầy điều dưỡng tiếp đón.',
+                    style: TextStyle(fontSize: 12, height: 1.6, color: Colors.black87),
+                  ),
+                ],
+              ),
+            ),
+          ),
+          const SizedBox(height: 24),
+          if (item.status == AppointmentStatus.confirmed) ...[
             FilledButton.icon(
-              onPressed: () =>
-                  Navigator.pushNamed(context, AppRoutes.doctorRating),
-              icon: const Icon(Icons.star_outline),
-              label: const Text('Đánh giá sau khám'),
-            ),
-          if (item.status == AppointmentStatus.confirmed)
-            OutlinedButton.icon(
-              onPressed: () {
-                MedicalScope.of(context).cancelAppointment(item.id);
-                Navigator.pop(context);
-              },
+              onPressed: () => Navigator.pushNamed(
+                context,
+                AppRoutes.cancelAppointment,
+                arguments: item,
+              ),
+              style: FilledButton.styleFrom(
+                backgroundColor: const Color(0xFFDC3545),
+              ),
               icon: const Icon(Icons.cancel_outlined),
-              label: const Text('Hủy lịch khám'),
+              label: const Text('Hủy lịch hẹn này'),
             ),
+          ],
+          if (item.status == AppointmentStatus.completed) ...[
+            FilledButton.icon(
+              onPressed: () => Navigator.pushNamed(context, AppRoutes.records),
+              icon: const Icon(Icons.folder_shared_outlined),
+              label: const Text('Xem bệnh án đợt khám này'),
+            ),
+            const SizedBox(height: 10),
+            OutlinedButton.icon(
+              onPressed: () => Navigator.pushNamed(context, AppRoutes.doctorRating),
+              icon: const Icon(Icons.star_outline),
+              label: const Text('Đánh giá bác sĩ'),
+            ),
+          ],
         ],
       ),
     );
   }
+
+  static Widget _row(String label, String value) => Padding(
+    padding: const EdgeInsets.symmetric(vertical: 4),
+    child: Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        SizedBox(
+          width: 110,
+          child: Text(label, style: const TextStyle(fontSize: 12, color: Colors.black54)),
+        ),
+        Expanded(
+          child: Text(value, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600)),
+        ),
+      ],
+    ),
+  );
 }
 
-class CancelAppointmentPage extends StatelessWidget {
+class CancelAppointmentPage extends StatefulWidget {
   const CancelAppointmentPage({super.key});
+
   @override
-  Widget build(BuildContext context) => const _FormPage(
-    title: 'Hủy lịch khám',
-    fields: ['Lý do hủy lịch'],
-    action: 'Xác nhận hủy lịch',
-    actionRoute: AppRoutes.myAppointments,
-    secondary: 'Quay lại',
-  );
+  State<CancelAppointmentPage> createState() => _CancelAppointmentPageState();
+}
+
+class _CancelAppointmentPageState extends State<CancelAppointmentPage> {
+  int _selectedReason = 0;
+  final _reasonController = TextEditingController();
+
+  final _reasons = const [
+    'Bận công việc cá nhân đột xuất',
+    'Triệu chứng bệnh đã thuyên giảm / khỏi hẳn',
+    'Đã khám tại cơ sở y tế khác gần nhà',
+    'Muốn đổi bác sĩ chuyên khoa hoặc khung giờ khác',
+    'Lý do khác',
+  ];
+
+  @override
+  void dispose() {
+    _reasonController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final item = ModalRoute.of(context)?.settings.arguments as Appointment?;
+    final store = MedicalScope.of(context);
+
+    return Scaffold(
+      backgroundColor: const Color(0xFFFAF8FF),
+      appBar: AppBar(title: const Text('Hủy lịch khám')),
+      body: ListView(
+        padding: const EdgeInsets.all(20),
+        children: [
+          if (item != null)
+            Card(
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+              child: Padding(
+                padding: const EdgeInsets.all(16),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Lịch hẹn: ${item.ticketNumber ?? item.id}',
+                      style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: Color(0xFF0057CD)),
+                    ),
+                    const SizedBox(height: 4),
+                    Text('${item.doctorName} • ${item.specialty}', style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w600)),
+                    Text(item.location, style: const TextStyle(fontSize: 12, color: Colors.black54)),
+                  ],
+                ),
+              ),
+            ),
+          const SizedBox(height: 16),
+          const Text(
+            'Vui lòng cho biết lý do bạn muốn hủy lịch hẹn:',
+            style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
+          ),
+          const SizedBox(height: 8),
+          ...List.generate(_reasons.length, (index) {
+            final isSelected = _selectedReason == index;
+            return InkWell(
+              onTap: () => setState(() => _selectedReason = index),
+              borderRadius: BorderRadius.circular(8),
+              child: Padding(
+                padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 4),
+                child: Row(
+                  children: [
+                    Icon(
+                      isSelected ? Icons.radio_button_checked : Icons.radio_button_off,
+                      color: isSelected ? const Color(0xFF0057CD) : Colors.black45,
+                      size: 20,
+                    ),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: Text(_reasons[index], style: const TextStyle(fontSize: 14)),
+                    ),
+                  ],
+                ),
+              ),
+            );
+          }),
+          if (_selectedReason == _reasons.length - 1) ...[
+            const SizedBox(height: 8),
+            TextField(
+              controller: _reasonController,
+              maxLines: 3,
+              decoration: const InputDecoration(
+                hintText: 'Nhập chi tiết lý do hủy...',
+              ),
+            ),
+          ],
+          const SizedBox(height: 24),
+          FilledButton(
+            onPressed: () {
+              if (item != null) {
+                store.cancelAppointment(item.id);
+              } else if (store.appointments.isNotEmpty) {
+                final firstConfirmed = store.appointments.where((a) => a.status == AppointmentStatus.confirmed).firstOrNull;
+                if (firstConfirmed != null) {
+                  store.cancelAppointment(firstConfirmed.id);
+                }
+              }
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(
+                  content: Text('Đã hủy lịch khám thành công!'),
+                  backgroundColor: Color(0xFFDC3545),
+                ),
+              );
+              Navigator.pushNamedAndRemoveUntil(
+                context,
+                AppRoutes.myAppointments,
+                ModalRoute.withName(AppRoutes.home),
+              );
+            },
+            style: FilledButton.styleFrom(
+              backgroundColor: const Color(0xFFDC3545),
+              minimumSize: const Size.fromHeight(48),
+            ),
+            child: const Text('Xác nhận hủy lịch khám'),
+          ),
+          const SizedBox(height: 12),
+          OutlinedButton(
+            onPressed: () => Navigator.pop(context),
+            style: OutlinedButton.styleFrom(minimumSize: const Size.fromHeight(48)),
+            child: const Text('Quay lại'),
+          ),
+        ],
+      ),
+    );
+  }
 }
 
 class VisitHistoryPage extends StatelessWidget {

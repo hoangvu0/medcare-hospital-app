@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 
+import '../models/medical_models.dart';
 import '../routes/app_routes.dart';
 import '../state/medical_store.dart';
 import '../state/app_settings_store.dart';
-import 'doctor_detail_page.dart';
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
@@ -279,109 +279,160 @@ class _HomePageState extends State<HomePage> {
     ),
   );
 
-  Widget _appointment() => Padding(
-    padding: const EdgeInsets.fromLTRB(16, 24, 16, 0),
-    child: Column(
-      children: [
-        _sectionTitle('Lịch hẹn sắp tới', 'Tất cả (2)'),
-        const SizedBox(height: 9),
-        InkWell(
-          onTap: () => Navigator.pushNamed(context, AppRoutes.appointments),
-          borderRadius: BorderRadius.circular(16),
-          child: Container(
-            padding: const EdgeInsets.all(16),
-            decoration: _cardDecoration(),
-            child: Column(
-              children: [
-                Row(
+  Widget _appointment() {
+    final store = MedicalScope.of(context);
+    final confirmedAppointments = store.appointments
+        .where((a) => a.status == AppointmentStatus.confirmed)
+        .toList();
+    final nextAppointment = confirmedAppointments.firstOrNull;
+
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 24, 16, 0),
+      child: Column(
+        children: [
+          _sectionTitle(
+            'Lịch hẹn sắp tới',
+            'Tất cả (${confirmedAppointments.length})',
+            route: AppRoutes.myAppointments,
+          ),
+          const SizedBox(height: 9),
+          if (nextAppointment != null)
+            InkWell(
+              onTap: () => Navigator.pushNamed(
+                context,
+                AppRoutes.appointmentDetail,
+                arguments: nextAppointment,
+              ),
+              borderRadius: BorderRadius.circular(16),
+              child: Container(
+                padding: const EdgeInsets.all(16),
+                decoration: _cardDecoration(),
+                child: Column(
                   children: [
-                    const Chip(label: Text('Đã xác nhận khám')),
-                    const Spacer(),
-                    const Text(
-                      '#MED-9428',
-                      style: TextStyle(color: grey, fontSize: 11),
+                    Row(
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFFD1E7DD),
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: Text(
+                            nextAppointment.ticketNumber ?? 'Đã xác nhận khám',
+                            style: const TextStyle(
+                              fontSize: 12,
+                              fontWeight: FontWeight.bold,
+                              color: Color(0xFF0F5132),
+                            ),
+                          ),
+                        ),
+                        const Spacer(),
+                        Text(
+                          '#${nextAppointment.id}',
+                          style: const TextStyle(color: grey, fontSize: 11),
+                        ),
+                      ],
                     ),
-                  ],
-                ),
-                const SizedBox(height: 12),
-                const Row(
-                  children: [
-                    CircleAvatar(
-                      radius: 28,
-                      backgroundColor: Color(0xFFE2E7FF),
-                      child: Icon(Icons.person, color: primary),
+                    const SizedBox(height: 12),
+                    Row(
+                      children: [
+                        const CircleAvatar(
+                          radius: 28,
+                          backgroundColor: Color(0xFFE2E7FF),
+                          child: Icon(Icons.person, color: primary),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                'CHUYÊN KHOA ${nextAppointment.specialty.toUpperCase()}',
+                                style: const TextStyle(
+                                  color: primary,
+                                  fontSize: 10,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                              const SizedBox(height: 3),
+                              Text(
+                                nextAppointment.doctorName,
+                                style: const TextStyle(
+                                  color: dark,
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                              Text(
+                                nextAppointment.location,
+                                style: const TextStyle(color: grey, fontSize: 11),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
                     ),
-                    SizedBox(width: 12),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
+                    const SizedBox(height: 12),
+                    Container(
+                      padding: const EdgeInsets.all(11),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFF2F3FF),
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: Row(
                         children: [
+                          const Icon(
+                            Icons.calendar_today_outlined,
+                            size: 15,
+                            color: primary,
+                          ),
+                          const SizedBox(width: 8),
                           Text(
-                            'CHUYÊN KHOA TIM MẠCH',
-                            style: TextStyle(
+                            'Ngày ${nextAppointment.dateTime.day.toString().padLeft(2, '0')}/${nextAppointment.dateTime.month.toString().padLeft(2, '0')}/${nextAppointment.dateTime.year}',
+                            style: const TextStyle(
+                              fontSize: 12,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                          const Spacer(),
+                          Text(
+                            '${nextAppointment.dateTime.hour.toString().padLeft(2, '0')}:${nextAppointment.dateTime.minute.toString().padLeft(2, '0')}',
+                            style: const TextStyle(
                               color: primary,
-                              fontSize: 10,
                               fontWeight: FontWeight.bold,
                             ),
-                          ),
-                          SizedBox(height: 3),
-                          Text(
-                            'BS. CKI Nguyễn Văn An',
-                            style: TextStyle(
-                              color: dark,
-                              fontSize: 16,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                          Text(
-                            'Phòng khám 304 - Tầng 3, Nhà A',
-                            style: TextStyle(color: grey, fontSize: 11),
                           ),
                         ],
                       ),
                     ),
                   ],
                 ),
-                const SizedBox(height: 12),
-                Container(
-                  padding: const EdgeInsets.all(11),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFFF2F3FF),
-                    borderRadius: BorderRadius.circular(12),
+              ),
+            )
+          else
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.all(20),
+              decoration: _cardDecoration(),
+              child: Column(
+                children: [
+                  const Text(
+                    'Bạn chưa có lịch hẹn nào sắp tới.',
+                    style: TextStyle(color: grey),
                   ),
-                  child: const Row(
-                    children: [
-                      Icon(
-                        Icons.calendar_today_outlined,
-                        size: 15,
-                        color: primary,
-                      ),
-                      SizedBox(width: 8),
-                      Text(
-                        'Ngày mai, 18/10/2024',
-                        style: TextStyle(
-                          fontSize: 12,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                      Spacer(),
-                      Text(
-                        '09:30',
-                        style: TextStyle(
-                          color: primary,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                    ],
+                  const SizedBox(height: 10),
+                  FilledButton.icon(
+                    onPressed: () => Navigator.pushNamed(context, AppRoutes.appointments),
+                    icon: const Icon(Icons.add, size: 16),
+                    label: const Text('Đặt lịch khám ngay'),
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
-          ),
-        ),
-      ],
-    ),
-  );
+        ],
+      ),
+    );
+  }
 
   Widget _quickActions() {
     const actions = [
@@ -493,117 +544,109 @@ class _HomePageState extends State<HomePage> {
     );
   }
 
-  Widget _topDoctors() => Padding(
-    padding: const EdgeInsets.fromLTRB(16, 24, 16, 0),
-    child: Column(
-      children: [
-        _sectionTitle(
-          'Bác sĩ tiêu biểu tuần này',
-          'Danh sách',
-          route: AppRoutes.doctors,
-        ),
-        const SizedBox(height: 12),
-        _doctorCard(
-          'Khoa Nhi',
-          'PGS.TS Lê Thị Mai',
-          'Trưởng khoa Nhi • 22 năm kinh nghiệm',
-          '350.000đ',
-        ),
-        const SizedBox(height: 12),
-        _doctorCard(
-          'Tai Mũi Họng',
-          'ThS.BS Trần Quang Huy',
-          'Chuyên khoa Cấp cao • 14 năm kinh nghiệm',
-          '300.000đ',
-        ),
-      ],
-    ),
-  );
+  Widget _topDoctors() {
+    final store = MedicalScope.of(context);
+    final topDoctors = store.doctors.take(2).toList();
 
-  Widget _doctorCard(
-    String specialty,
-    String name,
-    String experience,
-    String price,
-  ) => Container(
-    padding: const EdgeInsets.all(16),
-    decoration: _cardDecoration(),
-    child: Column(
-      children: [
-        Row(
-          children: [
-            const CircleAvatar(
-              radius: 32,
-              backgroundColor: Color(0xFFE2E7FF),
-              child: Icon(Icons.person, color: primary, size: 34),
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 24, 16, 0),
+      child: Column(
+        children: [
+          _sectionTitle(
+            'Bác sĩ tiêu biểu tuần này',
+            'Xem tất cả (${store.doctors.length})',
+            route: AppRoutes.doctors,
+          ),
+          const SizedBox(height: 12),
+          ...topDoctors.map(
+            (doctor) => Padding(
+              padding: const EdgeInsets.only(bottom: 12),
+              child: _doctorCard(doctor),
             ),
-            const SizedBox(width: 14),
-            Expanded(
-              child: Column(
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _doctorCard(DoctorProfile doctor) => InkWell(
+    onTap: () => Navigator.pushNamed(
+      context,
+      AppRoutes.doctorDetail,
+      arguments: doctor,
+    ),
+    borderRadius: BorderRadius.circular(16),
+    child: Container(
+      padding: const EdgeInsets.all(16),
+      decoration: _cardDecoration(),
+      child: Column(
+        children: [
+          Row(
+            children: [
+              const CircleAvatar(
+                radius: 32,
+                backgroundColor: Color(0xFFE2E7FF),
+                child: Icon(Icons.person, color: primary, size: 34),
+              ),
+              const SizedBox(width: 14),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Chip(label: Text(doctor.specialty)),
+                    Text(
+                      doctor.name,
+                      style: const TextStyle(
+                        color: dark,
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    Text(
+                      doctor.experience,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(color: grey, fontSize: 11),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          Row(
+            children: [
+              Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Chip(label: Text(specialty)),
+                  const Text(
+                    'Phí khám tư vấn',
+                    style: TextStyle(color: grey, fontSize: 10),
+                  ),
                   Text(
-                    name,
+                    '${doctor.price ~/ 1000}.000đ',
                     style: const TextStyle(
-                      color: dark,
-                      fontSize: 16,
+                      color: primary,
+                      fontSize: 17,
                       fontWeight: FontWeight.bold,
                     ),
                   ),
-                  Text(
-                    experience,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(color: grey, fontSize: 11),
-                  ),
                 ],
               ),
-            ),
-          ],
-        ),
-        const SizedBox(height: 12),
-        Row(
-          children: [
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const Text(
-                  'Phí khám tư vấn',
-                  style: TextStyle(color: grey, fontSize: 10),
+              const Spacer(),
+              FilledButton.icon(
+                onPressed: () => Navigator.pushNamed(
+                  context,
+                  AppRoutes.appointments,
+                  arguments: doctor,
                 ),
-                Text(
-                  price,
-                  style: const TextStyle(
-                    color: primary,
-                    fontSize: 17,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-              ],
-            ),
-            const Spacer(),
-            FilledButton.icon(
-              onPressed: () => Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (_) => DoctorDetailPage(
-                    doctor: DoctorInfo(
-                      name: name,
-                      specialty: specialty,
-                      experience: experience,
-                      rating: '4.9',
-                      price: price,
-                    ),
-                  ),
-                ),
+                icon: const Icon(Icons.calendar_month, size: 15),
+                label: const Text('Đặt lịch ngay'),
               ),
-              icon: const Icon(Icons.calendar_month, size: 15),
-              label: const Text('Đặt lịch ngay'),
-            ),
-          ],
-        ),
-      ],
+            ],
+          ),
+        ],
+      ),
     ),
   );
 

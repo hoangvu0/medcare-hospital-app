@@ -12,6 +12,8 @@ void main() {
 
   test('đặt rồi hủy lịch cập nhật state và thông báo', () {
     final store = MedicalStore();
+    final initialCount = store.appointments.length;
+    final initialNotifs = store.notifications.length;
     final appointment = store.book(
       doctor: store.doctors.first,
       dateTime: DateTime(2026, 10, 1, 9),
@@ -20,11 +22,14 @@ void main() {
       useInsurance: false,
     );
 
-    expect(store.appointments, hasLength(1));
-    expect(store.notifications, hasLength(1));
+    expect(store.appointments, hasLength(initialCount + 1));
+    expect(store.notifications, hasLength(initialNotifs + 1));
     expect(appointment.status, AppointmentStatus.confirmed);
     store.cancelAppointment(appointment.id);
-    expect(store.appointments.single.status, AppointmentStatus.cancelled);
-    expect(store.notifications, hasLength(2));
+    expect(
+      store.appointments.firstWhere((a) => a.id == appointment.id).status,
+      AppointmentStatus.cancelled,
+    );
+    expect(store.notifications, hasLength(initialNotifs + 2));
   });
 }

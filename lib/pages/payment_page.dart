@@ -1,5 +1,8 @@
 import 'package:flutter/material.dart';
 
+import '../models/medical_models.dart';
+import '../state/medical_store.dart';
+
 class PaymentPage extends StatefulWidget {
   const PaymentPage({super.key});
 
@@ -14,51 +17,56 @@ class _PaymentPageState extends State<PaymentPage> {
   bool _invoiceRequested = true;
   bool _privateGuarantee = false;
   String _wallet = 'MoMo';
-  String _email = 'minhquan.family@gmail.com';
+  String _email = 'vu@example.com';
 
   @override
-  Widget build(BuildContext context) => Scaffold(
-    backgroundColor: const Color(0xFFF8FAFC),
-    appBar: AppBar(
-      title: const Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            'Thanh toán viện phí',
-            style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-          ),
-          Text(
-            'Chi tiết & thanh toán trực tuyến',
-            style: TextStyle(fontSize: 11, color: Colors.black54),
+  Widget build(BuildContext context) {
+    final store = MedicalScope.of(context);
+    final profile = store.profile;
+
+    return Scaffold(
+      backgroundColor: const Color(0xFFF8FAFC),
+      appBar: AppBar(
+        title: const Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'Thanh toán viện phí',
+              style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+            ),
+            Text(
+              'Chi tiết & thanh toán trực tuyến',
+              style: TextStyle(fontSize: 11, color: Colors.black54),
+            ),
+          ],
+        ),
+        actions: [
+          IconButton(
+            onPressed: _downloadStatement,
+            tooltip: 'Tải bảng kê',
+            icon: const Icon(Icons.download_outlined),
           ),
         ],
       ),
-      actions: [
-        IconButton(
-          onPressed: _downloadStatement,
-          tooltip: 'Tải bảng kê',
-          icon: const Icon(Icons.download_outlined),
-        ),
-      ],
-    ),
-    body: ListView(
-      padding: const EdgeInsets.fromLTRB(16, 8, 16, 132),
-      children: [
-        _invoiceCard(),
-        const SizedBox(height: 18),
-        _costSection(),
-        const SizedBox(height: 18),
-        _insuranceSection(),
-        const SizedBox(height: 18),
-        _paymentSection(),
-        const SizedBox(height: 18),
-        _eInvoiceSection(),
-      ],
-    ),
-    bottomNavigationBar: _bottomBar(),
-  );
+      body: ListView(
+        padding: const EdgeInsets.fromLTRB(16, 8, 16, 132),
+        children: [
+          _invoiceCard(profile),
+          const SizedBox(height: 18),
+          _costSection(),
+          const SizedBox(height: 18),
+          _insuranceSection(profile),
+          const SizedBox(height: 18),
+          _paymentSection(),
+          const SizedBox(height: 18),
+          _eInvoiceSection(),
+        ],
+      ),
+      bottomNavigationBar: _bottomBar(),
+    );
+  }
 
-  Widget _invoiceCard() => Card(
+  Widget _invoiceCard(PatientProfile profile) => Card(
     child: Padding(
       padding: const EdgeInsets.all(20),
       child: Column(
@@ -66,28 +74,28 @@ class _PaymentPageState extends State<PaymentPage> {
         children: [
           const Chip(
             avatar: Icon(Icons.circle, size: 8, color: Color(0xFFF59E0B)),
-            label: Text('Chờ thanh toán'),
+            label: Text('Chờ thanh toán viện phí'),
           ),
           const SizedBox(height: 8),
           const Text(
-            'Mã đợt khám: #VP-89241-1024',
+            'Mã đợt khám: #HS-2026-0891 (Khoa Tiêu hóa)',
             style: TextStyle(
               color: Colors.black54,
               fontWeight: FontWeight.bold,
             ),
           ),
           const SizedBox(height: 14),
-          const ListTile(
+          ListTile(
             contentPadding: EdgeInsets.zero,
-            leading: CircleAvatar(
+            leading: const CircleAvatar(
               backgroundColor: Color(0xFFE7F0FF),
-              child: Icon(Icons.child_care, color: _primary),
+              child: Icon(Icons.person, color: _primary),
             ),
             title: Text(
-              'Trần Minh Quân • Bé Ben',
-              style: TextStyle(fontWeight: FontWeight.bold),
+              profile.name,
+              style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 17),
             ),
-            subtitle: Text('Mã bệnh nhân: MC-89241 • 4 tuổi'),
+            subtitle: Text('Mã BN: ${profile.id} • ${profile.gender} • 24 tuổi'),
           ),
           const Text(
             'SỐ TIỀN THỰC TRẢ',
@@ -101,7 +109,7 @@ class _PaymentPageState extends State<PaymentPage> {
           const Row(
             children: [
               Text(
-                '680.000đ',
+                '330.000đ',
                 style: TextStyle(
                   fontSize: 30,
                   fontWeight: FontWeight.bold,
@@ -110,7 +118,7 @@ class _PaymentPageState extends State<PaymentPage> {
               ),
               SizedBox(width: 12),
               Chip(
-                label: Text('Đã giảm trừ BHYT'),
+                label: Text('Đã giảm 80% BHYT'),
                 avatar: Icon(Icons.verified, size: 14, color: _success),
               ),
             ],
@@ -141,38 +149,38 @@ class _PaymentPageState extends State<PaymentPage> {
         child: Column(
           children: [
             const _CostItem(
-              title: 'Phí khám chuyên khoa',
-              detail: 'ThS.BS Lê Thu Trang • Khám Nhi & Sơ sinh',
+              title: 'Phí khám Chuyên gia Tiêu hóa',
+              detail: 'PGS.TS.BS Nguyễn Văn An • Khoa Tiêu hóa - Gan mật',
+              gross: '500.000đ',
+              insurance: '-400.000đ',
+              payable: '100.000đ',
+            ),
+            const Divider(height: 1),
+            const _CostItem(
+              title: 'Nội soi Thực quản - Dạ dày - Tá tràng',
+              detail: 'Nội soi gây mê không đau + Test vi khuẩn Hp',
+              gross: '800.000đ',
+              insurance: '-640.000đ',
+              payable: '160.000đ',
+            ),
+            const Divider(height: 1),
+            const _CostItem(
+              title: 'Xét nghiệm máu sinh hóa 8 chỉ số',
+              detail: 'Glucose, Ure, Creatinine, AST, ALT, Mỡ máu',
               gross: '350.000đ',
-              insurance: '0đ',
-              payable: '350.000đ',
-            ),
-            const Divider(height: 1),
-            const _CostItem(
-              title: 'Xét nghiệm CRP & huyết học',
-              detail: 'CRP định lượng và công thức máu tự động',
-              gross: '280.000đ',
-              insurance: '-224.000đ',
-              payable: '56.000đ',
-            ),
-            const Divider(height: 1),
-            const _CostItem(
-              title: 'Đơn thuốc ngoại trú',
-              detail: 'Hapacol, Augmentin, Prospan, BioGaia',
-              gross: '320.000đ',
-              insurance: '-46.000đ',
-              payable: '274.000đ',
+              insurance: '-280.000đ',
+              payable: '70.000đ',
             ),
             Container(
               color: const Color(0xFFF1F5F9),
               padding: const EdgeInsets.all(16),
               child: const Column(
                 children: [
-                  _BillRow('Giá gốc', '950.000đ'),
+                  _BillRow('Tổng chi phí gốc', '1.650.000đ'),
                   SizedBox(height: 8),
-                  _BillRow('BHYT đúng tuyến 80%', '-270.000đ', success: true),
+                  _BillRow('BHYT chi trả đúng tuyến (80%)', '-1.320.000đ', success: true),
                   Divider(height: 22),
-                  _BillRow('Số tiền thực trả', '680.000đ', bold: true),
+                  _BillRow('Số tiền bệnh nhân thực trả', '330.000đ', bold: true),
                 ],
               ),
             ),
@@ -182,11 +190,11 @@ class _PaymentPageState extends State<PaymentPage> {
     ],
   );
 
-  Widget _insuranceSection() => Column(
+  Widget _insuranceSection(PatientProfile profile) => Column(
     crossAxisAlignment: CrossAxisAlignment.start,
     children: [
       const Text(
-        'Bảo hiểm áp dụng',
+        'Bảo hiểm y tế áp dụng',
         style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
       ),
       const SizedBox(height: 10),
@@ -195,22 +203,22 @@ class _PaymentPageState extends State<PaymentPage> {
           padding: const EdgeInsets.all(16),
           child: Column(
             children: [
-              const ListTile(
+              ListTile(
                 contentPadding: EdgeInsets.zero,
-                leading: CircleAvatar(
+                leading: const CircleAvatar(
                   backgroundColor: _success,
                   child: Icon(Icons.shield_outlined, color: Colors.white),
                 ),
-                title: Text(
-                  'Thẻ BHYT Trẻ Em (Dưới 6 tuổi)',
+                title: const Text(
+                  'Thẻ Bảo hiểm Y tế (BHYT)',
                   style: TextStyle(fontWeight: FontWeight.bold),
                 ),
-                subtitle: Text('GD4010234891*** • Đã xác thực thông tuyến'),
+                subtitle: Text('${profile.insuranceNumber} • Đã liên thông Cổng BHXH VN'),
               ),
               const Align(
                 alignment: Alignment.centerLeft,
                 child: Text(
-                  'Dữ liệu đã được liên thông tự động với Cổng BHXH Quốc gia. Quyền lợi được áp dụng trực tiếp vào hóa đơn.',
+                  'Dữ liệu đã được liên thông tự động với Cổng BHXH Quốc gia. Mức hưởng 80% đúng tuyến được áp dụng trực tiếp vào hóa đơn.',
                   style: TextStyle(fontSize: 12, color: Colors.black54),
                 ),
               ),
