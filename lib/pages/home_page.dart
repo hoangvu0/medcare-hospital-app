@@ -31,6 +31,7 @@ class _HomePageState extends State<HomePage> {
               children: [
                 if (settings.isOfflineSimulated) _offlineBanner(settings),
                 _greeting(),
+                _aiAssistantBanner(),
                 _emergency(),
                 _appointment(),
                 _quickActions(),
@@ -41,6 +42,7 @@ class _HomePageState extends State<HomePage> {
             ),
             _header(),
             _bottomNavigation(),
+
           ],
         ),
       ),
@@ -210,74 +212,144 @@ class _HomePageState extends State<HomePage> {
   );
 }
 
-  Widget _emergency() => Padding(
-    padding: const EdgeInsets.symmetric(horizontal: 16),
-    child: Container(
-      padding: const EdgeInsets.all(14),
-      decoration: BoxDecoration(
-        color: const Color(0xFFFFDAD6),
-        borderRadius: BorderRadius.circular(16),
-      ),
-      child: Row(
-        children: [
-          const CircleAvatar(
-            backgroundColor: Color(0xFFBA1A1A),
-            child: Icon(Icons.phone, color: Colors.white),
+  Widget _aiAssistantBanner() => Padding(
+    padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
+    child: InkWell(
+      onTap: () => Navigator.pushNamed(context, AppRoutes.aiAssistant),
+      borderRadius: BorderRadius.circular(18),
+      child: Container(
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          gradient: const LinearGradient(
+            colors: [Color(0xFF0057CD), Color(0xFF1E3A8A)],
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
           ),
-          const SizedBox(width: 12),
-          const Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  'CẤP CỨU 24/7',
-                  style: TextStyle(
-                    color: Color(0xFFBA1A1A),
-                    fontSize: 11,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-                SizedBox(height: 2),
-                Text(
-                  '1900 8899',
-                  style: TextStyle(
-                    color: Color(0xFF93000A),
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-              ],
+          borderRadius: BorderRadius.circular(18),
+          boxShadow: const [
+            BoxShadow(
+              color: Color(0x330057CD),
+              blurRadius: 10,
+              offset: Offset(0, 4),
             ),
-          ),
-          FilledButton(
-            onPressed: () => _emergencyDialog(),
-            style: FilledButton.styleFrom(
-              backgroundColor: const Color(0xFFBA1A1A),
+          ],
+        ),
+        child: Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(10),
+              decoration: BoxDecoration(
+                color: Colors.white.withValues(alpha: 0.2),
+                shape: BoxShape.circle,
+              ),
+              child: const Icon(Icons.smart_toy_rounded, color: Colors.white, size: 28),
             ),
-            child: const Text('Gọi ngay'),
-          ),
-        ],
+            const SizedBox(width: 14),
+            const Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Text(
+                        'TRỢ LÝ Y TẾ AI',
+                        style: TextStyle(
+                          color: Colors.amber,
+                          fontSize: 11,
+                          fontWeight: FontWeight.bold,
+                          letterSpacing: 0.5,
+                        ),
+                      ),
+                      SizedBox(width: 6),
+                      Text(
+                        'NEW',
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontSize: 9,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ],
+                  ),
+                  SizedBox(height: 2),
+                  Text(
+                    'Tư vấn & Sàng lọc triệu chứng 24/7',
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontSize: 14,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  SizedBox(height: 2),
+                  Text(
+                    'Mô tả biểu hiện để được gợi ý bác sĩ ngay ➔',
+                    style: TextStyle(color: Colors.white70, fontSize: 11),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
       ),
     ),
   );
 
-  void _emergencyDialog() => showDialog<void>(
-    context: context,
-    builder: (context) => AlertDialog(
-      title: const Text('Gọi cấp cứu 24/7'),
-      content: const Text('Bạn có muốn gọi MedCare 1900 8899 không?'),
-      actions: [
-        TextButton(
-          onPressed: () => Navigator.pop(context),
-          child: const Text('Hủy'),
+  Widget _emergency() => Padding(
+    padding: const EdgeInsets.symmetric(horizontal: 16),
+    child: InkWell(
+      onTap: () => Navigator.pushNamed(context, AppRoutes.emergencySos),
+      borderRadius: BorderRadius.circular(16),
+      child: Container(
+        padding: const EdgeInsets.all(14),
+        decoration: BoxDecoration(
+          color: const Color(0xFFFFDAD6),
+          borderRadius: BorderRadius.circular(16),
         ),
-        FilledButton(
-          onPressed: () => Navigator.pop(context),
-          child: const Text('Gọi ngay'),
+        child: Row(
+          children: [
+            const CircleAvatar(
+              backgroundColor: Color(0xFFBA1A1A),
+              child: Icon(Icons.phone, color: Colors.white),
+            ),
+            const SizedBox(width: 12),
+            const Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'CẤP CỨU 24/7 & MEDICAL ID',
+                    style: TextStyle(
+                      color: Color(0xFFBA1A1A),
+                      fontSize: 11,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  SizedBox(height: 2),
+                  Text(
+                    '1900 8899',
+                    style: TextStyle(
+                      color: Color(0xFF93000A),
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            FilledButton(
+              onPressed: () => Navigator.pushNamed(context, AppRoutes.emergencySos),
+              style: FilledButton.styleFrom(
+                backgroundColor: const Color(0xFFBA1A1A),
+              ),
+              child: const Text('Cấp cứu'),
+            ),
+          ],
         ),
-      ],
+      ),
     ),
   );
+
+
 
   Widget _appointment() {
     final store = MedicalScope.of(context);
@@ -436,48 +508,102 @@ class _HomePageState extends State<HomePage> {
 
   Widget _quickActions() {
     const actions = [
-      (Icons.calendar_month, 'Đặt khám\nnhanh', AppRoutes.appointments),
-      (Icons.medical_services, 'Bác sĩ\nchuyên khoa', AppRoutes.doctors),
-      (Icons.description, 'Bệnh án\nđiện tử', AppRoutes.records),
-      (Icons.account_balance_wallet, 'Thanh toán\nviện phí', AppRoutes.payment),
+      (Icons.calendar_month_rounded, 'Đặt khám\nnhanh', AppRoutes.appointments, Color(0xFFE2E7FF), Color(0xFF0057CD)),
+      (Icons.medication_rounded, 'Nhắc uống\nthuốc', AppRoutes.medicationTracker, Color(0xFFDCFCE7), Color(0xFF15803D)),
+      (Icons.monitor_heart_rounded, 'Chỉ số\nsinh hiệu', AppRoutes.vitalsTracker, Color(0xFFFFE4E6), Color(0xFFBE123C)),
+      (Icons.people_alt_rounded, 'Hàng đợi\nkhám', AppRoutes.liveQueue, Color(0xFFFEF3C7), Color(0xFFB45309)),
+
+      (Icons.vaccines_rounded, 'Sổ tiêm\nchủng', AppRoutes.vaccination, Color(0xFFCCFBF1), Color(0xFF0F766E)),
+      (Icons.inventory_2_rounded, 'Gói khám\ntầm soát', AppRoutes.healthPackages, Color(0xFFEDE9FE), Color(0xFF6D28D9)),
+      (Icons.map_rounded, 'Sơ đồ\nbệnh viện', AppRoutes.hospitalMap, Color(0xFFFEF9C3), Color(0xFFB45309)),
+      (Icons.credit_card_rounded, 'Thẻ y tế\nBHYT 3D', AppRoutes.digitalCard, Color(0xFFE0E7FF), Color(0xFF1D4ED8)),
+
+      (Icons.description_rounded, 'Bệnh án\nđiện tử', AppRoutes.records, Color(0xFFE2E7FF), Color(0xFF0057CD)),
+      (Icons.account_balance_wallet_rounded, 'Thanh toán\nviện phí', AppRoutes.payment, Color(0xFFDCFCE7), Color(0xFF15803D)),
+      (Icons.spa_rounded, 'Thư giãn\ntinh thần', AppRoutes.mentalHealth, Color(0xFFF3E8FF), Color(0xFF7E22CE)),
+      (Icons.menu_book_rounded, 'Cẩm nang\ny khoa', AppRoutes.healthNews, Color(0xFFFFEDD5), Color(0xFFC2410C)),
     ];
+
     return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 20, 16, 0),
-      child: Row(
-        children: actions
-            .map(
-              (item) => Expanded(
-                child: InkWell(
-                  onTap: () => Navigator.pushNamed(context, item.$3),
-                  child: Column(
-                    children: [
-                      Container(
-                        width: 56,
-                        height: 56,
-                        decoration: BoxDecoration(
-                          color: const Color(0xFFE2E7FF),
-                          borderRadius: BorderRadius.circular(16),
-                        ),
-                        child: Icon(item.$1, color: primary),
-                      ),
-                      const SizedBox(height: 6),
-                      Text(
-                        item.$2,
-                        textAlign: TextAlign.center,
-                        style: const TextStyle(
-                          fontSize: 10,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                    ],
-                  ),
+      padding: const EdgeInsets.fromLTRB(16, 22, 16, 0),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              const Text(
+                'DỊCH VỤ Y TẾ THÔNG MINH',
+                style: TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.bold,
+                  color: Color(0xFF0057CD),
+                  letterSpacing: 0.5,
                 ),
               ),
-            )
-            .toList(),
+              const Spacer(),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                decoration: BoxDecoration(
+                  color: const Color(0xFF0057CD).withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: const Text(
+                  '12 TIỆN ÍCH',
+                  style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: Color(0xFF0057CD)),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 14),
+          GridView.builder(
+            shrinkWrap: true,
+            physics: const NeverScrollableScrollPhysics(),
+            itemCount: actions.length,
+            gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+              crossAxisCount: 4,
+              mainAxisSpacing: 14,
+              crossAxisSpacing: 8,
+              childAspectRatio: 0.78,
+            ),
+            itemBuilder: (context, index) {
+              final item = actions[index];
+              return InkWell(
+                onTap: () => Navigator.pushNamed(context, item.$3),
+                borderRadius: BorderRadius.circular(16),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Container(
+                      width: 52,
+                      height: 52,
+                      decoration: BoxDecoration(
+                        color: item.$4,
+                        borderRadius: BorderRadius.circular(16),
+                      ),
+                      child: Icon(item.$1, color: item.$5, size: 26),
+                    ),
+                    const SizedBox(height: 6),
+                    Text(
+                      item.$2,
+                      textAlign: TextAlign.center,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(
+                        fontSize: 11,
+                        fontWeight: FontWeight.w600,
+                        height: 1.2,
+                      ),
+                    ),
+                  ],
+                ),
+              );
+            },
+          ),
+        ],
       ),
     );
   }
+
 
   Widget _specialties() {
     const specialties = [
@@ -654,28 +780,29 @@ class _HomePageState extends State<HomePage> {
     padding: const EdgeInsets.fromLTRB(16, 24, 16, 20),
     child: Column(
       children: [
-        _sectionTitle('Cẩm nang sức khỏe', 'Xem thêm'),
+        _sectionTitle('Cẩm nang sức khỏe', 'Xem tất cả', route: AppRoutes.healthNews),
         const SizedBox(height: 12),
         ...[
           (
-            'Tim mạch',
-            '5 phút đọc',
-            '5 dấu hiệu cảnh báo sớm bệnh lý mạch vành',
-            Icons.favorite,
+            'Tiêu hóa',
+            '4 phút đọc',
+            'Chế độ ăn cho người viêm loét dạ dày vi khuẩn Hp',
+            Icons.restaurant,
           ),
           (
-            'Nhi khoa',
-            '4 phút đọc',
-            'Chăm sóc trẻ sốt giao mùa đúng cách',
-            Icons.child_care,
+            'Tim mạch',
+            '5 phút đọc',
+            'Phân biệt đau thắt ngực do tim và trào ngược dạ dày',
+            Icons.favorite,
           ),
         ].map(
           (article) => Card(
             margin: const EdgeInsets.only(bottom: 12),
             child: ListTile(
+              onTap: () => Navigator.pushNamed(context, AppRoutes.healthNews),
               leading: Container(
-                width: 72,
-                height: 72,
+                width: 52,
+                height: 52,
                 decoration: BoxDecoration(
                   color: const Color(0xFFE2E7FF),
                   borderRadius: BorderRadius.circular(12),
@@ -684,15 +811,17 @@ class _HomePageState extends State<HomePage> {
               ),
               title: Text(
                 article.$3,
-                style: const TextStyle(fontWeight: FontWeight.bold),
+                style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
               ),
               subtitle: Text('${article.$1} • ${article.$2}'),
+              trailing: const Icon(Icons.chevron_right, size: 18),
             ),
           ),
         ),
       ],
     ),
   );
+
 
   Widget _sectionTitle(String title, String action, {String? route}) => Row(
     children: [

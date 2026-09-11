@@ -30,4 +30,16 @@ abstract final class AppRoutes {
   static const notifications = '/notifications';
   static const settings = '/settings';
   static const diagnostics = '/diagnostics';
+  static const aiAssistant = '/ai-assistant';
+  static const medicationTracker = '/medication-tracker';
+  static const vitalsTracker = '/vitals-tracker';
+  static const liveQueue = '/live-queue';
+  static const vaccination = '/vaccination';
+  static const healthPackages = '/health-packages';
+  static const hospitalMap = '/hospital-map';
+  static const digitalCard = '/digital-card';
+  static const emergencySos = '/emergency-sos';
+  static const mentalHealth = '/mental-health';
+  static const healthNews = '/health-news';
 }
+

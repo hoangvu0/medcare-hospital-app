@@ -226,3 +226,171 @@ class MedicineItem {
   final String instruction;
   final String? warning;
 }
+
+class VitalSignRecord {
+  const VitalSignRecord({
+    required this.timestamp,
+    required this.systolic,
+    required this.diastolic,
+    required this.heartRate,
+    required this.bloodGlucose,
+    required this.weightKg,
+    required this.heightCm,
+    this.note,
+  });
+
+  final DateTime timestamp;
+  final int systolic;
+  final int diastolic;
+  final int heartRate;
+  final double bloodGlucose;
+  final double weightKg;
+  final double heightCm;
+  final String? note;
+
+  double get bmi => weightKg / ((heightCm / 100) * (heightCm / 100));
+
+  String get bmiCategory {
+    final value = bmi;
+    if (value < 18.5) return 'Gầy / Thiếu cân';
+    if (value < 23.0) return 'Bình thường (Chuẩn châu Á)';
+    if (value < 25.0) return 'Tiền béo phì';
+    return 'Béo phì';
+  }
+
+  String get bpStatus {
+    if (systolic < 120 && diastolic < 80) return 'Tối ưu';
+    if (systolic < 130 && diastolic < 85) return 'Bình thường';
+    if (systolic < 140 || diastolic < 90) return 'Tiền tăng huyết áp';
+    return 'Tăng huyết áp';
+  }
+}
+
+class MedicineScheduleItem {
+  const MedicineScheduleItem({
+    required this.id,
+    required this.medicineName,
+    required this.dosage,
+    required this.timeSlot,
+    required this.period,
+    required this.instruction,
+    this.isTaken = false,
+    this.takenAt,
+  });
+
+  final String id;
+  final String medicineName;
+  final String dosage;
+  final String timeSlot;
+  final String period;
+  final String instruction;
+  final bool isTaken;
+  final DateTime? takenAt;
+
+  MedicineScheduleItem copyWith({
+    bool? isTaken,
+    DateTime? takenAt,
+  }) => MedicineScheduleItem(
+    id: id,
+    medicineName: medicineName,
+    dosage: dosage,
+    timeSlot: timeSlot,
+    period: period,
+    instruction: instruction,
+    isTaken: isTaken ?? this.isTaken,
+    takenAt: takenAt ?? this.takenAt,
+  );
+}
+
+class LiveQueueInfo {
+  const LiveQueueInfo({
+    required this.department,
+    required this.room,
+    required this.doctorName,
+    required this.currentNumber,
+    required this.patientNumber,
+    required this.ticketCode,
+    required this.estimatedMinutes,
+  });
+
+  final String department;
+  final String room;
+  final String doctorName;
+  final int currentNumber;
+  final int patientNumber;
+  final String ticketCode;
+  final int estimatedMinutes;
+
+  int get waitCount => (patientNumber - currentNumber).clamp(0, 999);
+}
+
+class VaccineRecord {
+  const VaccineRecord({
+    required this.id,
+    required this.vaccineName,
+    required this.diseaseTarget,
+    required this.doseNumber,
+    required this.dateAdministered,
+    required this.batchNumber,
+    required this.facility,
+    this.nextDoseDate,
+    this.status = 'Đã hoàn thành',
+  });
+
+  final String id;
+  final String vaccineName;
+  final String diseaseTarget;
+  final String doseNumber;
+  final String dateAdministered;
+  final String batchNumber;
+  final String facility;
+  final String? nextDoseDate;
+  final String status;
+}
+
+class HealthPackage {
+  const HealthPackage({
+    required this.id,
+    required this.title,
+    required this.subtitle,
+    required this.price,
+    required this.originalPrice,
+    this.isPopular = false,
+    required this.targetGroup,
+    required this.benefits,
+    required this.items,
+  });
+
+  final String id;
+  final String title;
+  final String subtitle;
+  final int price;
+  final int originalPrice;
+  final bool isPopular;
+  final String targetGroup;
+  final List<String> benefits;
+  final List<String> items;
+}
+
+class HealthArticle {
+  const HealthArticle({
+    required this.id,
+    required this.title,
+    required this.category,
+    required this.author,
+    required this.readTime,
+    required this.summary,
+    required this.content,
+    required this.date,
+  });
+
+  final String id;
+  final String title;
+  final String category;
+  final String author;
+  final String readTime;
+  final String summary;
+  final String content;
+  final String date;
+}
+

@@ -1,19 +1,31 @@
 import 'package:flutter/material.dart';
 
+import 'pages/ai_health_assistant_page.dart';
 import 'pages/appointment_page.dart';
 import 'pages/additional_pages.dart';
 import 'pages/diagnostics_page.dart';
+import 'pages/digital_card_page.dart';
 import 'pages/doctor_detail_page.dart';
 import 'pages/doctors_page.dart';
 import 'pages/e_prescription_page.dart';
+import 'pages/emergency_sos_page.dart';
+import 'pages/health_news_page.dart';
+import 'pages/health_packages_page.dart';
 import 'pages/home_page.dart';
+import 'pages/hospital_map_page.dart';
+import 'pages/live_queue_page.dart';
+import 'pages/medication_tracker_page.dart';
+import 'pages/mental_health_page.dart';
 import 'pages/patient_records_page.dart';
 import 'pages/payment_page.dart';
 import 'pages/simple_pages.dart';
+import 'pages/vaccination_page.dart';
+import 'pages/vitals_tracker_page.dart';
 import 'routes/app_routes.dart';
 import 'state/app_settings_store.dart';
 import 'state/medical_store.dart';
 import 'widgets/app_lock_screen.dart';
+
 
 void main() {
   WidgetsFlutterBinding.ensureInitialized();
@@ -136,7 +148,19 @@ class _HospitalAppState extends State<HospitalApp> {
                 AppRoutes.notifications: (context) => const NotificationsPage(),
                 AppRoutes.settings: (context) => const SettingsPage(),
                 AppRoutes.diagnostics: (context) => const DiagnosticsPage(),
+                AppRoutes.aiAssistant: (context) => const AiHealthAssistantPage(),
+                AppRoutes.medicationTracker: (context) => const MedicationTrackerPage(),
+                AppRoutes.vitalsTracker: (context) => const VitalsTrackerPage(),
+                AppRoutes.liveQueue: (context) => const LiveQueuePage(),
+                AppRoutes.vaccination: (context) => const VaccinationPage(),
+                AppRoutes.healthPackages: (context) => const HealthPackagesPage(),
+                AppRoutes.hospitalMap: (context) => const HospitalMapPage(),
+                AppRoutes.digitalCard: (context) => const DigitalCardPage(),
+                AppRoutes.emergencySos: (context) => const EmergencySosPage(),
+                AppRoutes.mentalHealth: (context) => const MentalHealthPage(),
+                AppRoutes.healthNews: (context) => const HealthNewsPage(),
               },
+
             );
           },
         ),

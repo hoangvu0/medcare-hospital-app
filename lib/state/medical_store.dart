@@ -27,9 +27,61 @@ class MedicalStore extends ChangeNotifier {
 
   final List<Appointment> _appointments = List.from(MedicalData.initialAppointments);
   final List<AppNotification> _notifications = List.from(MedicalData.initialNotifications);
+  final List<VitalSignRecord> _vitals = List.from(MedicalData.initialVitals);
+  final List<MedicineScheduleItem> _medicineSchedule = List.from(MedicalData.initialMedicineSchedule);
+  LiveQueueInfo _queueInfo = MedicalData.defaultQueue;
+
+  final List<VaccineRecord> vaccineRecords = MedicalData.initialVaccines;
+  final List<HealthPackage> healthPackages = MedicalData.initialHealthPackages;
+  final List<HealthArticle> healthArticles = MedicalData.initialArticles;
 
   List<Appointment> get appointments => List.unmodifiable(_appointments);
   List<AppNotification> get notifications => List.unmodifiable(_notifications);
+  List<VitalSignRecord> get vitals => List.unmodifiable(_vitals);
+  List<MedicineScheduleItem> get medicineSchedule => List.unmodifiable(_medicineSchedule);
+  LiveQueueInfo get queueInfo => _queueInfo;
+
+  double get medicineAdherenceRate {
+    if (_medicineSchedule.isEmpty) return 1.0;
+    final taken = _medicineSchedule.where((m) => m.isTaken).length;
+    return taken / _medicineSchedule.length;
+  }
+
+  void addVitalRecord(VitalSignRecord record) {
+    _vitals.insert(0, record);
+    notifyListeners();
+  }
+
+  void toggleMedicineTaken(String id) {
+    final index = _medicineSchedule.indexWhere((m) => m.id == id);
+    if (index < 0) return;
+    final current = _medicineSchedule[index];
+    final updatedTaken = !current.isTaken;
+    _medicineSchedule[index] = current.copyWith(
+      isTaken: updatedTaken,
+      takenAt: updatedTaken ? DateTime.now() : null,
+    );
+    notifyListeners();
+  }
+
+  void refreshQueue() {
+    // Tự động mô phỏng bước tiến của hàng đợi
+    final nextCur = (_queueInfo.currentNumber < _queueInfo.patientNumber)
+        ? _queueInfo.currentNumber + 1
+        : _queueInfo.currentNumber;
+    final remain = (_queueInfo.patientNumber - nextCur).clamp(0, 99);
+    _queueInfo = LiveQueueInfo(
+      department: _queueInfo.department,
+      room: _queueInfo.room,
+      doctorName: _queueInfo.doctorName,
+      currentNumber: nextCur,
+      patientNumber: _queueInfo.patientNumber,
+      ticketCode: _queueInfo.ticketCode,
+      estimatedMinutes: remain * 4,
+    );
+    notifyListeners();
+  }
+
 
   Future<void> _restore() async {
     try {

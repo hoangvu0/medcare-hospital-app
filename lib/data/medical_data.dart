@@ -303,4 +303,269 @@ abstract final class MedicalData {
       createdAt: DateTime.now().subtract(const Duration(days: 2)),
     ),
   ];
+
+  /// Danh sách chỉ số sinh hiệu thực tế của bệnh nhân Nguyễn Hoàng Vũ
+  static List<VitalSignRecord> get initialVitals => [
+    VitalSignRecord(
+      timestamp: DateTime.now().subtract(const Duration(hours: 2)),
+      systolic: 118,
+      diastolic: 78,
+      heartRate: 74,
+      bloodGlucose: 94.5,
+      weightKg: 68.0,
+      heightCm: 174.0,
+      note: 'Đo sau ăn sáng 2 giờ, thể trạng ổn định.',
+    ),
+    VitalSignRecord(
+      timestamp: DateTime.now().subtract(const Duration(days: 2)),
+      systolic: 122,
+      diastolic: 80,
+      heartRate: 78,
+      bloodGlucose: 98.0,
+      weightKg: 68.2,
+      heightCm: 174.0,
+      note: 'Đo tại phòng khám sàng lọc Tòa B.',
+    ),
+    VitalSignRecord(
+      timestamp: DateTime.now().subtract(const Duration(days: 7)),
+      systolic: 125,
+      diastolic: 82,
+      heartRate: 82,
+      bloodGlucose: 102.0,
+      weightKg: 68.5,
+      heightCm: 174.0,
+      note: 'Hơi mệt do đau dạ dày thượng vị.',
+    ),
+  ];
+
+  /// Lịch uống thuốc hôm nay theo đơn tiệt trừ Hp
+  static List<MedicineScheduleItem> get initialMedicineSchedule => [
+    const MedicineScheduleItem(
+      id: 'sch-01',
+      medicineName: 'Nexium 40mg (Esomeprazole)',
+      dosage: '1 viên',
+      timeSlot: '06:30',
+      period: 'Sáng',
+      instruction: 'Uống trước ăn sáng 30 phút, nuốt nguyên viên.',
+      isTaken: true,
+    ),
+    const MedicineScheduleItem(
+      id: 'sch-02',
+      medicineName: 'Amoxicillin 500mg',
+      dosage: '2 viên',
+      timeSlot: '07:30',
+      period: 'Sáng',
+      instruction: 'Uống ngay sau ăn sáng, uống cùng nhiều nước.',
+      isTaken: true,
+    ),
+    const MedicineScheduleItem(
+      id: 'sch-03',
+      medicineName: 'Clarithromycin 500mg',
+      dosage: '1 viên',
+      timeSlot: '07:30',
+      period: 'Sáng',
+      instruction: 'Uống sau ăn sáng cùng Amoxicillin.',
+      isTaken: true,
+    ),
+    const MedicineScheduleItem(
+      id: 'sch-04',
+      medicineName: 'Nexium 40mg (Esomeprazole)',
+      dosage: '1 viên',
+      timeSlot: '18:30',
+      period: 'Tối',
+      instruction: 'Uống trước ăn tối 30 phút.',
+      isTaken: false,
+    ),
+    const MedicineScheduleItem(
+      id: 'sch-05',
+      medicineName: 'Amoxicillin 500mg',
+      dosage: '2 viên',
+      timeSlot: '19:30',
+      period: 'Tối',
+      instruction: 'Uống sau ăn tối, uống đủ 2 viên.',
+      isTaken: false,
+    ),
+    const MedicineScheduleItem(
+      id: 'sch-06',
+      medicineName: 'Clarithromycin 500mg',
+      dosage: '1 viên',
+      timeSlot: '19:30',
+      period: 'Tối',
+      instruction: 'Uống sau ăn tối, tránh rượu bia hoàn toàn.',
+      isTaken: false,
+    ),
+    const MedicineScheduleItem(
+      id: 'sch-07',
+      medicineName: 'Phosphalugel (Gel nhôm)',
+      dosage: '1 gói 20g',
+      timeSlot: '21:30',
+      period: 'Tối',
+      instruction: 'Uống khi đau hoặc trước khi đi ngủ 30 phút.',
+      isTaken: false,
+    ),
+  ];
+
+  /// Thông tin hàng đợi khám trực tiếp mô phỏng phòng khám
+  static const LiveQueueInfo defaultQueue = LiveQueueInfo(
+    department: 'Khoa Tiêu hóa & Gan Mật',
+    room: 'Phòng 305 (Tầng 3 - Tòa B)',
+    doctorName: 'PGS.TS.BS Nguyễn Văn An',
+    currentNumber: 18,
+    patientNumber: 21,
+    ticketCode: 'KB-0824',
+    estimatedMinutes: 12,
+  );
+
+  /// Sổ tiêm chủng vắc-xin của bệnh nhân
+  static const List<VaccineRecord> initialVaccines = [
+    VaccineRecord(
+      id: 'vac-01',
+      vaccineName: 'Influvac Tetra (Hà Lan)',
+      diseaseTarget: 'Cúm mùa 4 chủng (A/H1N1, A/H3N2, B)',
+      doseNumber: 'Mũi 1/1 (Hàng năm)',
+      dateAdministered: '15/10/2025',
+      batchNumber: 'INF-2025-98A',
+      facility: 'Trung tâm Tiêm chủng MedCare Hospital',
+      nextDoseDate: '15/10/2026',
+      status: 'Đã hoàn thành',
+    ),
+    VaccineRecord(
+      id: 'vac-02',
+      vaccineName: 'Engerix-B 20mcg (Bỉ)',
+      diseaseTarget: 'Viêm gan siêu vi B',
+      doseNumber: 'Mũi 3/3 (Hoàn thành phác đồ)',
+      dateAdministered: '20/04/2024',
+      batchNumber: 'ENG-8821B',
+      facility: 'Trung tâm Tiêm chủng MedCare Hospital',
+      status: 'Đã hoàn thành',
+    ),
+    VaccineRecord(
+      id: 'vac-03',
+      vaccineName: 'Comirnaty Pfizer-BioNTech',
+      diseaseTarget: 'Covid-19',
+      doseNumber: 'Mũi 3 (Mũi nhắc lại)',
+      dateAdministered: '12/03/2023',
+      batchNumber: 'PFI-91204',
+      facility: 'Điểm tiêm chủng BV Bạch Mai',
+      status: 'Đã hoàn thành',
+    ),
+    VaccineRecord(
+      id: 'vac-04',
+      vaccineName: 'VAT (Việt Nam)',
+      diseaseTarget: 'Uốn ván hấp phụ',
+      doseNumber: 'Mũi nhắc lại 10 năm',
+      dateAdministered: '05/06/2022',
+      batchNumber: 'VAT-4410',
+      facility: 'Trung tâm Tiêm chủng MedCare Hospital',
+      status: 'Đã hoàn thành',
+    ),
+  ];
+
+  /// Danh mục các gói khám sức khỏe tổng quát
+  static const List<HealthPackage> initialHealthPackages = [
+    HealthPackage(
+      id: 'pkg-01',
+      title: 'Tầm Soát Ung Thư Sớm Đường Tiêu Hóa',
+      subtitle: 'Nội soi dạ dày - đại tràng không đau & Test vi khuẩn Hp',
+      price: 2850000,
+      originalPrice: 3500000,
+      isPopular: true,
+      targetGroup: 'Người hay đau dạ dày, ợ chua, tiền sử gia đình có polyp',
+      benefits: [
+        'Nội soi tiền mê không đau, êm ái, tỉnh ngay sau 15 phút',
+        'Máy nội soi Olympus EVIS X1 phóng đại 100 lần phát hiện tổn thương vi thể',
+        'Bao gồm test nhanh Clo-test tìm vi khuẩn Helicobacter Pylori',
+        'Bác sĩ chuyên khoa tiêu hóa tư vấn kết quả và kê đơn trực tiếp',
+      ],
+      items: [
+        'Khám chuyên khoa tiêu hóa với PGS.TS',
+        'Nội soi thực quản - dạ dày - tá tràng gây mê',
+        'Nội soi toàn bộ đại trực tràng',
+        'Test vi khuẩn Hp qua mảnh sinh thiết',
+        'Xét nghiệm công thức máu & đông máu cơ bản',
+      ],
+    ),
+    HealthPackage(
+      id: 'pkg-02',
+      title: 'Khám Sức Khỏe Tổng Quát Định Kỳ VIP',
+      subtitle: 'Đánh giá toàn diện 36 chỉ số sinh hóa & Chẩn đoán hình ảnh',
+      price: 3950000,
+      originalPrice: 4800000,
+      isPopular: false,
+      targetGroup: 'Nam/Nữ từ 20-65 tuổi muốn kiểm tra thể trạng toàn thân',
+      benefits: [
+        'Kiểm tra chức năng gan, thận, tim mạch, mỡ máu, đường huyết',
+        'Chụp X-quang tim phổi kỹ thuật số & Siêu âm ổ bụng tổng quát màu',
+        'Đo điện tim đồ ECG 12 chuyển đạo',
+        'Bác sĩ Trưởng khoa kết luận tổng quan và định hướng lối sống',
+      ],
+      items: [
+        'Khám Nội tổng quát, Mắt, Tai mũi họng, Răng hàm mặt',
+        'Tổng phân tích tế bào máu 24 thông số',
+        'Đường huyết đói & HbA1c đánh giá tiểu đường',
+        'Men gan AST, ALT, GGT & Chức năng thận Ure, Creatinine',
+        'Bộ mỡ máu Lipid (Cholesterol, Triglyceride, HDL, LDL)',
+        'Chụp X-quang ngực thẳng & Siêu âm Doppler ổ bụng',
+      ],
+    ),
+    HealthPackage(
+      id: 'pkg-03',
+      title: 'Tầm Soát Tim Mạch & Phòng Ngừa Đột Quỵ',
+      subtitle: 'Siêu âm tim màu 4D & Đo xơ vữa động mạch cảnh',
+      price: 2400000,
+      originalPrice: 3000000,
+      isPopular: false,
+      targetGroup: 'Người có huyết áp dao động, đau ngực, tim đập nhanh hoặc trên 40 tuổi',
+      benefits: [
+        'Khám chuyên sâu với chuyên gia Viện Tim mạch Quốc gia',
+        'Phát hiện sớm nguy cơ nhồi máu cơ tim và xơ vữa mạch máu não',
+        'Đo điện tim gắng sức và phân tích rối loạn nhịp tim',
+      ],
+      items: [
+        'Khám Nội Tim mạch cùng PGS.TS Trần Minh Đức',
+        'Điện tâm đồ ECG 12 cần',
+        'Siêu âm tim Doppler màu 4D công nghệ cao',
+        'Siêu âm mạch máu hệ động mạch cảnh đoạn ngoài sọ',
+        'Định lượng Troponin-T và Hs-CRP đánh giá viêm mạch vành',
+      ],
+    ),
+  ];
+
+  /// Cẩm nang y khoa & Bài viết chuyên gia
+  static const List<HealthArticle> initialArticles = [
+    HealthArticle(
+      id: 'art-01',
+      title: 'Chế độ ăn uống khoa học cho người viêm loét dạ dày có vi khuẩn Hp',
+      category: 'Tiêu hóa',
+      author: 'PGS.TS.BS Nguyễn Văn An',
+      readTime: '4 phút đọc',
+      summary: 'Các nguyên tắc vàng trong dinh dưỡng giúp bảo vệ niêm mạc dạ dày và tăng hiệu quả tiệt trừ vi khuẩn Hp.',
+      content:
+          'Khi đang điều trị vi khuẩn Helicobacter Pylori (Hp), chế độ ăn uống đóng vai trò then chốt quyết định 30% tỷ lệ khỏi bệnh. Bệnh nhân cần:\n\n1. Chia nhỏ bữa ăn thành 4-5 bữa nhẹ trong ngày để dạ dày không bao giờ quá đói hoặc quá no.\n2. Tránh tuyệt đối đồ uống có cồn, bia rượu, cà phê đặc và trà đặc vì chúng kích thích tăng tiết acid chlohydric.\n3. Hạn chế đồ chiên xào nhiều dầu mỡ, đồ muối chua lên men (dưa cà muối).\n4. Bổ sung các loại rau họ cải như bông cải xanh (chứa sulforaphane diệt khuẩn Hp tự nhiên), nghệ vàng và sữa chua men sống sau bữa ăn 1 tiếng.',
+      date: '10/02/2026',
+    ),
+    HealthArticle(
+      id: 'art-02',
+      title: 'Phân biệt cơn đau thắt ngực do tim và đau tức ngực do trào ngược dạ dày',
+      category: 'Tim mạch',
+      author: 'PGS.TS.BS Trần Minh Đức',
+      readTime: '5 phút đọc',
+      summary: 'Rất nhiều bệnh nhân nhầm lẫn giữa trào ngược thực quản dạ dày (GERD) và cơn thiếu máu cơ tim cấp.',
+      content:
+          'Đau ngực là triệu chứng thường gặp khiến người bệnh rất lo lắng. Để phân biệt:\n\n• Đau do Tim mạch: Thường có cảm giác đè nặng, bóp nghẹt như có đá đè lên vùng ngực trái hoặc sau xương ức, có thể lan lên cằm, vai trái hoặc cánh tay trái. Cơn đau tăng khi gắng sức hoặc xúc động, kéo dài từ 5-15 phút.\n\n• Đau do Trào ngược dạ dày: Thường có cảm giác nóng rát (ợ nóng - heartburn) lan từ vùng thượng vị lên cổ họng, thường xuất hiện sau khi ăn no, khi cúi người hoặc nằm xuống, kèm theo ợ chua, đắng miệng.\n\nKhi có biểu hiện đau tức ngực kèm khó thở, vã mồ hôi lạnh, hãy gọi ngay cấp cứu 1900 8899 để được hỗ trợ kịp thời.',
+      date: '08/02/2026',
+    ),
+    HealthArticle(
+      id: 'art-03',
+      title: 'Những lưu ý sống còn trước khi tiến hành Nội soi dạ dày gây mê',
+      category: 'Cận lâm sàng',
+      author: 'BSCKII Hoàng Quốc Việt',
+      readTime: '3 phút đọc',
+      summary: 'Chuẩn bị đúng cách giúp cuộc nội soi diễn ra an toàn, không đau và hình ảnh niêm mạc rõ nét nhất.',
+      content:
+          'Để chuẩn bị cho buổi nội soi dạ dày êm ái không đau:\n\n1. Nhịn ăn ít nhất 6-8 tiếng trước giờ nội soi để dạ dày sạch hoàn toàn.\n2. Nhịn uống nước ít nhất 2 tiếng trước khi vào phòng soi để tránh trào ngược dịch vào đường thở khi gây mê.\n3. Thông báo cho bác sĩ tiền sử dị ứng thuốc, bệnh lý tim mạch, hen suyễn hoặc nếu đang uống thuốc chống đông máu.\n4. Cần có người nhà đi cùng để hỗ trợ đưa về sau khi hết thuốc mê.',
+      date: '02/02/2026',
+    ),
+  ];
 }
+
