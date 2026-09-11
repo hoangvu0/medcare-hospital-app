@@ -46,7 +46,7 @@ class VitalsTrackerPage extends StatelessWidget {
               physics: const NeverScrollableScrollPhysics(),
               crossAxisSpacing: 12,
               mainAxisSpacing: 12,
-              childAspectRatio: 1.25,
+              childAspectRatio: 1.15,
               children: [
                 _vitalCard(
                   context,
@@ -103,7 +103,6 @@ class VitalsTrackerPage extends StatelessWidget {
                 ),
               ),
               child: Row(
-
                 mainAxisAlignment: MainAxisAlignment.spaceAround,
                 children: [
                   _miniStat('Chiều cao', '${latest.heightCm.toInt()} cm'),
@@ -118,6 +117,21 @@ class VitalsTrackerPage extends StatelessWidget {
                   ),
                   _miniStat('Tiêu chuẩn WHO', 'Chuẩn châu Á'),
                 ],
+              ),
+            ),
+          ] else ...[
+            Container(
+              padding: const EdgeInsets.all(24),
+              decoration: BoxDecoration(
+                color: isDark ? const Color(0xFF1E293B) : Colors.white,
+                borderRadius: BorderRadius.circular(16),
+              ),
+              child: const Center(
+                child: Text(
+                  'Chưa có dữ liệu sinh hiệu nào. Hãy nhấn "Đo chỉ số mới" để thêm!',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(color: Colors.grey),
+                ),
               ),
             ),
           ],
@@ -188,9 +202,14 @@ class VitalsTrackerPage extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.baseline,
             textBaseline: TextBaseline.alphabetic,
             children: [
-              Text(
-                value,
-                style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+              Flexible(
+                child: FittedBox(
+                  fit: BoxFit.scaleDown,
+                  child: Text(
+                    value,
+                    style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                  ),
+                ),
               ),
               const SizedBox(width: 4),
               Text(
@@ -244,9 +263,9 @@ class VitalsTrackerPage extends StatelessWidget {
       ),
       child: Row(
         children: [
-          CircleAvatar(
-            backgroundColor: const Color(0xFFE0E7FF),
-            child: const Icon(Icons.speed, color: Color(0xFF0057CD), size: 20),
+          const CircleAvatar(
+            backgroundColor: Color(0xFFE0E7FF),
+            child: Icon(Icons.speed, color: Color(0xFF0057CD), size: 20),
           ),
           const SizedBox(width: 12),
           Expanded(
@@ -293,112 +312,150 @@ class VitalsTrackerPage extends StatelessWidget {
   }
 
   void _showAddVitalDialog(BuildContext context, MedicalStore store) {
-    final sysCtrl = TextEditingController(text: '120');
-    final diaCtrl = TextEditingController(text: '80');
-    final hrCtrl = TextEditingController(text: '75');
-    final gluCtrl = TextEditingController(text: '95');
-    final weightCtrl = TextEditingController(text: '68');
-    final noteCtrl = TextEditingController();
-
     showDialog<void>(
       context: context,
-      builder: (dialogContext) => AlertDialog(
-        title: const Text('Ghi nhận chỉ số sinh hiệu mới'),
-        content: SingleChildScrollView(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Row(
-                children: [
-                  Expanded(
-                    child: TextField(
-                      controller: sysCtrl,
-                      keyboardType: TextInputType.number,
-                      decoration: const InputDecoration(labelText: 'Tâm thu (Sys)', suffixText: 'mmHg'),
-                    ),
+      builder: (dialogContext) => _AddVitalDialog(store: store),
+    );
+  }
+}
+
+class _AddVitalDialog extends StatefulWidget {
+  const _AddVitalDialog({required this.store});
+
+  final MedicalStore store;
+
+  @override
+  State<_AddVitalDialog> createState() => _AddVitalDialogState();
+}
+
+class _AddVitalDialogState extends State<_AddVitalDialog> {
+  late final TextEditingController _sysCtrl;
+  late final TextEditingController _diaCtrl;
+  late final TextEditingController _hrCtrl;
+  late final TextEditingController _gluCtrl;
+  late final TextEditingController _weightCtrl;
+  late final TextEditingController _noteCtrl;
+
+  @override
+  void initState() {
+    super.initState();
+    _sysCtrl = TextEditingController(text: '120');
+    _diaCtrl = TextEditingController(text: '80');
+    _hrCtrl = TextEditingController(text: '75');
+    _gluCtrl = TextEditingController(text: '95');
+    _weightCtrl = TextEditingController(text: '68');
+    _noteCtrl = TextEditingController();
+  }
+
+  @override
+  void dispose() {
+    _sysCtrl.dispose();
+    _diaCtrl.dispose();
+    _hrCtrl.dispose();
+    _gluCtrl.dispose();
+    _weightCtrl.dispose();
+    _noteCtrl.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      title: const Text('Ghi nhận chỉ số sinh hiệu mới'),
+      content: SingleChildScrollView(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Row(
+              children: [
+                Expanded(
+                  child: TextField(
+                    controller: _sysCtrl,
+                    keyboardType: TextInputType.number,
+                    decoration: const InputDecoration(labelText: 'Tâm thu (Sys)', suffixText: 'mmHg'),
                   ),
-                  const SizedBox(width: 10),
-                  Expanded(
-                    child: TextField(
-                      controller: diaCtrl,
-                      keyboardType: TextInputType.number,
-                      decoration: const InputDecoration(labelText: 'Tâm trương (Dia)', suffixText: 'mmHg'),
-                    ),
+                ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: TextField(
+                    controller: _diaCtrl,
+                    keyboardType: TextInputType.number,
+                    decoration: const InputDecoration(labelText: 'Tâm trương (Dia)', suffixText: 'mmHg'),
                   ),
-                ],
-              ),
-              const SizedBox(height: 12),
-              Row(
-                children: [
-                  Expanded(
-                    child: TextField(
-                      controller: hrCtrl,
-                      keyboardType: TextInputType.number,
-                      decoration: const InputDecoration(labelText: 'Nhịp tim', suffixText: 'bpm'),
-                    ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 12),
+            Row(
+              children: [
+                Expanded(
+                  child: TextField(
+                    controller: _hrCtrl,
+                    keyboardType: TextInputType.number,
+                    decoration: const InputDecoration(labelText: 'Nhịp tim', suffixText: 'bpm'),
                   ),
-                  const SizedBox(width: 10),
-                  Expanded(
-                    child: TextField(
-                      controller: gluCtrl,
-                      keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                      decoration: const InputDecoration(labelText: 'Đường huyết', suffixText: 'mg/dL'),
-                    ),
+                ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: TextField(
+                    controller: _gluCtrl,
+                    keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                    decoration: const InputDecoration(labelText: 'Đường huyết', suffixText: 'mg/dL'),
                   ),
-                ],
-              ),
-              const SizedBox(height: 12),
-              TextField(
-                controller: weightCtrl,
-                keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                decoration: const InputDecoration(labelText: 'Cân nặng hiện tại', suffixText: 'kg'),
-              ),
-              const SizedBox(height: 12),
-              TextField(
-                controller: noteCtrl,
-                decoration: const InputDecoration(labelText: 'Ghi chú (Tùy chọn)', hintText: 'VD: Đo lúc vừa thức dậy'),
-              ),
-            ],
-          ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 12),
+            TextField(
+              controller: _weightCtrl,
+              keyboardType: const TextInputType.numberWithOptions(decimal: true),
+              decoration: const InputDecoration(labelText: 'Cân nặng hiện tại', suffixText: 'kg'),
+            ),
+            const SizedBox(height: 12),
+            TextField(
+              controller: _noteCtrl,
+              decoration: const InputDecoration(labelText: 'Ghi chú (Tùy chọn)', hintText: 'VD: Đo lúc vừa thức dậy'),
+            ),
+          ],
         ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(dialogContext),
-            child: const Text('Hủy'),
-          ),
-          FilledButton(
-            onPressed: () {
-              final sys = int.tryParse(sysCtrl.text) ?? 120;
-              final dia = int.tryParse(diaCtrl.text) ?? 80;
-              final hr = int.tryParse(hrCtrl.text) ?? 75;
-              final glu = double.tryParse(gluCtrl.text) ?? 95.0;
-              final weight = double.tryParse(weightCtrl.text) ?? 68.0;
-
-              store.addVitalRecord(
-                VitalSignRecord(
-                  timestamp: DateTime.now(),
-                  systolic: sys,
-                  diastolic: dia,
-                  heartRate: hr,
-                  bloodGlucose: glu,
-                  weightKg: weight,
-                  heightCm: 174.0,
-                  note: noteCtrl.text.trim().isEmpty ? null : noteCtrl.text.trim(),
-                ),
-              );
-
-              Navigator.pop(dialogContext);
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(
-                  content: Text('Đã cập nhật chỉ số sinh hiệu thành công!'),
-                  backgroundColor: Colors.green,
-                ),
-              );
-            },
-            child: const Text('Lưu chỉ số'),
-          ),
-        ],
       ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.pop(context),
+          child: const Text('Hủy'),
+        ),
+        FilledButton(
+          onPressed: () {
+            final sys = int.tryParse(_sysCtrl.text) ?? 120;
+            final dia = int.tryParse(_diaCtrl.text) ?? 80;
+            final hr = int.tryParse(_hrCtrl.text) ?? 75;
+            final glu = double.tryParse(_gluCtrl.text) ?? 95.0;
+            final weight = double.tryParse(_weightCtrl.text) ?? 68.0;
+
+            widget.store.addVitalRecord(
+              VitalSignRecord(
+                timestamp: DateTime.now(),
+                systolic: sys,
+                diastolic: dia,
+                heartRate: hr,
+                bloodGlucose: glu,
+                weightKg: weight,
+                heightCm: 174.0,
+                note: _noteCtrl.text.trim().isEmpty ? null : _noteCtrl.text.trim(),
+              ),
+            );
+
+            Navigator.pop(context);
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                content: Text('Đã cập nhật chỉ số sinh hiệu thành công!'),
+                backgroundColor: Colors.green,
+              ),
+            );
+          },
+          child: const Text('Lưu chỉ số'),
+        ),
+      ],
     );
   }
 }
