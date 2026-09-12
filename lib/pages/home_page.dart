@@ -53,6 +53,7 @@ class _HomePageState extends State<HomePage> {
               children: [
                 if (settings.isOfflineSimulated) _offlineBanner(settings),
                 _greeting(),
+                _clinicalPathwayBanner(store),
                 _aiAssistantBanner(),
                 _followUpReminderBanner(store),
                 _hospitalWalletBanner(store),
@@ -306,6 +307,85 @@ class _HomePageState extends State<HomePage> {
             ),
           ),
         ],
+      ),
+    );
+  }
+
+  Widget _clinicalPathwayBanner(MedicalStore store) {
+    final step = store.currentPathwayStep;
+    final progress = store.pathwayProgressPercentage;
+    final completedCount = store.completedStepsCount;
+    final totalSteps = store.clinicalPathway.length;
+
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
+      child: InkWell(
+        onTap: () => Navigator.pushNamed(context, AppRoutes.clinicalPathway),
+        borderRadius: BorderRadius.circular(16),
+        child: Container(
+          padding: const EdgeInsets.all(14),
+          decoration: BoxDecoration(
+            gradient: const LinearGradient(
+              colors: [Color(0xFF0F2B5C), Color(0xFF0057CD)],
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+            ),
+            borderRadius: BorderRadius.circular(16),
+            boxShadow: const [
+              BoxShadow(color: Color(0x250057CD), blurRadius: 10, offset: Offset(0, 4)),
+            ],
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Row(
+                    children: [
+                      const Icon(Icons.alt_route_rounded, color: Colors.amberAccent, size: 16),
+                      const SizedBox(width: 6),
+                      Text(
+                        'TIẾN ĐỘ KHÁM HÔM NAY (BƯỚC ${step.stepNumber}/$totalSteps)',
+                        style: const TextStyle(color: Colors.amberAccent, fontSize: 10, fontWeight: FontWeight.bold, letterSpacing: 0.5),
+                      ),
+                    ],
+                  ),
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                    decoration: BoxDecoration(color: Colors.white24, borderRadius: BorderRadius.circular(10)),
+                    child: Text(
+                      'Xong $completedCount/$totalSteps bước',
+                      style: const TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 8),
+              Text(
+                'Cần làm: ${step.title}',
+                style: const TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.bold),
+              ),
+              const SizedBox(height: 2),
+              Text(
+                '📍 ${step.location} • Dặn dò: ${step.doctorInstruction}',
+                style: const TextStyle(color: Colors.white70, fontSize: 11),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+              ),
+              const SizedBox(height: 10),
+              ClipRRect(
+                borderRadius: BorderRadius.circular(6),
+                child: LinearProgressIndicator(
+                  value: progress,
+                  minHeight: 6,
+                  backgroundColor: Colors.white24,
+                  valueColor: const AlwaysStoppedAnimation<Color>(Color(0xFF10B981)),
+                ),
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }
@@ -741,6 +821,7 @@ class _HomePageState extends State<HomePage> {
       (Icons.biotech_rounded, 'AI Diễn giải\nxét nghiệm', AppRoutes.labExplainer, Color(0xFFE0F2FE), Color(0xFF0369A1)),
       (Icons.shield_rounded, 'Bảo hiểm\nbảo lãnh', AppRoutes.insuranceGuarantee, Color(0xFFECFDF5), Color(0xFF047857)),
       (Icons.badge_rounded, 'Bàn làm việc\nBác sĩ', AppRoutes.doctorPortal, Color(0xFFE0E7FF), Color(0xFF0F2B5C)),
+      (Icons.alt_route_rounded, 'Lộ trình\nkhám', AppRoutes.clinicalPathway, Color(0xFFEFF6FF), Color(0xFF0057CD)),
     ];
 
     return Padding(

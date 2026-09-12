@@ -1341,6 +1341,69 @@ abstract final class MedicalData {
       description: 'Hoàn trả tức thì 100% số dư tạm ứng về tài khoản ngân hàng',
     ),
   ];
+
+  /// Quy trình khám bệnh chuẩn & Hướng dẫn sau khám từng bước
+  static List<ClinicalPathwayStep> get initialClinicalPathway => [
+    const ClinicalPathwayStep(
+      stepNumber: 1,
+      title: 'Tiếp đón & Đo sinh hiệu ban đầu',
+      subtitle: 'Đo Huyết áp, Chiều cao, Cân nặng, SpO2 tại Kiosk số 2',
+      location: 'Sảnh chính Tầng 1, Tòa A',
+      doctorInstruction: 'Người bệnh quét thẻ BHYT điện tử để lấy số thứ tự tự động.',
+      status: ClinicalStepStatus.completed,
+      completedTime: '08:15',
+    ),
+    const ClinicalPathwayStep(
+      stepNumber: 2,
+      title: 'Khám lâm sàng Chuyên khoa Tim mạch',
+      subtitle: 'Thăm khám tổng quát cùng PGS.TS.BS Trần Minh Đức',
+      location: 'Phòng khám 402, Tầng 4, Tòa A',
+      doctorInstruction: 'Bác sĩ nghe tim phổi, khai thác tiền sử đau ngực và chỉ định xét nghiệm.',
+      status: ClinicalStepStatus.completed,
+      completedTime: '08:45',
+    ),
+    const ClinicalPathwayStep(
+      stepNumber: 3,
+      title: 'Thực hiện Cận lâm sàng (Xét nghiệm & Chẩn đoán hình ảnh)',
+      subtitle: 'Lấy máu sinh hóa tại P.204 và Chụp X-quang tim phổi tại P.105',
+      location: 'Phòng 204 (Tòa A) & Phòng 105 (Tòa B)',
+      doctorInstruction: 'Nhịn ăn sáng trước khi lấy máu, cởi bỏ trang sức kim loại trước khi chụp phim X-quang. Thời gian trả kết quả dự kiến: 20 phút.',
+      status: ClinicalStepStatus.inProgress,
+      actionText: 'Xem Sơ đồ chỉ đường đến Phòng Xét nghiệm',
+      actionRoute: '/hospital-map',
+      etaMinutes: 15,
+    ),
+    const ClinicalPathwayStep(
+      stepNumber: 4,
+      title: 'Quay lại Bác sĩ nghe Kết luận & Phác đồ điều trị',
+      subtitle: 'Bác sĩ đọc kết quả X-quang, phân tích chỉ số máu và tư vấn',
+      location: 'Phòng khám 402, Tầng 4, Tòa A',
+      doctorInstruction: 'Sau khi có kết quả trên app, quay lại phòng 402 không cần lấy số lại.',
+      status: ClinicalStepStatus.upcoming,
+      actionText: 'Tra cứu kết quả qua Trợ lý AI Diễn giải',
+      actionRoute: '/lab-explainer',
+    ),
+    const ClinicalPathwayStep(
+      stepNumber: 5,
+      title: 'Quyết toán viện phí BHYT & Lấy thuốc theo đơn',
+      subtitle: 'Bảo lãnh viện phí không tiền mặt và nhận thuốc tại Quầy Dược số 3',
+      location: 'Quầy Thu ngân Tầng 1 & Nhà thuốc Tòa C',
+      doctorInstruction: 'Xác nhận trừ bảo lãnh BHYT 80%, kiểm tra đúng tên thuốc và hạn sử dụng trước khi rời viện.',
+      status: ClinicalStepStatus.upcoming,
+      actionText: 'Mở Đơn thuốc điện tử & Thanh toán',
+      actionRoute: '/prescription',
+    ),
+    const ClinicalPathwayStep(
+      stepNumber: 6,
+      title: 'Chăm sóc tại nhà & Tự động nhắc Tái khám sau 14 ngày',
+      subtitle: 'Uống thuốc đúng giờ, đo huyết áp mỗi sáng, tái khám sau 14 ngày',
+      location: 'Tại nhà người bệnh',
+      doctorInstruction: 'Hạn chế ăn mặn < 5g muối, duy trì vận động nhẹ nhàng. Nếu đau ngực tái phát lập tức bấm nút SOS 115 trên app.',
+      status: ClinicalStepStatus.upcoming,
+      actionText: 'Mở Lịch uống thuốc nhắc giờ',
+      actionRoute: '/medication-tracker',
+    ),
+  ];
 }
 
 

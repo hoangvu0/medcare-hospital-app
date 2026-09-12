@@ -47,5 +47,6 @@ abstract final class AppRoutes {
   static const labExplainer = '/lab-explainer';
   static const insuranceGuarantee = '/insurance-guarantee';
   static const doctorPortal = '/doctor-portal';
+  static const clinicalPathway = '/clinical-pathway';
 }
 

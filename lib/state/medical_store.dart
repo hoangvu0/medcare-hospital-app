@@ -72,6 +72,40 @@ class MedicalStore extends ChangeNotifier {
   int _walletBalance = 2500000;
   int _advanceDeposit = 1000000;
   final List<HospitalWalletTransaction> _walletTransactions = List.from(MedicalData.initialWalletTransactions);
+  final List<ClinicalPathwayStep> _clinicalPathway = List.from(MedicalData.initialClinicalPathway);
+  List<ClinicalPathwayStep> get clinicalPathway => List.unmodifiable(_clinicalPathway);
+
+  ClinicalPathwayStep get currentPathwayStep =>
+      _clinicalPathway.firstWhere((s) => s.status == ClinicalStepStatus.inProgress,
+          orElse: () => _clinicalPathway.last);
+
+  int get completedStepsCount =>
+      _clinicalPathway.where((s) => s.status == ClinicalStepStatus.completed).length;
+
+  double get pathwayProgressPercentage =>
+      _clinicalPathway.isEmpty ? 0.0 : completedStepsCount / _clinicalPathway.length;
+
+  void advancePathwayStep(int currentStepNumber) {
+    final idx = _clinicalPathway.indexWhere((s) => s.stepNumber == currentStepNumber);
+    if (idx >= 0) {
+      _clinicalPathway[idx] = _clinicalPathway[idx].copyWith(
+        status: ClinicalStepStatus.completed,
+        completedTime: '${DateTime.now().hour.toString().padLeft(2, '0')}:${DateTime.now().minute.toString().padLeft(2, '0')}',
+      );
+      if (idx + 1 < _clinicalPathway.length) {
+        _clinicalPathway[idx + 1] = _clinicalPathway[idx + 1].copyWith(
+          status: ClinicalStepStatus.inProgress,
+        );
+      }
+      notifyListeners();
+    }
+  }
+
+  void resetPathway() {
+    _clinicalPathway.clear();
+    _clinicalPathway.addAll(MedicalData.initialClinicalPathway);
+    notifyListeners();
+  }
 
   /// Map key = "doctorId_date_time" → SlotConfig
   final Map<String, SlotConfig> _slotConfigs = {

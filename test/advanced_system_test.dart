@@ -169,5 +169,27 @@ void main() {
       expect(store.followUpReminders.length, equals(initialReminders + 1));
       expect(store.followUpReminders.first.doctorName, contains('Trần Minh Đức'));
     });
+
+    test('11. Kiểm tra Quy trình & Lộ trình khám bệnh 6 bước chuẩn (Clinical Pathway Tracker)', () {
+      final pathway = store.clinicalPathway;
+      expect(pathway.length, equals(6));
+
+      // Ban đầu: Bước 1, 2 xong, Bước 3 đang thực hiện
+      expect(store.completedStepsCount, equals(2));
+      expect(store.currentPathwayStep.stepNumber, equals(3));
+      expect(store.currentPathwayStep.title, contains('Cận lâm sàng'));
+      expect(store.currentPathwayStep.location, contains('Phòng 204'));
+
+      // Hoàn thành Bước 3 (Xét nghiệm xong) -> Chuyển sang Bước 4 (Quay lại Bác sĩ kết luận)
+      store.advancePathwayStep(3);
+      expect(store.completedStepsCount, equals(3));
+      expect(store.currentPathwayStep.stepNumber, equals(4));
+      expect(store.currentPathwayStep.title, contains('Quay lại Bác sĩ'));
+
+      // Đặt lại lộ trình
+      store.resetPathway();
+      expect(store.completedStepsCount, equals(2));
+      expect(store.currentPathwayStep.stepNumber, equals(3));
+    });
   });
 }

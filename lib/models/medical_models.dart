@@ -80,6 +80,59 @@ class DoctorProfile {
 
 enum UserRole { patient, doctor, admin }
 
+enum ClinicalStepStatus { completed, inProgress, upcoming }
+
+class ClinicalPathwayStep {
+  const ClinicalPathwayStep({
+    required this.stepNumber,
+    required this.title,
+    required this.subtitle,
+    required this.location,
+    required this.doctorInstruction,
+    required this.status,
+    this.actionText,
+    this.actionRoute,
+    this.completedTime,
+    this.etaMinutes,
+  });
+
+  final int stepNumber;
+  final String title;
+  final String subtitle;
+  final String location;
+  final String doctorInstruction;
+  final ClinicalStepStatus status;
+  final String? actionText;
+  final String? actionRoute;
+  final String? completedTime;
+  final int? etaMinutes;
+
+  ClinicalPathwayStep copyWith({
+    int? stepNumber,
+    String? title,
+    String? subtitle,
+    String? location,
+    String? doctorInstruction,
+    ClinicalStepStatus? status,
+    String? actionText,
+    String? actionRoute,
+    String? completedTime,
+    int? etaMinutes,
+  }) =>
+      ClinicalPathwayStep(
+        stepNumber: stepNumber ?? this.stepNumber,
+        title: title ?? this.title,
+        subtitle: subtitle ?? this.subtitle,
+        location: location ?? this.location,
+        doctorInstruction: doctorInstruction ?? this.doctorInstruction,
+        status: status ?? this.status,
+        actionText: actionText ?? this.actionText,
+        actionRoute: actionRoute ?? this.actionRoute,
+        completedTime: completedTime ?? this.completedTime,
+        etaMinutes: etaMinutes ?? this.etaMinutes,
+      );
+}
+
 enum AppointmentStatus { confirmed, completed, cancelled }
 
 class Appointment {
