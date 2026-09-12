@@ -42,6 +42,21 @@ class MedicalStore extends ChangeNotifier {
   HospitalKpiData _hospitalKpi = MedicalData.initialHospitalKpi;
   TelemedicineSession? _currentTelemedicine;
 
+  // ── Tính năng Mới Toàn Diện ──
+  bool _isSeniorMode = false;
+  final List<LabReportItem> _labReports = List.from(MedicalData.initialLabReports);
+  final List<InsurancePolicy> _insurancePolicies = List.from(MedicalData.initialInsurancePolicies);
+  final List<CashlessClaimRequest> _cashlessClaims = [];
+  final List<AppointmentPassPackage> _appointmentPasses = List.from(MedicalData.initialAppointmentPasses);
+  final List<FollowUpReminder> _followUpReminders = List.from(MedicalData.initialFollowUpReminders);
+  final List<DoctorReview> _doctorReviews = List.from(MedicalData.initialDoctorReviews);
+  final List<SecurityAuditLog> _securityAuditLogs = List.from(MedicalData.initialSecurityAuditLogs);
+  final List<ActiveSessionInfo> _activeSessions = List.from(MedicalData.initialActiveSessions);
+  bool _isEmergencyLockdown = false;
+  int _walletBalance = 2500000;
+  int _advanceDeposit = 1000000;
+  final List<HospitalWalletTransaction> _walletTransactions = List.from(MedicalData.initialWalletTransactions);
+
   /// Map key = "doctorId_date_time" → SlotConfig
   final Map<String, SlotConfig> _slotConfigs = {
     for (final s in MedicalData.buildInitialSlotConfigs()) s.key: s
@@ -58,6 +73,20 @@ class MedicalStore extends ChangeNotifier {
   HospitalKpiData get hospitalKpi => _hospitalKpi;
   TelemedicineSession? get currentTelemedicine => _currentTelemedicine;
   LiveQueueInfo get queueInfo => _queueInfo;
+
+  bool get isSeniorMode => _isSeniorMode;
+  List<LabReportItem> get labReports => List.unmodifiable(_labReports);
+  List<InsurancePolicy> get insurancePolicies => List.unmodifiable(_insurancePolicies);
+  List<CashlessClaimRequest> get cashlessClaims => List.unmodifiable(_cashlessClaims);
+  List<AppointmentPassPackage> get appointmentPasses => List.unmodifiable(_appointmentPasses);
+  List<FollowUpReminder> get followUpReminders => List.unmodifiable(_followUpReminders);
+  List<DoctorReview> get doctorReviews => List.unmodifiable(_doctorReviews);
+  List<SecurityAuditLog> get securityAuditLogs => List.unmodifiable(_securityAuditLogs);
+  List<ActiveSessionInfo> get activeSessions => List.unmodifiable(_activeSessions);
+  bool get isEmergencyLockdown => _isEmergencyLockdown;
+  int get walletBalance => _walletBalance;
+  int get advanceDeposit => _advanceDeposit;
+  List<HospitalWalletTransaction> get walletTransactions => List.unmodifiable(_walletTransactions);
 
   /// Thành viên gia đình đang hoạt động
   FamilyMemberProfile get activeFamilyMember {
@@ -193,13 +222,207 @@ class MedicalStore extends ChangeNotifier {
       estimatedMinutes: waitRemain * 4,
     );
     // Cập nhật số ca đã hoàn thành
-    _hospitalKpi = HospitalKpiData(
-      todayPatients: _hospitalKpi.todayPatients,
-      todayRevenue: _hospitalKpi.todayRevenue,
-      avgWaitMinutes: _hospitalKpi.avgWaitMinutes,
-      occupancyRatePercent: _hospitalKpi.occupancyRatePercent,
-      totalDoctorsOnDuty: _hospitalKpi.totalDoctorsOnDuty,
+    _hospitalKpi = _hospitalKpi.copyWith(
       completedConsultations: _hospitalKpi.completedConsultations + 1,
+    );
+    notifyListeners();
+  }
+
+  /// Bác sĩ hoàn thành ca khám: Tự động lên lịch nhắc tái khám sau 14 ngày & nhắc đánh giá
+  void doctorFinishConsultation(String doctorName, String specialty) {
+    doctorCallNextPatient('Phòng 402');
+    final reminder = FollowUpReminder(
+      id: 'rem-${DateTime.now().millisecondsSinceEpoch}',
+      doctorName: doctorName,
+      specialty: specialty,
+      reminderDate: DateTime.now().add(const Duration(days: 14)),
+      clinicalReason: 'Tái khám định kỳ & đánh giá đáp ứng phác đồ điều trị',
+      doctorInstructions: 'Uống thuốc đúng đơn, ghi chép nhật ký triệu chứng và tái khám sau 14 ngày.',
+    );
+    _followUpReminders.insert(0, reminder);
+    _notifications.insert(
+      0,
+      AppNotification(
+        id: 'notif-fin-${DateTime.now().millisecondsSinceEpoch}',
+        title: 'Hoàn tất ca khám với $doctorName',
+        body: 'Bác sĩ đã tạo lịch nhắc tái khám sau 14 ngày. Hãy dành 30 giây để đánh giá trải nghiệm khám bệnh của bạn!',
+        createdAt: DateTime.now(),
+      ),
+    );
+    notifyListeners();
+  }
+
+  // ── Nghiệp vụ Mới: Senior Mode & Trợ năng ──────────────────────────────────
+
+  void toggleSeniorMode() {
+    _isSeniorMode = !_isSeniorMode;
+    notifyListeners();
+  }
+
+  // ── Nghiệp vụ Mới: Bảo lãnh Viện phí Trực tiếp (Cashless Claim) ───────────
+
+  CashlessClaimRequest submitCashlessClaim({
+    required String policyNumber,
+    required String providerName,
+    required int totalBill,
+    required int coveredPercent,
+  }) {
+    final coveredAmount = (totalBill * (coveredPercent / 100)).round();
+    final patientCoPay = totalBill - coveredAmount;
+    final claim = CashlessClaimRequest(
+      id: 'CLAIM-${DateTime.now().millisecondsSinceEpoch}',
+      policyNumber: policyNumber,
+      providerName: providerName,
+      hospitalBillId: 'BILL-2026-${_transactions.length + 101}',
+      totalBill: totalBill,
+      coveredAmount: coveredAmount,
+      patientCoPay: patientCoPay,
+      status: CashlessClaimStatus.approved,
+      requestedAt: DateTime.now(),
+      approvalCode: 'AUTH-${100000 + (DateTime.now().millisecond * 89)}',
+    );
+    _cashlessClaims.insert(0, claim);
+    // Ghi nhận log bảo mật
+    addSecurityAuditLog(
+      SecurityAuditLog(
+        id: 'audit-${DateTime.now().millisecondsSinceEpoch}',
+        actor: 'Cổng Liên Kết Bảo Hiểm ($providerName)',
+        action: 'Bảo lãnh viện phí trực tiếp thành công',
+        targetResource: 'Hồ sơ: ${_profile.name} • Hóa đơn: ${claim.hospitalBillId}',
+        ipAddress: '10.0.99.1 (Cổng Thanh Toán Bảo Hiểm)',
+        timestamp: DateTime.now(),
+        severity: SecuritySeverity.info,
+        statusDescription: 'Đã duyệt bảo lãnh: ${coveredAmount ~/ 1000}.000đ, Đồng chi trả: ${patientCoPay ~/ 1000}.000đ',
+      ),
+    );
+    _notifications.insert(
+      0,
+      AppNotification(
+        id: 'notif-claim-${claim.id}',
+        title: 'Bảo lãnh viện phí thành công!',
+        body: '$providerName đã chi trả ${coveredAmount ~/ 1000}.000đ. Bạn chỉ cần đồng chi trả ${patientCoPay ~/ 1000}.000đ.',
+        createdAt: DateTime.now(),
+      ),
+    );
+    notifyListeners();
+    return claim;
+  }
+
+  // ── Nghiệp vụ Mới: Đánh giá Bác sĩ & Khảo sát NPS ─────────────────────────
+
+  void submitDoctorReview(DoctorReview review) {
+    _doctorReviews.insert(0, review);
+    // Tính lại điểm NPS và review count
+    final total = _doctorReviews.length;
+    final totalStars = _doctorReviews.fold<double>(0, (sum, r) => sum + r.rating);
+    final avgRating = (totalStars / total);
+    _hospitalKpi = _hospitalKpi.copyWith(
+      totalReviews: _hospitalKpi.totalReviews + 1,
+      npsSatisfactionScore: (90.0 + (avgRating / 5.0) * 9.5).clamp(80.0, 100.0),
+    );
+    _notifications.insert(
+      0,
+      AppNotification(
+        id: 'notif-rev-${review.id}',
+        title: 'Cảm ơn phản hồi của bạn',
+        body: 'Đánh giá ${review.rating}★ cho ${review.doctorName} đã được ghi nhận vào hệ thống quản trị MedCare.',
+        createdAt: DateTime.now(),
+      ),
+    );
+    notifyListeners();
+  }
+
+  void addFollowUpReminder(FollowUpReminder reminder) {
+    _followUpReminders.insert(0, reminder);
+    notifyListeners();
+  }
+
+  // ── Nghiệp vụ Mới: Giám sát An ninh & Khóa khẩn cấp ───────────────────────
+
+  void toggleEmergencyLockdown() {
+    _isEmergencyLockdown = !_isEmergencyLockdown;
+    addSecurityAuditLog(
+      SecurityAuditLog(
+        id: 'audit-${DateTime.now().millisecondsSinceEpoch}',
+        actor: 'Quản Trị Viên An Ninh (admin@medcare.vn)',
+        action: _isEmergencyLockdown ? 'KÍCH HOẠT KHÓA HỆ THỐNG KHẨN CẤP' : 'Mở khóa hệ thống an ninh',
+        targetResource: 'Toàn bộ Cơ sở dữ liệu Bệnh viện',
+        ipAddress: '192.168.1.10 (Admin Web Console)',
+        timestamp: DateTime.now(),
+        severity: _isEmergencyLockdown ? SecuritySeverity.danger : SecuritySeverity.warning,
+        statusDescription: _isEmergencyLockdown
+            ? 'Đã tạm dừng các thao tác thay đổi dữ liệu để ngăn ngừa rò rỉ'
+            : 'Hệ thống đã trở lại trạng thái hoạt động bình thường',
+      ),
+    );
+    notifyListeners();
+  }
+
+  void revokeSession(String sessionId) {
+    _activeSessions.removeWhere((s) => s.id == sessionId);
+    addSecurityAuditLog(
+      SecurityAuditLog(
+        id: 'audit-${DateTime.now().millisecondsSinceEpoch}',
+        actor: 'Quản Trị Viên An Ninh',
+        action: 'Hủy phiên làm việc từ xa',
+        targetResource: 'Phiên: $sessionId',
+        ipAddress: '192.168.1.10',
+        timestamp: DateTime.now(),
+        severity: SecuritySeverity.warning,
+        statusDescription: 'Đã ngắt kết nối thiết bị thành công',
+      ),
+    );
+    notifyListeners();
+  }
+
+  void addSecurityAuditLog(SecurityAuditLog log) {
+    _securityAuditLogs.insert(0, log);
+    notifyListeners();
+  }
+
+  // ── Nghiệp vụ Mới: Ví Viện Phí & Tự động Hoàn Tạm Ứng ───────────────────────
+
+  void depositAdvance(int amount) {
+    _walletBalance -= amount;
+    _advanceDeposit += amount;
+    _walletTransactions.insert(
+      0,
+      HospitalWalletTransaction(
+        id: 'TXN-${DateTime.now().millisecondsSinceEpoch}',
+        title: 'Nộp tạm ứng viện phí',
+        amount: amount,
+        timestamp: DateTime.now(),
+        isDebit: true,
+        description: 'Tạm ứng vào quỹ viện phí MedCare',
+      ),
+    );
+    notifyListeners();
+  }
+
+  void autoRefundAdvance() {
+    if (_advanceDeposit <= 0) return;
+    final refundAmount = _advanceDeposit;
+    _advanceDeposit = 0;
+    _walletBalance += refundAmount;
+    _walletTransactions.insert(
+      0,
+      HospitalWalletTransaction(
+        id: 'TXN-${DateTime.now().millisecondsSinceEpoch}',
+        title: 'Tự động hoàn trả số dư tạm ứng (Auto-Refund)',
+        amount: refundAmount,
+        timestamp: DateTime.now(),
+        isDebit: false,
+        description: 'Đã hoàn 100% số tiền tạm ứng thừa vào tài khoản/ví',
+      ),
+    );
+    _notifications.insert(
+      0,
+      AppNotification(
+        id: 'notif-refund-${DateTime.now().millisecondsSinceEpoch}',
+        title: 'Hoàn trả tạm ứng viện phí',
+        body: 'MedCare đã hoàn trả ${refundAmount ~/ 1000}.000đ tiền tạm ứng thừa về tài khoản của bạn.',
+        createdAt: DateTime.now(),
+      ),
     );
     notifyListeners();
   }

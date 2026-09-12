@@ -13,6 +13,7 @@ class AppointmentPage extends StatefulWidget {
 class _AppointmentPageState extends State<AppointmentPage> {
   int _selectedDate = 0;
   String? _selectedTime;
+  String _selectedPassId = 'pass-std';
   bool _isSelf = true;
   bool _useInsurance = false;
   final _reasonController = TextEditingController();
@@ -118,6 +119,13 @@ class _AppointmentPageState extends State<AppointmentPage> {
           _CardSection(
             title: 'Khung giờ tiếp nhận',
             child: _buildTimeSlotGrid(store, doctor.id, dateStr),
+          ),
+          const SizedBox(height: 16),
+
+          // Chọn Gói thời gian khám bệnh
+          _CardSection(
+            title: 'Gói thời gian & Dịch vụ khám',
+            child: _buildAppointmentPassSelector(store),
           ),
           const SizedBox(height: 16),
 
@@ -231,6 +239,78 @@ class _AppointmentPageState extends State<AppointmentPage> {
           Text(label, style: const TextStyle(fontSize: 11)),
         ],
       );
+
+  Widget _buildAppointmentPassSelector(MedicalStore store) {
+    final passes = store.appointmentPasses;
+    return Column(
+      children: passes.map((pass) {
+        final isSelected = _selectedPassId == pass.id;
+        return GestureDetector(
+          onTap: () => setState(() => _selectedPassId = pass.id),
+          child: Container(
+            margin: const EdgeInsets.only(bottom: 10),
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: isSelected ? const Color(0xFFEFF6FF) : Colors.white,
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(
+                color: isSelected ? _primary : Colors.grey.shade300,
+                width: isSelected ? 2 : 1,
+              ),
+            ),
+            child: Row(
+              children: [
+                Icon(
+                  isSelected ? Icons.radio_button_checked : Icons.radio_button_off,
+                  color: isSelected ? _primary : Colors.grey,
+                  size: 20,
+                ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          Text(pass.title, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
+                          const SizedBox(width: 6),
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                            decoration: BoxDecoration(
+                              color: pass.isPopular ? Colors.amber.shade100 : Colors.blue.shade50,
+                              borderRadius: BorderRadius.circular(6),
+                            ),
+                            child: Text(
+                              pass.badge,
+                              style: TextStyle(
+                                fontSize: 9,
+                                fontWeight: FontWeight.bold,
+                                color: pass.isPopular ? Colors.amber.shade900 : Colors.blue.shade900,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 2),
+                      Text(pass.subtitle, style: const TextStyle(fontSize: 11, color: Colors.grey)),
+                    ],
+                  ),
+                ),
+                Text(
+                  pass.priceDelta == 0 ? 'Phí gốc' : '+${pass.priceDelta ~/ 1000}k',
+                  style: TextStyle(
+                    fontWeight: FontWeight.bold,
+                    fontSize: 13,
+                    color: pass.priceDelta == 0 ? Colors.grey : _primary,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+      }).toList(),
+    );
+  }
 
   // ── Bottom bar xác nhận ───────────────────────────────────────────────────
 
@@ -350,6 +430,12 @@ class _AppointmentPageState extends State<AppointmentPage> {
     }
 
     final parts = time.split(':');
+    final pass = store.appointmentPasses.firstWhere(
+      (p) => p.id == _selectedPassId,
+      orElse: () => store.appointmentPasses.first,
+    );
+    final finalReason = pass.priceDelta > 0 ? '[${pass.title}] $reason' : reason;
+
     final draft = AppointmentDraft(
       doctor: doctor,
       dateTime: DateTime(
@@ -360,7 +446,7 @@ class _AppointmentPageState extends State<AppointmentPage> {
         int.parse(parts[1]),
       ),
       patientName: _isSelf ? store.profile.name : 'Người thân',
-      reason: reason,
+      reason: finalReason,
       useInsurance: _useInsurance,
     );
     Navigator.pushNamed(

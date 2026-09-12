@@ -6,6 +6,8 @@ import 'pages/appointment_page.dart';
 import 'pages/additional_pages.dart';
 import 'pages/family_profiles_page.dart';
 import 'pages/telemedicine_page.dart';
+import 'pages/lab_explainer_page.dart';
+import 'pages/insurance_guarantee_page.dart';
 import 'pages/diagnostics_page.dart';
 import 'pages/digital_card_page.dart';
 import 'pages/doctor_detail_page.dart';
@@ -165,6 +167,8 @@ class _HospitalAppState extends State<HospitalApp> {
                 AppRoutes.adminSlots: (context) => const AdminSlotPage(),
                 AppRoutes.familyProfiles: (context) => const FamilyProfilesPage(),
                 AppRoutes.telemedicine: (context) => const TelemedicinePage(),
+                AppRoutes.labExplainer: (context) => const LabExplainerPage(),
+                AppRoutes.insuranceGuarantee: (context) => const InsuranceGuaranteePage(),
               },
 
             );

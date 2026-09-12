@@ -507,3 +507,4 @@ class _TelemedicinePageState extends State<TelemedicinePage> {
     );
   }
 }
+

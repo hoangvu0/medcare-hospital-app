@@ -46,8 +46,10 @@ class _AdminSlotPageState extends State<AdminSlotPage> {
       );
     }
 
+    final store = MedicalScope.of(context);
+
     return DefaultTabController(
-      length: 3,
+      length: 4,
       child: Scaffold(
         appBar: AppBar(
           title: const Column(
@@ -55,13 +57,14 @@ class _AdminSlotPageState extends State<AdminSlotPage> {
             children: [
               Text('Cổng Quản trị MedCare Hospital',
                   style: TextStyle(fontSize: 17, fontWeight: FontWeight.bold)),
-              Text('Phân hệ Quản trị viện phí & Bác sĩ lâm sàng',
+              Text('Phân hệ Quản trị viện phí, Bác sĩ & Giám sát An ninh',
                   style: TextStyle(fontSize: 11, color: Colors.white70)),
             ],
           ),
           backgroundColor: const Color(0xFF0D2657),
           foregroundColor: Colors.white,
           bottom: const TabBar(
+            isScrollable: true,
             indicatorColor: Colors.white,
             labelColor: Colors.white,
             unselectedLabelColor: Colors.white60,
@@ -69,6 +72,7 @@ class _AdminSlotPageState extends State<AdminSlotPage> {
               Tab(icon: Icon(Icons.event_seat, size: 18), text: 'Quản lý Slot'),
               Tab(icon: Icon(Icons.medical_services, size: 18), text: 'Bàn Bác sĩ'),
               Tab(icon: Icon(Icons.insights, size: 18), text: 'Doanh thu & KPI'),
+              Tab(icon: Icon(Icons.shield, size: 18), text: 'Giám sát An ninh'),
             ],
           ),
           actions: [
@@ -89,6 +93,7 @@ class _AdminSlotPageState extends State<AdminSlotPage> {
             _buildSlotPanel(),
             _buildDoctorWorkspace(),
             _buildHospitalKpiDashboard(),
+            _buildSecurityAuditPanel(store),
           ],
         ),
       ),
@@ -555,8 +560,12 @@ class _AdminSlotPageState extends State<AdminSlotPage> {
                     Expanded(
                       child: OutlinedButton.icon(
                         onPressed: () {
+                          store.doctorFinishConsultation(queue.doctorName, queue.department);
                           ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(content: Text('Đã lưu bệnh án và xuất đơn thuốc điện tử!')),
+                            const SnackBar(
+                              content: Text('Đã hoàn tất ca khám, tự động tạo lịch hẹn tái khám sau 14 ngày & gửi phiếu khảo sát đánh giá!'),
+                              backgroundColor: _kSuccess,
+                            ),
                           );
                         },
                         icon: const Icon(Icons.assignment_turned_in_outlined, size: 16),
@@ -713,6 +722,61 @@ class _AdminSlotPageState extends State<AdminSlotPage> {
             ),
           ),
         ),
+        const SizedBox(height: 16),
+
+        // NPS & Doctor Reviews Card
+        Card(
+          elevation: 1,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          child: Padding(
+            padding: const EdgeInsets.all(16),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    const Text('Khảo Sát Hài Lòng & NPS Bác Sĩ', style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold)),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                      decoration: BoxDecoration(color: Colors.green.shade50, borderRadius: BorderRadius.circular(8)),
+                      child: Text('${kpi.npsSatisfactionScore.toStringAsFixed(1)}% Hài lòng', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 11, color: Colors.green)),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 4),
+                Text('Dựa trên ${kpi.totalReviews} lượt đánh giá sau ca khám', style: const TextStyle(fontSize: 11, color: Colors.grey)),
+                const Divider(height: 20),
+                ...store.doctorReviews.take(3).map(
+                  (rev) => Padding(
+                    padding: const EdgeInsets.only(bottom: 10),
+                    child: Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const CircleAvatar(
+                          radius: 14,
+                          backgroundColor: Color(0xFFFEF3C7),
+                          child: Icon(Icons.star, size: 16, color: Colors.amber),
+                        ),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text('${rev.patientName} → ${rev.doctorName}', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 12)),
+                              Text(rev.comment, style: const TextStyle(fontSize: 11, color: Colors.black87)),
+                            ],
+                          ),
+                        ),
+                        Text('${rev.rating}★', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 12, color: Colors.amber)),
+                      ],
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
       ],
     );
   }
@@ -781,6 +845,259 @@ class _AdminSlotPageState extends State<AdminSlotPage> {
             ),
           ),
         ],
+      ),
+    );
+  }
+
+  // ── Tab 4: Giám sát An ninh & Nhật ký Truy vết (Security & Audit) ──────────
+
+  Widget _buildSecurityAuditPanel(MedicalStore store) {
+    final auditLogs = store.securityAuditLogs;
+    final sessions = store.activeSessions;
+    final isLockdown = store.isEmergencyLockdown;
+
+    return ListView(
+      padding: const EdgeInsets.all(16),
+      children: [
+        // Security Status Banner
+        Container(
+          padding: const EdgeInsets.all(18),
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              colors: isLockdown
+                  ? [const Color(0xFFBA1A1A), const Color(0xFF7A0006)]
+                  : [const Color(0xFF0F172A), const Color(0xFF1E293B)],
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+            ),
+            borderRadius: BorderRadius.circular(18),
+            boxShadow: const [
+              BoxShadow(color: Colors.black26, blurRadius: 10, offset: Offset(0, 4)),
+            ],
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Row(
+                    children: [
+                      Icon(
+                        isLockdown ? Icons.warning_rounded : Icons.verified_user,
+                        color: isLockdown ? Colors.amber : const Color(0xFF38BDF8),
+                        size: 26,
+                      ),
+                      const SizedBox(width: 10),
+                      Text(
+                        isLockdown ? 'CHẾ ĐỘ KHÓA KHẨN CẤP ĐANG BẬT' : 'TRUNG TÂM AN NINH & GIÁM SÁT HIS',
+                        style: TextStyle(
+                          color: isLockdown ? Colors.amber : const Color(0xFF38BDF8),
+                          fontSize: 12,
+                          fontWeight: FontWeight.bold,
+                          letterSpacing: 0.5,
+                        ),
+                      ),
+                    ],
+                  ),
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                    decoration: BoxDecoration(
+                      color: isLockdown ? Colors.red.shade900 : const Color(0xFF064E3B),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Text(
+                      isLockdown ? 'DEFCON 1' : '100% SECURE',
+                      style: TextStyle(
+                        color: isLockdown ? Colors.amber : const Color(0xFF34D399),
+                        fontSize: 11,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 12),
+              Text(
+                isLockdown
+                    ? 'Toàn bộ quyền ghi dữ liệu bệnh án và đặt slot đã bị tạm khóa để ngăn ngừa thất thoát dữ liệu.'
+                    : 'Hệ thống tuân thủ nghiêm ngặt HIPAA & Nghị định 13/2023/NĐ-CP về Bảo vệ Dữ liệu Cá nhân Y tế.',
+                style: const TextStyle(color: Colors.white70, fontSize: 12, height: 1.4),
+              ),
+              const SizedBox(height: 14),
+              Row(
+                children: [
+                  _securityTag('Mã hóa: AES-256 GCM'),
+                  const SizedBox(width: 8),
+                  _securityTag('TLS 1.3 End-to-End'),
+                  const SizedBox(width: 8),
+                  _securityTag('WAF: Active (0 breach)'),
+                ],
+              ),
+              const SizedBox(height: 16),
+              SizedBox(
+                width: double.infinity,
+                child: FilledButton.icon(
+                  onPressed: () => store.toggleEmergencyLockdown(),
+                  style: FilledButton.styleFrom(
+                    backgroundColor: isLockdown ? Colors.white : const Color(0xFFEF4444),
+                    foregroundColor: isLockdown ? Colors.red : Colors.white,
+                    padding: const EdgeInsets.symmetric(vertical: 12),
+                  ),
+                  icon: Icon(isLockdown ? Icons.lock_open : Icons.lock),
+                  label: Text(
+                    isLockdown ? 'MỞ KHÓA HỆ THỐNG TRỞ LẠI' : 'KÍCH HOẠT KHÓA TOÀN BỘ KHẨN CẤP (LOCKDOWN)',
+                    style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(height: 20),
+
+        // Active Sessions Section
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            const Text(
+              'THIẾT BỊ & PHIÊN ĐĂNG NHẬP (ACTIVE SESSIONS)',
+              style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Color(0xFF0D2657)),
+            ),
+            Text('${sessions.length} thiết bị trực tuyến', style: const TextStyle(fontSize: 11, color: Colors.grey)),
+          ],
+        ),
+        const SizedBox(height: 10),
+        ...sessions.map((sess) => _buildSessionCard(store, sess)),
+        const SizedBox(height: 20),
+
+        // Real-time Audit Trail Logs
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            const Text(
+              'NHẬT KÝ TRUY VẾT THỜI GIAN THỰC (AUDIT TRAIL)',
+              style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Color(0xFF0D2657)),
+            ),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+              decoration: BoxDecoration(color: Colors.green.shade50, borderRadius: BorderRadius.circular(6)),
+              child: const Text('Live Stream', style: TextStyle(fontSize: 10, color: Colors.green, fontWeight: FontWeight.bold)),
+            ),
+          ],
+        ),
+        const SizedBox(height: 10),
+        ...auditLogs.map((log) => _buildAuditLogCard(log)),
+      ],
+    );
+  }
+
+  Widget _securityTag(String text) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+      decoration: BoxDecoration(
+        color: Colors.white10,
+        borderRadius: BorderRadius.circular(6),
+      ),
+      child: Text(text, style: const TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.w500)),
+    );
+  }
+
+  Widget _buildSessionCard(MedicalStore store, ActiveSessionInfo sess) {
+    return Card(
+      margin: const EdgeInsets.only(bottom: 8),
+      elevation: 0.5,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      child: ListTile(
+        leading: CircleAvatar(
+          backgroundColor: sess.isCurrent ? const Color(0xFFD2E4FF) : const Color(0xFFF1F5F9),
+          child: Icon(
+            sess.clientType.contains('Web')
+                ? Icons.laptop
+                : sess.clientType.contains('Tablet')
+                    ? Icons.tablet_mac
+                    : Icons.smartphone,
+            color: sess.isCurrent ? const Color(0xFF0057CD) : Colors.grey,
+            size: 20,
+          ),
+        ),
+        title: Row(
+          children: [
+            Text(sess.deviceName, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
+            if (sess.isCurrent) ...[
+              const SizedBox(width: 6),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                decoration: BoxDecoration(color: Colors.blue.shade100, borderRadius: BorderRadius.circular(4)),
+                child: const Text('Hiện tại', style: TextStyle(fontSize: 9, fontWeight: FontWeight.bold, color: Colors.blue)),
+              ),
+            ],
+          ],
+        ),
+        subtitle: Text('${sess.clientType} • IP: ${sess.ipAddress} • ${sess.lastActive}', style: const TextStyle(fontSize: 11)),
+        trailing: sess.isCurrent
+            ? null
+            : TextButton(
+                onPressed: () {
+                  store.revokeSession(sess.id);
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(content: Text('Đã ngắt kết nối phiên ${sess.deviceName}')),
+                  );
+                },
+                child: const Text('Hủy phiên', style: TextStyle(color: Colors.red, fontSize: 12)),
+              ),
+      ),
+    );
+  }
+
+  Widget _buildAuditLogCard(SecurityAuditLog log) {
+    final color = switch (log.severity) {
+      SecuritySeverity.info => Colors.green,
+      SecuritySeverity.warning => Colors.amber,
+      SecuritySeverity.danger => Colors.red,
+    };
+
+    return Card(
+      margin: const EdgeInsets.only(bottom: 8),
+      elevation: 0.5,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      child: Padding(
+        padding: const EdgeInsets.all(12),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Container(
+                  width: 8,
+                  height: 8,
+                  decoration: BoxDecoration(color: color, shape: BoxShape.circle),
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(log.action, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 12.5)),
+                ),
+                Text(
+                  '${log.timestamp.hour.toString().padLeft(2, '0')}:${log.timestamp.minute.toString().padLeft(2, '0')}',
+                  style: const TextStyle(fontSize: 11, color: Colors.grey),
+                ),
+              ],
+            ),
+            const SizedBox(height: 4),
+            Text('Thực hiện: ${log.actor} • IP: ${log.ipAddress}', style: const TextStyle(fontSize: 11, color: Colors.grey)),
+            const SizedBox(height: 2),
+            Text('Đối tượng: ${log.targetResource}', style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w500)),
+            const SizedBox(height: 4),
+            Container(
+              padding: const EdgeInsets.all(6),
+              decoration: BoxDecoration(
+                color: color.withValues(alpha: 0.08),
+                borderRadius: BorderRadius.circular(6),
+              ),
+              child: Text(log.statusDescription, style: TextStyle(fontSize: 11, color: color)),
+            ),
+          ],
+        ),
       ),
     );
   }

@@ -662,6 +662,8 @@ class HospitalKpiData {
     required this.occupancyRatePercent,
     required this.totalDoctorsOnDuty,
     required this.completedConsultations,
+    this.npsSatisfactionScore = 96.8,
+    this.totalReviews = 142,
   });
 
   final int todayPatients;
@@ -670,4 +672,279 @@ class HospitalKpiData {
   final int occupancyRatePercent;
   final int totalDoctorsOnDuty;
   final int completedConsultations;
+  final double npsSatisfactionScore;
+  final int totalReviews;
+
+  HospitalKpiData copyWith({
+    int? todayPatients,
+    int? todayRevenue,
+    int? avgWaitMinutes,
+    int? occupancyRatePercent,
+    int? totalDoctorsOnDuty,
+    int? completedConsultations,
+    double? npsSatisfactionScore,
+    int? totalReviews,
+  }) =>
+      HospitalKpiData(
+        todayPatients: todayPatients ?? this.todayPatients,
+        todayRevenue: todayRevenue ?? this.todayRevenue,
+        avgWaitMinutes: avgWaitMinutes ?? this.avgWaitMinutes,
+        occupancyRatePercent: occupancyRatePercent ?? this.occupancyRatePercent,
+        totalDoctorsOnDuty: totalDoctorsOnDuty ?? this.totalDoctorsOnDuty,
+        completedConsultations: completedConsultations ?? this.completedConsultations,
+        npsSatisfactionScore: npsSatisfactionScore ?? this.npsSatisfactionScore,
+        totalReviews: totalReviews ?? this.totalReviews,
+      );
 }
+
+// ── Nâng cấp: Trợ lý AI Diễn giải Xét nghiệm (Lab Explainer) ────────────────
+
+enum LabRiskLevel { normal, warning, critical }
+enum LabCategory { hematology, biochemistry }
+
+class LabReportItem {
+  const LabReportItem({
+    required this.id,
+    required this.code,
+    required this.name,
+    required this.category,
+    required this.value,
+    required this.unit,
+    required this.referenceRange,
+    required this.riskLevel,
+    required this.clinicalMeaning,
+    required this.dietaryAdvice,
+    required this.testedAt,
+  });
+
+  final String id;
+  final String code;
+  final String name;
+  final LabCategory category;
+  final double value;
+  final String unit;
+  final String referenceRange;
+  final LabRiskLevel riskLevel;
+  final String clinicalMeaning;
+  final String dietaryAdvice;
+  final String testedAt;
+
+  String get categoryLabel => category == LabCategory.hematology ? 'Huyết học' : 'Sinh hóa máu';
+
+  String get riskLabel => switch (riskLevel) {
+        LabRiskLevel.normal => 'Bình thường',
+        LabRiskLevel.warning => 'Cảnh báo nhẹ',
+        LabRiskLevel.critical => 'Vượt ngưỡng',
+      };
+}
+
+// ── Nâng cấp: Cổng Bảo Hiểm & Bảo Lãnh Viện Phí Tư Nhân (Direct Billing) ───
+
+enum CashlessClaimStatus { pending, approved, rejected }
+
+class InsurancePolicy {
+  const InsurancePolicy({
+    required this.id,
+    required this.providerName,
+    required this.policyNumber,
+    required this.cardHolderName,
+    required this.outpatientLimit,
+    required this.inpatientLimit,
+    required this.usedAmount,
+    required this.expireDate,
+    required this.coveragePercent,
+    this.logoEmoji = '🛡️',
+  });
+
+  final String id;
+  final String providerName;
+  final String policyNumber;
+  final String cardHolderName;
+  final int outpatientLimit;
+  final int inpatientLimit;
+  final int usedAmount;
+  final String expireDate;
+  final int coveragePercent;
+  final String logoEmoji;
+
+  int get remainingOutpatient => outpatientLimit - usedAmount;
+}
+
+class CashlessClaimRequest {
+  const CashlessClaimRequest({
+    required this.id,
+    required this.policyNumber,
+    required this.providerName,
+    required this.hospitalBillId,
+    required this.totalBill,
+    required this.coveredAmount,
+    required this.patientCoPay,
+    required this.status,
+    required this.requestedAt,
+    this.approvalCode,
+  });
+
+  final String id;
+  final String policyNumber;
+  final String providerName;
+  final String hospitalBillId;
+  final int totalBill;
+  final int coveredAmount;
+  final int patientCoPay;
+  final CashlessClaimStatus status;
+  final DateTime requestedAt;
+  final String? approvalCode;
+}
+
+// ── Nâng cấp: Tự động nhắc Tái khám & Đánh giá Bác sĩ ───────────────────────
+
+class FollowUpReminder {
+  const FollowUpReminder({
+    required this.id,
+    required this.doctorName,
+    required this.specialty,
+    required this.reminderDate,
+    required this.clinicalReason,
+    required this.doctorInstructions,
+    this.isCompleted = false,
+  });
+
+  final String id;
+  final String doctorName;
+  final String specialty;
+  final DateTime reminderDate;
+  final String clinicalReason;
+  final String doctorInstructions;
+  final bool isCompleted;
+
+  FollowUpReminder copyWith({bool? isCompleted}) => FollowUpReminder(
+        id: id,
+        doctorName: doctorName,
+        specialty: specialty,
+        reminderDate: reminderDate,
+        clinicalReason: clinicalReason,
+        doctorInstructions: doctorInstructions,
+        isCompleted: isCompleted ?? this.isCompleted,
+      );
+}
+
+class DoctorReview {
+  const DoctorReview({
+    required this.id,
+    required this.doctorId,
+    required this.doctorName,
+    required this.patientName,
+    required this.rating,
+    required this.comment,
+    required this.treatmentDepartment,
+    required this.createdAt,
+    this.attitudeRating = 5,
+    this.expertiseRating = 5,
+    this.waitingTimeRating = 5,
+  });
+
+  final String id;
+  final String doctorId;
+  final String doctorName;
+  final String patientName;
+  final double rating;
+  final String comment;
+  final String treatmentDepartment;
+  final DateTime createdAt;
+  final int attitudeRating;
+  final int expertiseRating;
+  final int waitingTimeRating;
+}
+
+// ── Nâng cấp: Giám Sát Bảo Mật & Nhật Ký Truy Vết (Security & Audit) ────────
+
+enum SecuritySeverity { info, warning, danger }
+
+class SecurityAuditLog {
+  const SecurityAuditLog({
+    required this.id,
+    required this.actor,
+    required this.action,
+    required this.targetResource,
+    required this.ipAddress,
+    required this.timestamp,
+    required this.severity,
+    required this.statusDescription,
+  });
+
+  final String id;
+  final String actor;
+  final String action;
+  final String targetResource;
+  final String ipAddress;
+  final DateTime timestamp;
+  final SecuritySeverity severity;
+  final String statusDescription;
+
+  String get severityLabel => switch (severity) {
+        SecuritySeverity.info => 'Hợp lệ',
+        SecuritySeverity.warning => 'Chú ý',
+        SecuritySeverity.danger => 'Cảnh báo',
+      };
+}
+
+class ActiveSessionInfo {
+  const ActiveSessionInfo({
+    required this.id,
+    required this.deviceName,
+    required this.clientType,
+    required this.ipAddress,
+    required this.lastActive,
+    required this.isCurrent,
+  });
+
+  final String id;
+  final String deviceName;
+  final String clientType;
+  final String ipAddress;
+  final String lastActive;
+  final bool isCurrent;
+}
+
+// ── Nâng cấp: Gói Đăng Ký Thời Gian Khám Bệnh (Appointment Pass) ────────────
+
+class AppointmentPassPackage {
+  const AppointmentPassPackage({
+    required this.id,
+    required this.title,
+    required this.subtitle,
+    required this.priceDelta,
+    required this.badge,
+    required this.benefits,
+    this.isPopular = false,
+  });
+
+  final String id;
+  final String title;
+  final String subtitle;
+  final int priceDelta;
+  final String badge;
+  final List<String> benefits;
+  final bool isPopular;
+}
+
+// ── Nâng cấp: Ví Viện Phí & Tạm Ứng Tự Động Hoàn Tiền ───────────────────────
+
+class HospitalWalletTransaction {
+  const HospitalWalletTransaction({
+    required this.id,
+    required this.title,
+    required this.amount,
+    required this.timestamp,
+    required this.isDebit,
+    required this.description,
+  });
+
+  final String id;
+  final String title;
+  final int amount;
+  final DateTime timestamp;
+  final bool isDebit; // true: trừ tiền, false: cộng tiền / hoàn tiền
+  final String description;
+}
+

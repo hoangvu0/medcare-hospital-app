@@ -13,6 +13,7 @@ class DoctorsPage extends StatefulWidget {
 
 class _DoctorsPageState extends State<DoctorsPage> {
   int selectedCategory = 0;
+  int selectedRank = 0;
   String query = '';
 
   final categories = const [
@@ -27,6 +28,17 @@ class _DoctorsPageState extends State<DoctorsPage> {
     'Thần kinh',
     'Sản phụ khoa',
     'Răng Hàm Mặt',
+    'Ung bướu & Xạ trị',
+    'Hô hấp & Phổi',
+  ];
+
+  final rankFilters = const [
+    'Tất cả học vị',
+    'Giáo sư (GS)',
+    'Phó Giáo sư (PGS)',
+    'Tiến sĩ (TS)',
+    'BSCKII',
+    'Thạc sĩ (ThS)',
   ];
 
   @override
@@ -34,15 +46,28 @@ class _DoctorsPageState extends State<DoctorsPage> {
     final store = MedicalScope.of(context);
     final doctors = store.doctors;
     final selected = categories[selectedCategory];
+    final selectedRankName = rankFilters[selectedRank];
+
     final visible = doctors
         .where(
-          (doctor) =>
-              (selected == 'Tất cả' ||
-                  doctor.specialty.toLowerCase().contains(selected.toLowerCase()) ||
-                  selected.toLowerCase().contains(doctor.specialty.toLowerCase())) &&
-              (doctor.name.toLowerCase().contains(query.toLowerCase()) ||
-                  doctor.specialty.toLowerCase().contains(query.toLowerCase()) ||
-                  doctor.experience.toLowerCase().contains(query.toLowerCase())),
+          (doctor) {
+            final matchCategory = selected == 'Tất cả' ||
+                doctor.specialty.toLowerCase().contains(selected.toLowerCase()) ||
+                selected.toLowerCase().contains(doctor.specialty.toLowerCase());
+
+            final matchRank = selectedRankName == 'Tất cả học vị' ||
+                (selectedRankName.contains('GS') && doctor.name.startsWith('GS')) ||
+                (selectedRankName.contains('PGS') && doctor.name.startsWith('PGS')) ||
+                (selectedRankName.contains('TS') && (doctor.name.startsWith('TS') || doctor.education.contains('Tiến sĩ'))) ||
+                (selectedRankName.contains('BSCKII') && (doctor.name.contains('BSCKII') || doctor.education.contains('Chuyên khoa II'))) ||
+                (selectedRankName.contains('ThS') && (doctor.name.startsWith('ThS') || doctor.education.contains('Thạc sĩ')));
+
+            final matchQuery = doctor.name.toLowerCase().contains(query.toLowerCase()) ||
+                doctor.specialty.toLowerCase().contains(query.toLowerCase()) ||
+                doctor.experience.toLowerCase().contains(query.toLowerCase());
+
+            return matchCategory && matchRank && matchQuery;
+          },
         )
         .toList();
     return Scaffold(
@@ -80,7 +105,7 @@ class _DoctorsPageState extends State<DoctorsPage> {
             ),
           ),
           SizedBox(
-            height: 50,
+            height: 46,
             child: ListView.separated(
               padding: const EdgeInsets.symmetric(horizontal: 16),
               scrollDirection: Axis.horizontal,
@@ -90,6 +115,22 @@ class _DoctorsPageState extends State<DoctorsPage> {
                 label: Text(categories[index]),
                 selected: selectedCategory == index,
                 onSelected: (_) => setState(() => selectedCategory = index),
+              ),
+            ),
+          ),
+          const SizedBox(height: 6),
+          SizedBox(
+            height: 40,
+            child: ListView.separated(
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              scrollDirection: Axis.horizontal,
+              itemCount: rankFilters.length,
+              separatorBuilder: (_, _) => const SizedBox(width: 6),
+              itemBuilder: (context, index) => FilterChip(
+                label: Text(rankFilters[index], style: const TextStyle(fontSize: 11)),
+                selected: selectedRank == index,
+                selectedColor: const Color(0xFFD2E4FF),
+                onSelected: (_) => setState(() => selectedRank = index),
               ),
             ),
           ),

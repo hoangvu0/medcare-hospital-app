@@ -44,5 +44,7 @@ abstract final class AppRoutes {
   static const adminSlots = '/admin-slots';
   static const familyProfiles = '/family-profiles';
   static const telemedicine = '/telemedicine';
+  static const labExplainer = '/lab-explainer';
+  static const insuranceGuarantee = '/insurance-guarantee';
 }
 

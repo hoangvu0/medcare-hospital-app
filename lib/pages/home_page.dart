@@ -20,6 +20,28 @@ class _HomePageState extends State<HomePage> {
   @override
   Widget build(BuildContext context) {
     final settings = AppSettingsScope.of(context);
+    final store = MedicalScope.of(context);
+
+    if (store.isSeniorMode) {
+      return Scaffold(
+        backgroundColor: const Color(0xFFFAF8FF),
+        appBar: AppBar(
+          title: const Text('MedCare — Chế độ Người cao tuổi', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 17)),
+          backgroundColor: const Color(0xFF0057CD),
+          foregroundColor: Colors.white,
+          actions: [
+            FilledButton.tonal(
+              onPressed: () => store.toggleSeniorMode(),
+              style: FilledButton.styleFrom(backgroundColor: Colors.white24, foregroundColor: Colors.white),
+              child: const Text('Thoát'),
+            ),
+            const SizedBox(width: 8),
+          ],
+        ),
+        body: _buildSeniorModeScreen(store),
+      );
+    }
+
     return Scaffold(
       backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       body: SafeArea(
@@ -32,6 +54,8 @@ class _HomePageState extends State<HomePage> {
                 if (settings.isOfflineSimulated) _offlineBanner(settings),
                 _greeting(),
                 _aiAssistantBanner(),
+                _followUpReminderBanner(store),
+                _hospitalWalletBanner(store),
                 _emergency(),
                 _appointment(),
                 _quickActions(),
@@ -115,6 +139,14 @@ class _HomePageState extends State<HomePage> {
           onPressed: () =>
               Navigator.pushNamed(context, AppRoutes.notifications),
           icon: const Icon(Icons.notifications_none_rounded, color: dark),
+        ),
+        IconButton(
+          onPressed: () {
+            final store = MedicalScope.of(context);
+            store.toggleSeniorMode();
+          },
+          tooltip: 'Chế độ Người cao tuổi (Senior Mode)',
+          icon: const Icon(Icons.elderly_outlined, color: primary),
         ),
         IconButton(
           onPressed: () => Navigator.pushNamed(context, AppRoutes.settings),
@@ -321,6 +353,121 @@ class _HomePageState extends State<HomePage> {
       ),
     ),
   );
+
+  Widget _followUpReminderBanner(MedicalStore store) {
+    if (store.followUpReminders.isEmpty) return const SizedBox.shrink();
+    final rem = store.followUpReminders.first;
+    final daysRemaining = rem.reminderDate.difference(DateTime.now()).inDays.clamp(0, 99);
+
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
+      child: Container(
+        padding: const EdgeInsets.all(14),
+        decoration: BoxDecoration(
+          color: const Color(0xFFEFF6FF),
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: const Color(0xFFBFDBFE)),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                const Icon(Icons.event_repeat, color: Color(0xFF0057CD), size: 20),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    'LỊCH HẸN TÁI KHÁM TỰ ĐỘNG (CÒN $daysRemaining NGÀY)',
+                    style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Color(0xFF0057CD)),
+                  ),
+                ),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                  decoration: BoxDecoration(color: const Color(0xFF0057CD), borderRadius: BorderRadius.circular(8)),
+                  child: const Text('Bác sĩ hẹn', style: TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold)),
+                ),
+              ],
+            ),
+            const SizedBox(height: 6),
+            Text(
+              'Bác sĩ: ${rem.doctorName} (${rem.specialty})',
+              style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
+            ),
+            const SizedBox(height: 2),
+            Text(
+              rem.clinicalReason,
+              style: const TextStyle(fontSize: 11, color: Colors.black87),
+            ),
+            const SizedBox(height: 4),
+            Text(
+              'Dặn dò: ${rem.doctorInstructions}',
+              style: const TextStyle(fontSize: 11, color: Colors.grey),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _hospitalWalletBanner(MedicalStore store) {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
+      child: Container(
+        padding: const EdgeInsets.all(14),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: const Color(0xFFE2E8F0)),
+          boxShadow: [
+            BoxShadow(color: Colors.black.withValues(alpha: 0.03), blurRadius: 6, offset: const Offset(0, 2)),
+          ],
+        ),
+        child: Row(
+          children: [
+            const CircleAvatar(
+              backgroundColor: Color(0xFFDCFCE7),
+              child: Icon(Icons.account_balance_wallet, color: Color(0xFF15803D)),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text('VÍ VIỆN PHÍ MEDCARE PAY', style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: Colors.grey)),
+                  Text(
+                    'Số dư: ${store.walletBalance ~/ 1000}.000đ',
+                    style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: Color(0xFF0F172A)),
+                  ),
+                  Text(
+                    'Tạm ứng: ${store.advanceDeposit ~/ 1000}.000đ',
+                    style: const TextStyle(fontSize: 11, color: Color(0xFF15803D), fontWeight: FontWeight.w600),
+                  ),
+                ],
+              ),
+            ),
+            if (store.advanceDeposit > 0)
+              FilledButton.tonal(
+                onPressed: () {
+                  store.autoRefundAdvance();
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text('Đã hoàn trả 100% số tiền tạm ứng thừa về tài khoản ngân hàng!'),
+                      backgroundColor: Colors.green,
+                    ),
+                  );
+                },
+                style: FilledButton.styleFrom(
+                  backgroundColor: const Color(0xFFDCFCE7),
+                  foregroundColor: const Color(0xFF15803D),
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                ),
+                child: const Text('Hoàn tiền', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold)),
+              ),
+          ],
+        ),
+      ),
+    );
+  }
 
   Widget _emergency() => Padding(
     padding: const EdgeInsets.symmetric(horizontal: 16),
@@ -553,6 +700,8 @@ class _HomePageState extends State<HomePage> {
 
       (Icons.spa_rounded, 'Thư giãn\ntinh thần', AppRoutes.mentalHealth, Color(0xFFF3E8FF), Color(0xFF7E22CE)),
       (Icons.menu_book_rounded, 'Cẩm nang\ny khoa', AppRoutes.healthNews, Color(0xFFFFEDD5), Color(0xFFC2410C)),
+      (Icons.biotech_rounded, 'AI Diễn giải\nxét nghiệm', AppRoutes.labExplainer, Color(0xFFE0F2FE), Color(0xFF0369A1)),
+      (Icons.shield_rounded, 'Bảo hiểm\nbảo lãnh', AppRoutes.insuranceGuarantee, Color(0xFFECFDF5), Color(0xFF047857)),
     ];
 
     return Padding(
@@ -943,6 +1092,111 @@ class _HomePageState extends State<HomePage> {
                 Navigator.pushNamed(context, AppRoutes.records);
               },
             ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildSeniorModeScreen(MedicalStore store) {
+    return ListView(
+      padding: const EdgeInsets.all(20),
+      children: [
+        Container(
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            color: const Color(0xFF0057CD),
+            borderRadius: BorderRadius.circular(16),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text('Kính chào Bác,', style: TextStyle(color: Colors.white70, fontSize: 16)),
+              Text(store.profile.name, style: const TextStyle(color: Colors.white, fontSize: 24, fontWeight: FontWeight.bold)),
+              const SizedBox(height: 6),
+              const Text('Chế độ màn hình tối giản, chữ to rõ ràng dành riêng cho Người cao tuổi.', style: TextStyle(color: Colors.white70, fontSize: 13)),
+            ],
+          ),
+        ),
+        const SizedBox(height: 24),
+
+        _seniorBigButton(
+          title: 'GỌI CẤP CỨU & BÁC SĨ',
+          subtitle: 'Kết nối khẩn cấp 1900 8899 / 115',
+          icon: Icons.phone_in_talk,
+          color: const Color(0xFFBA1A1A),
+          onTap: () => Navigator.pushNamed(context, AppRoutes.emergencySos),
+        ),
+        const SizedBox(height: 16),
+
+        _seniorBigButton(
+          title: 'LỊCH KHÁM & TÁI KHÁM',
+          subtitle: 'Xem phòng khám & bác sĩ hẹn',
+          icon: Icons.calendar_month,
+          color: const Color(0xFF0057CD),
+          onTap: () => Navigator.pushNamed(context, AppRoutes.myAppointments),
+        ),
+        const SizedBox(height: 16),
+
+        _seniorBigButton(
+          title: 'GIỜ UỐNG THUỐC HÀNG NGÀY',
+          subtitle: 'Xem danh sách thuốc cần uống hôm nay',
+          icon: Icons.medication_rounded,
+          color: const Color(0xFF006C49),
+          onTap: () => Navigator.pushNamed(context, AppRoutes.medicationTracker),
+        ),
+        const SizedBox(height: 16),
+
+        _seniorBigButton(
+          title: 'ĐỌC KẾT QUẢ XÉT NGHIỆM',
+          subtitle: 'AI giải thích chỉ số máu bằng chữ to',
+          icon: Icons.auto_awesome,
+          color: const Color(0xFF7E22CE),
+          onTap: () => Navigator.pushNamed(context, AppRoutes.labExplainer),
+        ),
+      ],
+    );
+  }
+
+  Widget _seniorBigButton({
+    required String title,
+    required String subtitle,
+    required IconData icon,
+    required Color color,
+    required VoidCallback onTap,
+  }) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(18),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 20),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(18),
+          border: Border.all(color: color, width: 2),
+          boxShadow: [
+            BoxShadow(color: color.withValues(alpha: 0.1), blurRadius: 10, offset: const Offset(0, 4)),
+          ],
+        ),
+        child: Row(
+          children: [
+            CircleAvatar(
+              radius: 28,
+              backgroundColor: color.withValues(alpha: 0.12),
+              child: Icon(icon, color: color, size: 32),
+            ),
+            const SizedBox(width: 16),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(title, style: TextStyle(fontSize: 16, fontWeight: FontWeight.w900, color: color)),
+                  const SizedBox(height: 4),
+                  Text(subtitle, style: const TextStyle(fontSize: 13, color: Colors.black87, fontWeight: FontWeight.w500)),
+                ],
+              ),
+            ),
+            Icon(Icons.arrow_forward_ios, color: color, size: 18),
           ],
         ),
       ),
