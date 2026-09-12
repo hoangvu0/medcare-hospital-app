@@ -85,11 +85,25 @@ class _LoginPageState extends State<LoginPage> {
       return;
     }
 
-    Navigator.pushNamedAndRemoveUntil(
-      context,
-      AppRoutes.home,
-      (_) => false,
-    );
+    if (store.isDoctorRole) {
+      Navigator.pushNamedAndRemoveUntil(
+        context,
+        AppRoutes.doctorPortal,
+        (_) => false,
+      );
+    } else if (store.isAdminRole) {
+      Navigator.pushNamedAndRemoveUntil(
+        context,
+        AppRoutes.adminSlots,
+        (_) => false,
+      );
+    } else {
+      Navigator.pushNamedAndRemoveUntil(
+        context,
+        AppRoutes.home,
+        (_) => false,
+      );
+    }
   }
 
   void _fillDemo(String id, String pass) {

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../models/medical_models.dart';
+import '../routes/app_routes.dart';
 import '../state/medical_store.dart';
 
 const _kPrimary = Color(0xFF0D6EFD);
@@ -35,7 +36,10 @@ class _AdminSlotPageState extends State<AdminSlotPage> {
 
   @override
   Widget build(BuildContext context) {
-    if (!_authenticated) {
+    final store = MedicalScope.of(context);
+    final isAlreadyAdmin = store.isAdminRole || _authenticated;
+
+    if (!isAlreadyAdmin) {
       return Scaffold(
         appBar: AppBar(
           title: const Text('Admin & Bác sĩ — Đăng nhập'),
@@ -45,8 +49,6 @@ class _AdminSlotPageState extends State<AdminSlotPage> {
         body: _buildLoginScreen(),
       );
     }
-
-    final store = MedicalScope.of(context);
 
     return DefaultTabController(
       length: 4,
@@ -77,14 +79,22 @@ class _AdminSlotPageState extends State<AdminSlotPage> {
           ),
           actions: [
             Padding(
-              padding: const EdgeInsets.only(right: 12),
+              padding: const EdgeInsets.symmetric(horizontal: 4),
               child: Chip(
                 avatar: const Icon(Icons.admin_panel_settings,
                     size: 16, color: Colors.white),
-                label: const Text('Admin & Doctor',
+                label: const Text('Admin Portal',
                     style: TextStyle(color: Colors.white, fontSize: 11)),
                 backgroundColor: Colors.white.withValues(alpha: 0.15),
               ),
+            ),
+            IconButton(
+              tooltip: 'Đăng xuất tài khoản Admin',
+              icon: const Icon(Icons.logout_rounded, color: Colors.redAccent),
+              onPressed: () {
+                store.logout();
+                Navigator.pushNamedAndRemoveUntil(context, AppRoutes.login, (_) => false);
+              },
             ),
           ],
         ),

@@ -294,32 +294,84 @@ class _PatientRecordsPageState extends State<PatientRecordsPage> {
                   style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13),
                 ),
               ),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                decoration: BoxDecoration(
+                  color: Colors.blue.shade50,
+                  borderRadius: BorderRadius.circular(6),
+                  border: Border.all(color: Colors.blue.shade200),
+                ),
+                child: Text(
+                  'ICD-10: ${record.diagnosisCode}',
+                  style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: Colors.blue.shade800),
+                ),
+              ),
             ],
           ),
           const SizedBox(height: 8),
           Container(
-            padding: const EdgeInsets.all(10),
+            padding: const EdgeInsets.all(12),
             decoration: BoxDecoration(
               color: const Color(0xFFF8FAFC),
-              borderRadius: BorderRadius.circular(8),
+              borderRadius: BorderRadius.circular(10),
               border: Border.all(color: Colors.black12),
             ),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
+                  '• Bệnh học ICD-10: ${record.icd10Name}',
+                  style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Color(0xFF0F172A)),
+                ),
+                const SizedBox(height: 4),
+                Text(
                   '• Triệu chứng: ${record.symptoms}',
                   style: const TextStyle(fontSize: 12, color: Colors.black87),
                 ),
                 const SizedBox(height: 4),
                 Text(
-                  '• Hướng điều trị: ${record.treatmentPlan}',
+                  '• Khám thực thể: ${record.physicalExamNotes}',
                   style: const TextStyle(fontSize: 12, color: Colors.black87),
+                ),
+                if (record.prescribedMedicinesSummary != null) ...[
+                  const SizedBox(height: 4),
+                  Text(
+                    '• Thuốc kê đơn: ${record.prescribedMedicinesSummary}',
+                    style: const TextStyle(fontSize: 12, color: Colors.teal, fontWeight: FontWeight.w600),
+                  ),
+                ],
+                const SizedBox(height: 4),
+                Text(
+                  '• Lời dặn Bác sĩ: ${record.doctorInstructions}',
+                  style: const TextStyle(fontSize: 12, fontStyle: FontStyle.italic, color: Color(0xFF0369A1)),
                 ),
                 const SizedBox(height: 4),
                 Text(
                   '• Tái khám: ${record.followUpDate} • Mã toa: ${record.prescriptionCode}',
                   style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Color(0xFF0057CD)),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 8),
+          // Huy hiệu ký số SHA-256 EMR
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+            decoration: BoxDecoration(
+              color: Colors.green.shade50,
+              borderRadius: BorderRadius.circular(8),
+              border: Border.all(color: Colors.green.shade200),
+            ),
+            child: Row(
+              children: [
+                Icon(Icons.verified_rounded, size: 16, color: Colors.green.shade700),
+                const SizedBox(width: 6),
+                Expanded(
+                  child: Text(
+                    'Ký số EMR: ${record.digitalSignatureToken}',
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(fontSize: 10, fontWeight: FontWeight.w600, color: Colors.green.shade800),
+                  ),
                 ),
               ],
             ),

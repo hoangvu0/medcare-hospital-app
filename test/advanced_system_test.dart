@@ -191,5 +191,133 @@ void main() {
       expect(store.completedStepsCount, equals(2));
       expect(store.currentPathwayStep.stepNumber, equals(3));
     });
+
+    test('12. Kiểm tra Phân quyền Đăng nhập Độc lập 3 vai trò (Bệnh nhân, Bác sĩ, Admin)', () {
+      // 1. Đăng nhập Bệnh nhân
+      final patientOk = store.login(identifier: 'vu@example.com', password: 'password123');
+      expect(patientOk, isTrue);
+      expect(store.currentUserRole, equals(UserRole.patient));
+      expect(store.isDoctorRole, isFalse);
+      expect(store.isAdminRole, isFalse);
+
+      // 2. Đăng nhập Bác sĩ
+      final doctorOk = store.login(identifier: 'doctor@medcare.vn', password: 'password123');
+      expect(doctorOk, isTrue);
+      expect(store.currentUserRole, equals(UserRole.doctor));
+      expect(store.isDoctorRole, isTrue);
+      expect(store.isAdminRole, isFalse);
+      expect(store.activeDoctorUser.name, contains('Trần Minh Đức'));
+
+      // 3. Đăng nhập Admin
+      final adminOk = store.login(identifier: 'admin@medcare.vn', password: 'admin123password');
+      expect(adminOk, isTrue);
+      expect(store.currentUserRole, equals(UserRole.admin));
+      expect(store.isAdminRole, isTrue);
+      expect(store.isDoctorRole, isFalse);
+    });
+
+    test('13. 🔥 SIÊU TEST: Bác sĩ ký số EMR & Đồng bộ 100% dữ liệu sang tài khoản Bệnh nhân', () {
+      // Chuẩn bị danh mục thuốc kê đơn từ Bác sĩ
+      final prescribed = [
+        const MedicineItem(
+          name: 'Amlodipine Besylate',
+          category: 'Thuốc hạ áp',
+          dosage: '5mg',
+          quantity: '30 viên',
+          instruction: 'Uống 1 viên vào 8:00 sáng sau ăn',
+          warning: 'Không dừng thuốc đột ngột',
+        ),
+        const MedicineItem(
+          name: 'Rosuvastatin',
+          category: 'Hạ lipid máu',
+          dosage: '10mg',
+          quantity: '30 viên',
+          instruction: 'Uống 1 viên vào 20:00 tối trước ngủ',
+        ),
+      ];
+
+      final initialRecordsCount = store.medicalRecords.length;
+      final initialScheduleCount = store.medicineSchedule.length;
+
+      // Bác sĩ thực thi buổi khám hoàn chỉnh và truyền dữ liệu
+      store.doctorExecuteFullConsultationSync(
+        diagnosis: 'Tăng huyết áp nguyên phát độ 1',
+        icd10Code: 'I10',
+        icd10Name: 'Tăng huyết áp vô căn (nguyên phát)',
+        symptoms: 'Đau đầu chẩm, hồi hộp khi gắng sức',
+        physicalExam: 'Tim đều T1 T2 rõ, huyết áp 135/85 mmHg, bụng mềm',
+        labNotes: 'Glucose 5.6 mmol/L, Creatinine 82 µmol/L (eGFR 95)',
+        doctorAdvice: 'Ăn nhạt dưới 5g muối/ngày, tập thể dục nhẹ, không hút thuốc',
+        followUpDate: '26/02/2026',
+        prescribedMedicines: prescribed,
+        riskLevel: 'Theo dõi định kỳ tim mạch',
+      );
+
+      // 1. Kiểm tra Hồ sơ Bệnh án EMR của Bệnh nhân nhận được
+      expect(store.medicalRecords.length, equals(initialRecordsCount + 1));
+      final latestRecord = store.medicalRecords.first;
+      expect(latestRecord.diagnosisCode, equals('I10'));
+      expect(latestRecord.icd10Name, contains('Tăng huyết áp'));
+      expect(latestRecord.physicalExamNotes, contains('135/85'));
+      expect(latestRecord.doctorInstructions, contains('Ăn nhạt'));
+      expect(latestRecord.digitalSignatureToken, contains('EMR-SHA256-VN-VALIDATED'));
+      expect(latestRecord.prescribedMedicinesSummary, contains('Amlodipine Besylate'));
+
+      // 2. Kiểm tra Danh mục thuốc và Lịch uống thuốc tự động của Bệnh nhân
+      expect(store.medicineSchedule.length, equals(initialScheduleCount + 2));
+      expect(store.medicineSchedule.first.medicineName, equals('Rosuvastatin'));
+      expect(store.medicineSchedule[1].medicineName, equals('Amlodipine Besylate'));
+
+      // 3. Kiểm tra Lộ trình khám bệnh Clinical Pathway tự động hoàn thành
+      expect(store.clinicalPathway[2].status, equals(ClinicalStepStatus.completed)); // Bước 3 xong
+      expect(store.clinicalPathway[3].status, equals(ClinicalStepStatus.completed)); // Bước 4 xong
+
+      // 4. Kiểm tra Push Notification gửi tới ứng dụng Bệnh nhân
+      expect(store.notifications.first.title, contains('ký số'));
+      expect(store.notifications.first.body, contains('Trần Minh Đức'));
+
+      // 5. Kiểm tra Nhật ký an ninh kiểm toán HIPAA EMR ghi nhận
+      expect(store.securityAuditLogs.first.action, equals('EMR_FINAL_CONSULTATION_SYNC'));
+    });
+
+    test('14. Kiểm tra 32 Chức năng Lâm sàng chuyên sâu của Bác sĩ', () {
+      // Sinh hiệu
+      store.doctorRecordVitals(
+        bpSys: 130,
+        bpDia: 80,
+        heartRate: 72,
+        spo2: 99,
+        temp: 36.6,
+        weight: 68.0,
+      );
+      expect(store.vitals.first.systolic, equals(130));
+      expect(store.vitals.first.heartRate, equals(72));
+
+      // Cận lâm sàng CBC & Sinh hóa
+      store.doctorOrderCBC();
+      expect(store.labTests.first.name, contains('CBC'));
+
+      store.doctorOrderBloodBiochemistry();
+      expect(store.labTests.first.name, contains('Creatinine'));
+
+      // Dược lâm sàng: Tương tác thuốc & Tính liều thận
+      final interaction = store.doctorCheckDrugInteraction('Amlodipine', 'Atorvastatin');
+      expect(interaction, contains('Không phát hiện tương tác đối kháng'));
+
+      final isAllergic = store.doctorCheckAllergyRisk('Penicillin');
+      expect(isAllergic, isTrue);
+
+      final renalDose = store.doctorCalculateRenalDose(68.0, 95.0);
+      expect(renalDose, contains('Chức năng thận bảo tồn'));
+
+      // Ký số EMR
+      final token = store.doctorDigitalSignEmr(signer: 'PGS.TS.BS Trần Minh Đức', certKey: 'TEST-KEY');
+      expect(token, contains('EMR-SHA256'));
+
+      // Y lệnh & Lời dặn
+      store.doctorIssueHospitalizationOrder(false, 'Ngoại trú');
+      store.doctorSendDirectAdvice('Đo huyết áp hàng ngày vào buổi sáng');
+      expect(store.notifications.first.title, contains('Lời dặn dò'));
+    });
   });
 }

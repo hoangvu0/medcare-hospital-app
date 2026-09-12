@@ -233,6 +233,16 @@ class MedicalRecord {
     required this.prescriptionCode,
     required this.totalFee,
     required this.insuranceCovered,
+    this.diagnosisCode = 'I10',
+    this.icd10Name = 'Tăng huyết áp nguyên phát',
+    this.differentialDiagnosis,
+    this.physicalExamNotes = 'Tim đều T1, T2 rõ. Phổi thông khí tốt, không rale. Bụng mềm.',
+    this.labSummary,
+    this.xrayFindings,
+    this.doctorInstructions = 'Uống thuốc đúng giờ, hạn chế ăn mặn, tái khám đúng hẹn.',
+    this.digitalSignatureToken = 'EMR-SHA256-VN-MEDCARE-VALIDATED',
+    this.riskLevel = 'Theo dõi định kỳ',
+    this.prescribedMedicinesSummary,
   });
 
   final String id;
@@ -246,6 +256,16 @@ class MedicalRecord {
   final String prescriptionCode;
   final int totalFee;
   final int insuranceCovered;
+  final String diagnosisCode;
+  final String icd10Name;
+  final String? differentialDiagnosis;
+  final String physicalExamNotes;
+  final String? labSummary;
+  final String? xrayFindings;
+  final String doctorInstructions;
+  final String digitalSignatureToken;
+  final String riskLevel;
+  final String? prescribedMedicinesSummary;
 
   int get patientPaid => totalFee - insuranceCovered;
 }

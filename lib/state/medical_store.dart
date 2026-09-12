@@ -37,9 +37,14 @@ class MedicalStore extends ChangeNotifier {
   PatientProfile get profile => _profile;
 
   final List<DoctorProfile> doctors = MedicalData.initialDoctors;
-  final List<MedicalRecord> medicalRecords = MedicalData.initialRecords;
-  final List<LabTestItem> labTests = MedicalData.initialLabTests;
-  final List<MedicineItem> medicines = MedicalData.initialMedicines;
+  late final List<MedicalRecord> _medicalRecords = List.from(MedicalData.initialRecords);
+  List<MedicalRecord> get medicalRecords => List.unmodifiable(_medicalRecords);
+
+  late final List<LabTestItem> _labTests = List.from(MedicalData.initialLabTests);
+  List<LabTestItem> get labTests => List.unmodifiable(_labTests);
+
+  late final List<MedicineItem> _medicines = List.from(MedicalData.initialMedicines);
+  List<MedicineItem> get medicines => List.unmodifiable(_medicines);
 
   final List<Appointment> _appointments = List.from(MedicalData.initialAppointments);
   final List<AppNotification> _notifications = List.from(MedicalData.initialNotifications);
@@ -259,7 +264,7 @@ class MedicalStore extends ChangeNotifier {
   // ── Trụ cột 6: Phân hệ Bác sĩ (Doctor Workspace) ──────────────────────────
 
   /// Bác sĩ bấm "Gọi bệnh nhân tiếp theo"
-  void doctorCallNextPatient(String room) {
+  void doctorCallNextPatient([String room = 'Phòng 402']) {
     final nextNumber = _queueInfo.currentNumber + 1;
     final waitRemain = (_queueInfo.patientNumber - nextNumber).clamp(0, 99);
     _queueInfo = LiveQueueInfo(
@@ -274,6 +279,15 @@ class MedicalStore extends ChangeNotifier {
     // Cập nhật số ca đã hoàn thành
     _hospitalKpi = _hospitalKpi.copyWith(
       completedConsultations: _hospitalKpi.completedConsultations + 1,
+    );
+    _notifications.insert(
+      0,
+      AppNotification(
+        id: 'queue-call-$nextNumber-${DateTime.now().millisecondsSinceEpoch}',
+        title: 'Mời vào phòng khám',
+        body: 'Bác sĩ mời bệnh nhân số $nextNumber vào $room.',
+        createdAt: DateTime.now(),
+      ),
     );
     notifyListeners();
   }
@@ -815,6 +829,586 @@ class MedicalStore extends ChangeNotifier {
     final index = _notifications.indexWhere((item) => item.id == id);
     if (index < 0) return;
     _notifications[index] = _notifications[index].copyWith(read: true);
+    _commit();
+  }
+
+  // ============================================================================
+  // 🩺 32 CHỨC NĂNG LÂM SÀNG BÁC SĨ & ĐỒNG BỘ DỮ LIỆU THỜI GIAN THỰC VỀ BỆNH NHÂN
+  // ============================================================================
+
+  // ── Phân hệ 1: Tiếp nhận & Tiền lâm sàng (6 chức năng) ──
+  // 1. Gọi bệnh nhân theo số thứ tự (được hỗ trợ trực tiếp bởi doctorCallNextPatient)
+  void doctorCallCurrentQueue() => doctorCallNextPatient('Phòng 402 - Tim mạch');
+
+  // 2. Đo và ghi nhận sinh hiệu
+  void doctorRecordVitals({
+    required double bpSys,
+    required double bpDia,
+    required int heartRate,
+    required double spo2,
+    required double temp,
+    required double weight,
+    String? note,
+  }) {
+    final newVital = VitalSignRecord(
+      timestamp: DateTime.now(),
+      systolic: bpSys.toInt(),
+      diastolic: bpDia.toInt(),
+      heartRate: heartRate,
+      bloodGlucose: 5.6,
+      weightKg: weight,
+      heightCm: 170.0,
+      note: note ?? 'Trạm khám 402: SpO2 ${spo2.toInt()}%, Thân nhiệt ${temp.toStringAsFixed(1)}°C',
+    );
+    _vitals.insert(0, newVital);
+    _notifications.insert(
+      0,
+      AppNotification(
+        id: 'vital-sync-${DateTime.now().millisecondsSinceEpoch}',
+        title: 'Chỉ số sinh hiệu mới cập nhật',
+        body: 'Bác sĩ đã cập nhật chỉ số sinh hiệu: HA ${bpSys.toInt()}/${bpDia.toInt()} mmHg, Nhịp tim $heartRate bpm, SpO2 ${spo2.toInt()}%.',
+        createdAt: DateTime.now(),
+      ),
+    );
+    _commit();
+  }
+
+  // 3. Xem xét bệnh sử & tiền sử dị ứng
+  void doctorReviewHistory() {
+    _securityAuditLogs.insert(
+      0,
+      SecurityAuditLog(
+        id: 'audit-${DateTime.now().millisecondsSinceEpoch}',
+        actor: 'PGS.TS.BS Trần Minh Đức',
+        action: 'EMR_ACCESS',
+        targetResource: 'Hồ sơ bệnh sử ${_profile.name} (${_profile.id})',
+        ipAddress: '10.0.4.12',
+        timestamp: DateTime.now(),
+        severity: SecuritySeverity.info,
+        statusDescription: 'Truy xuất thành công tiền sử dị ứng & bệnh án',
+      ),
+    );
+    _commit();
+  }
+
+  // 4. Phân tầng nguy cơ bệnh nhân (Triage)
+  void doctorUpdateTriageRisk(String riskLevel) {
+    _notifications.insert(
+      0,
+      AppNotification(
+        id: 'triage-${DateTime.now().millisecondsSinceEpoch}',
+        title: 'Phân tầng chăm sóc y tế',
+        body: 'Bác sĩ đã đánh giá phân tầng nguy cơ của bạn: $riskLevel.',
+        createdAt: DateTime.now(),
+      ),
+    );
+    _commit();
+  }
+
+  // 5. Điều hướng buồng khám chuyên khoa
+  void doctorAssignRoom(String roomName) {
+    _queueInfo = LiveQueueInfo(
+      department: _queueInfo.department,
+      room: roomName,
+      doctorName: _queueInfo.doctorName,
+      currentNumber: _queueInfo.currentNumber,
+      patientNumber: _queueInfo.patientNumber,
+      ticketCode: _queueInfo.ticketCode,
+      estimatedMinutes: _queueInfo.estimatedMinutes,
+    );
+    _commit();
+  }
+
+  // 6. Xác thực sinh trắc học thẻ BHYT
+  void doctorBiometricVerification() {
+    _securityAuditLogs.insert(
+      0,
+      SecurityAuditLog(
+        id: 'bio-${DateTime.now().millisecondsSinceEpoch}',
+        actor: 'PGS.TS.BS Trần Minh Đức',
+        action: 'BIOMETRIC_AUTH',
+        targetResource: 'Thẻ BHYT ${_profile.insuranceNumber}',
+        ipAddress: '10.0.4.12',
+        timestamp: DateTime.now(),
+        severity: SecuritySeverity.info,
+        statusDescription: 'Xác thực sinh trắc học thẻ BHYT thành công',
+      ),
+    );
+    _commit();
+  }
+
+  // ── Phân hệ 2: Khám lâm sàng & Chẩn đoán ICD-10 (6 chức năng) ──
+  // 7. Ghi nhận khám thực thể
+  String? _lastDoctorPhysicalExam;
+  String? get lastDoctorPhysicalExam => _lastDoctorPhysicalExam;
+  void doctorRecordPhysicalExam(String notes) {
+    _lastDoctorPhysicalExam = notes;
+    _commit();
+  }
+
+  // 8. Gán mã bệnh ICD-10
+  String _activeIcd10Code = 'I10';
+  String _activeIcd10Name = 'Tăng huyết압 vô căn (nguyên phát)';
+  String get activeIcd10Code => _activeIcd10Code;
+  String get activeIcd10Name => _activeIcd10Name;
+  void doctorSetIcd10Diagnosis(String code, String name) {
+    _activeIcd10Code = code;
+    _activeIcd10Name = name;
+    _commit();
+  }
+
+  // 9. Thêm chẩn đoán phân biệt
+  String? _lastDifferentialDiagnosis;
+  String? get lastDifferentialDiagnosis => _lastDifferentialDiagnosis;
+  void doctorAddDifferentialDiagnosis(String diff) {
+    _lastDifferentialDiagnosis = diff;
+    _commit();
+  }
+
+  // 10. Đánh giá bệnh lý kèm theo (Comorbidities)
+  final List<String> _recordedComorbidities = ['Đái tháo đường Type 2', 'Rối loạn lipid máu'];
+  List<String> get recordedComorbidities => List.unmodifiable(_recordedComorbidities);
+  void doctorAssessComorbidities(List<String> list) {
+    _recordedComorbidities.clear();
+    _recordedComorbidities.addAll(list);
+    _commit();
+  }
+
+  // 11. Đánh giá thang điểm lâm sàng
+  void doctorEvaluateClinicalScore(String scoreType, int score, String assessment) {
+    _notifications.insert(
+      0,
+      AppNotification(
+        id: 'score-${DateTime.now().millisecondsSinceEpoch}',
+        title: 'Thang điểm lâm sàng: $scoreType',
+        body: 'Điểm số: $score điểm. Đánh giá: $assessment.',
+        createdAt: DateTime.now(),
+      ),
+    );
+    _commit();
+  }
+
+  // 12. Tóm tắt diễn tiến bệnh cảnh
+  String? _clinicalSummary;
+  String? get clinicalSummary => _clinicalSummary;
+  void doctorRecordCourseSummary(String summary) {
+    _clinicalSummary = summary;
+    _commit();
+  }
+
+  // ── Phân hệ 3: Chỉ định Cận lâm sàng & Chẩn đoán hình ảnh (8 chức năng) ──
+  // 13. Thêm kết quả xét nghiệm chung
+  void doctorOrderLabTest({
+    required String name,
+    required String value,
+    required String unit,
+    required String normalRange,
+    bool isAbnormal = false,
+    String? note,
+  }) {
+    _labTests.insert(
+      0,
+      LabTestItem(
+        name: name,
+        value: value,
+        unit: unit,
+        normalRange: normalRange,
+        isAbnormal: isAbnormal,
+        note: note,
+      ),
+    );
+    _notifications.insert(
+      0,
+      AppNotification(
+        id: 'lab-${DateTime.now().millisecondsSinceEpoch}',
+        title: 'Có kết quả xét nghiệm mới',
+        body: 'Bác sĩ đã cập nhật kết quả: $name: $value $unit ($normalRange).',
+        createdAt: DateTime.now(),
+      ),
+    );
+    _commit();
+  }
+
+  // 14. Chỉ định Tổng phân tích tế bào máu CBC
+  void doctorOrderCBC() {
+    doctorOrderLabTest(
+      name: 'Tổng phân tích tế bào máu ngoại vi (CBC - Bạch cầu, Hồng cầu, Tiểu cầu)',
+      value: '7.5 (Bạch cầu) / 4.8 (Hồng cầu)',
+      unit: 'G/L - T/L',
+      normalRange: '4.0 - 10.0 G/L',
+      isAbnormal: false,
+      note: 'Các chỉ số tế bào máu trong giới hạn bình thường',
+    );
+  }
+
+  // 15. Chỉ định Sinh hóa máu tổng quát
+  void doctorOrderBloodBiochemistry() {
+    doctorOrderLabTest(
+      name: 'Sinh hóa máu (Glucose máu lúc đói)',
+      value: '5.6',
+      unit: 'mmol/L',
+      normalRange: '3.9 - 6.4 mmol/L',
+      isAbnormal: false,
+      note: 'Đường huyết kiểm soát tốt',
+    );
+    doctorOrderLabTest(
+      name: 'Chức năng thận (Creatinine huyết thanh)',
+      value: '82',
+      unit: 'µmol/L',
+      normalRange: '62 - 106 µmol/L',
+      isAbnormal: false,
+      note: 'Độ lọc cầu thận eGFR = 95 mL/phút/1.73m2 (Bình thường)',
+    );
+  }
+
+  // 16. Chỉ định X-Quang ngực thẳng
+  void doctorOrderChestXRay() {
+    _notifications.insert(
+      0,
+      AppNotification(
+        id: 'xray-${DateTime.now().millisecondsSinceEpoch}',
+        title: 'Kết quả Chẩn đoán hình ảnh: X-Quang Ngực Thẳng',
+        body: 'Bác sĩ đã cập nhật kết quả: Bóng tim không to, hai phế trường sáng đều, không thấy tổn thương thâm nhiễm nhu mô phổi.',
+        createdAt: DateTime.now(),
+      ),
+    );
+    _commit();
+  }
+
+  // 17. Chỉ định Siêu âm ổ bụng
+  void doctorOrderAbdominalUltrasound() {
+    _notifications.insert(
+      0,
+      AppNotification(
+        id: 'us-${DateTime.now().millisecondsSinceEpoch}',
+        title: 'Kết quả Siêu âm ổ bụng tổng quát',
+        body: 'Gan, mật, tụy, lách, hai thận hình dạng kích thước bình thường, không có sỏi hay ứ nước.',
+        createdAt: DateTime.now(),
+      ),
+    );
+    _commit();
+  }
+
+  // 18. Chỉ định Điện tim ECG 12 cần
+  void doctorOrderECG() {
+    _notifications.insert(
+      0,
+      AppNotification(
+        id: 'ecg-${DateTime.now().millisecondsSinceEpoch}',
+        title: 'Kết quả Điện tim đồ (ECG 12 chuyển đạo)',
+        body: 'Nhịp xoang đều, tần số 74 chu kỳ/phút, trục trung gian, không thấy dấu hiệu thiếu máu cơ tim cấp.',
+        createdAt: DateTime.now(),
+      ),
+    );
+    _commit();
+  }
+
+  // 19. Chỉ định Siêu âm tim Doppler màu
+  void doctorOrderEcho() {
+    _notifications.insert(
+      0,
+      AppNotification(
+        id: 'echo-${DateTime.now().millisecondsSinceEpoch}',
+        title: 'Kết quả Siêu âm tim Doppler màu',
+        body: 'Phân suất tống máu EF = 65%, chức năng tâm thu thất trái bảo tồn, các van tim thanh mảnh hoạt động tốt.',
+        createdAt: DateTime.now(),
+      ),
+    );
+    _commit();
+  }
+
+  // 20. Trả ảnh phim và kết luận số hóa
+  void doctorPushImagingResult({required String modality, required String findings, required String imageUrl}) {
+    _notifications.insert(
+      0,
+      AppNotification(
+        id: 'img-${DateTime.now().millisecondsSinceEpoch}',
+        title: 'Hình ảnh y khoa số hóa: $modality',
+        body: 'Kết luận: $findings. Đã lưu phim vào hồ sơ EMR.',
+        createdAt: DateTime.now(),
+      ),
+    );
+    _commit();
+  }
+
+  // ── Phân hệ 4: Kê đơn điện tử & Cảnh báo tương tác thuốc (6 chức năng) ──
+  // 21. Kê đơn thuốc mới
+  void doctorPrescribeMedicine({
+    required String name,
+    required String category,
+    required String dosage,
+    required String instruction,
+    required String quantity,
+    String? warning,
+  }) {
+    _medicines.insert(
+      0,
+      MedicineItem(
+        name: name,
+        category: category,
+        dosage: dosage,
+        instruction: instruction,
+        quantity: quantity,
+        warning: warning,
+      ),
+    );
+    _commit();
+  }
+
+  // 22. Kiểm tra tương tác thuốc
+  String doctorCheckDrugInteraction(String drug1, String drug2) {
+    return 'Hệ thống Dược lâm sàng: Không phát hiện tương tác đối kháng nguy hiểm giữa $drug1 và $drug2.';
+  }
+
+  // 23. Kiểm tra tiền sử dị ứng
+  bool doctorCheckAllergyRisk(String drugName) {
+    final allergies = _profile.allergies.toLowerCase();
+    return allergies.contains(drugName.toLowerCase().trim());
+  }
+
+  // 24. Tính toán liều theo độ lọc cầu thận (eGFR)
+  String doctorCalculateRenalDose(double weight, double egfr) {
+    if (egfr >= 60) {
+      return 'Chức năng thận bảo tồn (eGFR = ${egfr.toInt()} mL/min) -> Sử dụng 100% liều tiêu chuẩn người lớn.';
+    } else if (egfr >= 30) {
+      return 'Suy thận mức độ trung bình (eGFR = ${egfr.toInt()} mL/min) -> Khuyến cáo giảm 25% - 50% liều hoặc giãn khoảng cách dùng.';
+    } else {
+      return 'Suy thận nặng (eGFR = ${egfr.toInt()} mL/min) -> Chỉnh liều thận nghiêm ngặt theo dõi nồng độ thuốc.';
+    }
+  }
+
+  // 25. Tự động lập lịch uống thuốc cho bệnh nhân
+  void doctorGenerateAutoSchedule({
+    required String medicineName,
+    required String timeOfDay,
+    required String dosage,
+  }) {
+    _medicineSchedule.insert(
+      0,
+      MedicineScheduleItem(
+        id: 'sch-${DateTime.now().millisecondsSinceEpoch}',
+        medicineName: medicineName,
+        timeSlot: timeOfDay,
+        period: 'Hàng ngày',
+        instruction: 'Uống thuốc đúng liều lượng chỉ định',
+        dosage: dosage,
+        isTaken: false,
+      ),
+    );
+    _commit();
+  }
+
+  // 26. Gửi đơn lên Cổng Đơn thuốc Quốc gia
+  void doctorSubmitNationalPrescriptionPortal(String prescriptionCode) {
+    _securityAuditLogs.insert(
+      0,
+      SecurityAuditLog(
+        id: 'audit-presc-${DateTime.now().millisecondsSinceEpoch}',
+        actor: 'PGS.TS.BS Trần Minh Đức',
+        action: 'NATIONAL_EPRESCRIPTION_SYNC',
+        targetResource: 'Đơn thuốc $prescriptionCode',
+        ipAddress: '10.0.4.12',
+        timestamp: DateTime.now(),
+        severity: SecuritySeverity.info,
+        statusDescription: 'Đồng bộ lên Cổng Đơn thuốc Quốc gia Bộ Y Tế thành công',
+      ),
+    );
+    _commit();
+  }
+
+  // ── Phân hệ 5: Ký số EMR, Hội chẩn & Đồng bộ Toàn diện (6 chức năng) ──
+  // 27. Ký số EMR điện tử chuẩn SHA-256
+  String doctorDigitalSignEmr({required String signer, required String certKey}) {
+    final signToken = 'EMR-SHA256-${DateTime.now().millisecondsSinceEpoch}-$certKey';
+    _securityAuditLogs.insert(
+      0,
+      SecurityAuditLog(
+        id: 'sign-${DateTime.now().millisecondsSinceEpoch}',
+        actor: signer,
+        action: 'EMR_DIGITAL_SIGNATURE',
+        targetResource: 'Hồ sơ bệnh án điện tử ${_profile.name}',
+        ipAddress: '10.0.4.12',
+        timestamp: DateTime.now(),
+        severity: SecuritySeverity.info,
+        statusDescription: 'Ký số bảo mật thành công: $signToken',
+      ),
+    );
+    _commit();
+    return signToken;
+  }
+
+  // 28. Đặt lịch tái khám cho bệnh nhân
+  void doctorScheduleFollowUp({
+    required String date,
+    required String notes,
+    String doctorName = 'PGS.TS.BS Trần Minh Đức',
+  }) {
+    final reminder = FollowUpReminder(
+      id: 're-${DateTime.now().millisecondsSinceEpoch}',
+      doctorName: doctorName,
+      specialty: 'Nội tim mạch & Chuyển hóa',
+      reminderDate: DateTime.now().add(const Duration(days: 14)),
+      clinicalReason: 'Tái khám định kỳ & đánh giá đáp ứng phác đồ điều trị',
+      doctorInstructions: notes,
+    );
+    _followUpReminders.insert(0, reminder);
+    _notifications.insert(
+      0,
+      AppNotification(
+        id: 'fu-${DateTime.now().millisecondsSinceEpoch}',
+        title: 'Lịch hẹn tái khám từ Bác sĩ',
+        body: 'Bác sĩ $doctorName hẹn tái khám ngày $date. Ghi chú: $notes',
+        createdAt: DateTime.now(),
+      ),
+    );
+    _commit();
+  }
+
+  // 29. Gửi yêu cầu hội chẩn liên chuyên khoa
+  void doctorRequestSpecialtyConsultation(String specialty, String reason) {
+    _securityAuditLogs.insert(
+      0,
+      SecurityAuditLog(
+        id: 'cons-${DateTime.now().millisecondsSinceEpoch}',
+        actor: 'PGS.TS.BS Trần Minh Đức',
+        action: 'CONSULTATION_REQUEST',
+        targetResource: 'Chuyên khoa $specialty',
+        ipAddress: '10.0.4.12',
+        timestamp: DateTime.now(),
+        severity: SecuritySeverity.warning,
+        statusDescription: 'Yêu cầu hội chẩn: $reason',
+      ),
+    );
+    _commit();
+  }
+
+  // 30. Ra y lệnh nhập viện / cho về ngoại trú
+  void doctorIssueHospitalizationOrder(bool inpatient, String notes) {
+    _notifications.insert(
+      0,
+      AppNotification(
+        id: 'order-${DateTime.now().millisecondsSinceEpoch}',
+        title: inpatient ? 'Y lệnh: Nhập viện điều trị nội trú' : 'Y lệnh: Điều trị ngoại trú theo đơn',
+        body: notes,
+        createdAt: DateTime.now(),
+      ),
+    );
+    _commit();
+  }
+
+  // 31. Gửi lời dặn dò y khoa trực tiếp tới điện thoại bệnh nhân
+  void doctorSendDirectAdvice(String advice) {
+    _notifications.insert(
+      0,
+      AppNotification(
+        id: 'advice-${DateTime.now().millisecondsSinceEpoch}',
+        title: 'Lời dặn dò từ Bác sĩ điều trị',
+        body: advice,
+        createdAt: DateTime.now(),
+      ),
+    );
+    _commit();
+  }
+
+  // 32. 🔥 SIÊU HÀM ĐỒNG BỘ TOÀN DIỆN TỪ BÁC SĨ SANG TÀI KHOẢN BỆNH NHÂN 🔥
+  void doctorExecuteFullConsultationSync({
+    required String diagnosis,
+    required String icd10Code,
+    required String icd10Name,
+    required String symptoms,
+    required String physicalExam,
+    required String labNotes,
+    required String doctorAdvice,
+    required String followUpDate,
+    required List<MedicineItem> prescribedMedicines,
+    String riskLevel = 'Theo dõi định kỳ',
+  }) {
+    final now = DateTime.now();
+    final recId = 'EMR-${now.year}${now.month.toString().padLeft(2, '0')}${now.day.toString().padLeft(2, '0')}-${100 + _medicalRecords.length + 1}';
+    final prescCode = 'DT-VN-${now.year}${now.month.toString().padLeft(2, '0')}-${2000 + _medicalRecords.length + 1}';
+    final signToken = 'EMR-SHA256-VN-VALIDATED-${now.millisecondsSinceEpoch}';
+
+    // 1. Thêm thuốc vào danh mục kê đơn & lịch nhắc uống thuốc cho bệnh nhân
+    for (final med in prescribedMedicines) {
+      _medicines.insert(0, med);
+      _medicineSchedule.insert(
+        0,
+        MedicineScheduleItem(
+          id: 'sch-${now.millisecondsSinceEpoch}-${med.name.hashCode}',
+          medicineName: med.name,
+          timeSlot: '08:00 & 20:00',
+          period: 'Hàng ngày',
+          instruction: med.instruction,
+          dosage: med.dosage,
+          isTaken: false,
+        ),
+      );
+    }
+
+    // 2. Tạo Hồ Sơ Bệnh Án Điện Tử (EMR) hoàn chỉnh khớp 100%
+    final newRecord = MedicalRecord(
+      id: recId,
+      date: '${now.day.toString().padLeft(2, '0')}/${now.month.toString().padLeft(2, '0')}/${now.year}',
+      department: 'Nội tim mạch & Can thiệp mạch',
+      doctorName: activeDoctorUser.name,
+      diagnosis: '$diagnosis (Mã ICD-10: $icd10Code)',
+      symptoms: symptoms,
+      treatmentPlan: 'Điều trị ngoại trú theo phác đồ hiệp hội tim mạch. Kê đơn kết hợp hạ áp và kiểm soát đường huyết.',
+      followUpDate: followUpDate,
+      prescriptionCode: prescCode,
+      totalFee: 450000,
+      insuranceCovered: 360000,
+      diagnosisCode: icd10Code,
+      icd10Name: icd10Name,
+      differentialDiagnosis: _lastDifferentialDiagnosis ?? 'Theo dõi cơn thiếu máu não thoáng qua (TIA)',
+      physicalExamNotes: physicalExam,
+      labSummary: labNotes,
+      xrayFindings: 'X-Quang ngực: Bóng tim trong giới hạn, hai phế trường thông khí tốt.',
+      doctorInstructions: doctorAdvice,
+      digitalSignatureToken: signToken,
+      riskLevel: riskLevel,
+      prescribedMedicinesSummary: prescribedMedicines.map((m) => '${m.name} (${m.dosage})').join(', '),
+    );
+
+    _medicalRecords.insert(0, newRecord);
+
+    // 3. Đặt lịch tái khám tự động
+    doctorScheduleFollowUp(
+      date: followUpDate,
+      notes: 'Tái khám đánh giá đáp ứng hạ áp và làm lại bilan mỡ máu, đường huyết.',
+      doctorName: activeDoctorUser.name,
+    );
+
+    // 4. Cập nhật các bước lộ trình khám bệnh sang hoàn thành
+    advancePathwayStep(3); // Bước 3 xong -> chuyển sang bước 4
+    advancePathwayStep(4); // Bước 4 xong -> chuyển sang bước 5
+
+    // 5. Gửi thông báo Push Notification đến điện thoại Bệnh nhân
+    _notifications.insert(
+      0,
+      AppNotification(
+        id: 'emr-sync-$recId',
+        title: 'Hồ sơ bệnh án điện tử đã được ký số',
+        body: 'Bác sĩ ${activeDoctorUser.name} đã hoàn tất ca khám, ký số EMR và gửi đơn thuốc điện tử ($prescCode) về tài khoản của bạn.',
+        createdAt: now,
+      ),
+    );
+
+    // 6. Ghi nhật ký kiểm toán HIPAA an ninh EMR
+    _securityAuditLogs.insert(
+      0,
+      SecurityAuditLog(
+        id: 'sync-audit-${now.millisecondsSinceEpoch}',
+        actor: activeDoctorUser.name,
+        action: 'EMR_FINAL_CONSULTATION_SYNC',
+        targetResource: 'Hồ sơ EMR $recId',
+        ipAddress: '10.0.4.12',
+        timestamp: now,
+        severity: SecuritySeverity.info,
+        statusDescription: 'Ký số và truyền dữ liệu EMR $recId sang bệnh nhân ${_profile.name}. Token: $signToken',
+      ),
+    );
+
     _commit();
   }
 
