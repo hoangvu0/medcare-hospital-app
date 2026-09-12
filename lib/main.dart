@@ -8,6 +8,7 @@ import 'pages/family_profiles_page.dart';
 import 'pages/telemedicine_page.dart';
 import 'pages/lab_explainer_page.dart';
 import 'pages/insurance_guarantee_page.dart';
+import 'pages/doctor_portal_page.dart';
 import 'pages/diagnostics_page.dart';
 import 'pages/digital_card_page.dart';
 import 'pages/doctor_detail_page.dart';
@@ -169,6 +170,7 @@ class _HospitalAppState extends State<HospitalApp> {
                 AppRoutes.telemedicine: (context) => const TelemedicinePage(),
                 AppRoutes.labExplainer: (context) => const LabExplainerPage(),
                 AppRoutes.insuranceGuarantee: (context) => const InsuranceGuaranteePage(),
+                AppRoutes.doctorPortal: (context) => const DoctorPortalPage(),
               },
 
             );

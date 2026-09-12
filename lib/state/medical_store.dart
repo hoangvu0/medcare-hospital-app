@@ -17,6 +17,22 @@ class MedicalStore extends ChangeNotifier {
   bool get authenticated => _authenticated;
   bool get restored => _restored;
 
+  UserRole _currentUserRole = UserRole.patient;
+  UserRole get currentUserRole => _currentUserRole;
+  bool get isDoctorRole => _currentUserRole == UserRole.doctor;
+  bool get isAdminRole => _currentUserRole == UserRole.admin;
+  DoctorProfile get activeDoctorUser => doctors.first; // PGS.TS.BS Trần Minh Đức (Phòng 402)
+
+  void switchRole(UserRole role) {
+    _currentUserRole = role;
+    notifyListeners();
+  }
+
+  void toggleDoctorRole() {
+    _currentUserRole = _currentUserRole == UserRole.doctor ? UserRole.patient : UserRole.doctor;
+    notifyListeners();
+  }
+
   PatientProfile _profile = MedicalData.defaultPatient;
   PatientProfile get profile => _profile;
 
@@ -246,6 +262,25 @@ class MedicalStore extends ChangeNotifier {
         id: 'notif-fin-${DateTime.now().millisecondsSinceEpoch}',
         title: 'Hoàn tất ca khám với $doctorName',
         body: 'Bác sĩ đã tạo lịch nhắc tái khám sau 14 ngày. Hãy dành 30 giây để đánh giá trải nghiệm khám bệnh của bạn!',
+        createdAt: DateTime.now(),
+      ),
+    );
+    notifyListeners();
+  }
+
+  /// Bác sĩ kê đơn thuốc điện tử cho bệnh nhân
+  void doctorPrescribeMedication({
+    required String patientName,
+    required String diagnosis,
+    required List<String> medicines,
+    required String advice,
+  }) {
+    _notifications.insert(
+      0,
+      AppNotification(
+        id: 'notif-rx-${DateTime.now().millisecondsSinceEpoch}',
+        title: 'Bác sĩ ${activeDoctorUser.name} đã kê đơn thuốc',
+        body: 'Chẩn đoán: "$diagnosis". Đơn thuốc gồm ${medicines.length} loại thuốc đã được gửi vào tài khoản của bạn.',
         createdAt: DateTime.now(),
       ),
     );
@@ -629,6 +664,14 @@ class MedicalStore extends ChangeNotifier {
   bool login({required String identifier, required String password}) {
     if (identifier.trim().isEmpty || password.trim().length < 6) return false;
     _authenticated = true;
+    final lower = identifier.trim().toLowerCase();
+    if (lower.contains('doctor') || lower.contains('bacsi')) {
+      _currentUserRole = UserRole.doctor;
+    } else if (lower.contains('admin')) {
+      _currentUserRole = UserRole.admin;
+    } else {
+      _currentUserRole = UserRole.patient;
+    }
     _commit();
     return true;
   }
@@ -640,11 +683,13 @@ class MedicalStore extends ChangeNotifier {
   }) {
     _profile = _profile.copyWith(name: name, phone: phone, email: email);
     _authenticated = true;
+    _currentUserRole = UserRole.patient;
     _commit();
   }
 
   void logout() {
     _authenticated = false;
+    _currentUserRole = UserRole.patient;
     _commit();
   }
 

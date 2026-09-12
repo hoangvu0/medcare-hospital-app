@@ -163,7 +163,8 @@ class _HomePageState extends State<HomePage> {
 
   Widget _greeting() {
     final settings = AppSettingsScope.of(context);
-    final profile = MedicalScope.of(context).profile;
+    final store = MedicalScope.of(context);
+    final profile = store.profile;
     final bhytText = settings.isMaskingSensitiveData
         ? 'BHYT: ${settings.maskText(profile.insuranceNumber, visiblePrefix: 4, visibleSuffix: 3)}'
         : 'BHYT: Đã liên kết';
@@ -238,6 +239,43 @@ class _HomePageState extends State<HomePage> {
                   const Icon(Icons.swap_horiz_rounded, size: 16, color: primary),
                 ],
               ),
+            ),
+          ),
+
+          // Thanh chuyển đổi tương tác Bác sĩ <-> Bệnh nhân
+          Container(
+            margin: const EdgeInsets.only(top: 8),
+            child: Row(
+              children: [
+                Expanded(
+                  child: InkWell(
+                    onTap: () {
+                      store.switchRole(UserRole.doctor);
+                      Navigator.pushNamed(context, AppRoutes.doctorPortal);
+                    },
+                    borderRadius: BorderRadius.circular(10),
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFF0F2B5C).withValues(alpha: 0.08),
+                        borderRadius: BorderRadius.circular(10),
+                        border: Border.all(color: const Color(0xFF0F2B5C).withValues(alpha: 0.2)),
+                      ),
+                      child: const Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(Icons.medical_services_outlined, size: 15, color: Color(0xFF0F2B5C)),
+                          SizedBox(width: 6),
+                          Text(
+                            '🩺 Vào Bàn làm việc Bác sĩ (Gọi số, Kê đơn, Tái khám)',
+                            style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Color(0xFF0F2B5C)),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+              ],
             ),
           ),
 
@@ -702,6 +740,7 @@ class _HomePageState extends State<HomePage> {
       (Icons.menu_book_rounded, 'Cẩm nang\ny khoa', AppRoutes.healthNews, Color(0xFFFFEDD5), Color(0xFFC2410C)),
       (Icons.biotech_rounded, 'AI Diễn giải\nxét nghiệm', AppRoutes.labExplainer, Color(0xFFE0F2FE), Color(0xFF0369A1)),
       (Icons.shield_rounded, 'Bảo hiểm\nbảo lãnh', AppRoutes.insuranceGuarantee, Color(0xFFECFDF5), Color(0xFF047857)),
+      (Icons.badge_rounded, 'Bàn làm việc\nBác sĩ', AppRoutes.doctorPortal, Color(0xFFE0E7FF), Color(0xFF0F2B5C)),
     ];
 
     return Padding(

@@ -470,26 +470,47 @@ class _LoginPageState extends State<LoginPage> {
                               const SizedBox(width: 8),
                               Expanded(
                                 child: InkWell(
-                                  onTap: () => _fillDemo('admin@medcare.vn', 'admin123'),
+                                  onTap: () => _fillDemo('doctor@medcare.vn', '123456'),
                                   borderRadius: BorderRadius.circular(8),
                                   child: Container(
                                     padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
                                     decoration: BoxDecoration(
-                                      color: Colors.green.withValues(alpha: 0.08),
+                                      color: Colors.teal.withValues(alpha: 0.08),
                                       borderRadius: BorderRadius.circular(8),
-                                      border: Border.all(color: Colors.green.withValues(alpha: 0.2)),
+                                      border: Border.all(color: Colors.teal.withValues(alpha: 0.2)),
                                     ),
                                     child: const Column(
                                       crossAxisAlignment: CrossAxisAlignment.start,
                                       children: [
-                                        Text('🩺 Bác sĩ / Admin', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold)),
-                                        Text('admin@medcare.vn', style: TextStyle(fontSize: 10, color: Colors.grey)),
+                                        Text('🩺 Bác sĩ', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold)),
+                                        Text('doctor@medcare.vn', style: TextStyle(fontSize: 10, color: Colors.grey)),
                                       ],
                                     ),
                                   ),
                                 ),
                               ),
                             ],
+                          ),
+                          const SizedBox(height: 6),
+                          InkWell(
+                            onTap: () => _fillDemo('admin@medcare.vn', 'admin123'),
+                            borderRadius: BorderRadius.circular(8),
+                            child: Container(
+                              width: double.infinity,
+                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+                              decoration: BoxDecoration(
+                                color: Colors.purple.withValues(alpha: 0.08),
+                                borderRadius: BorderRadius.circular(8),
+                                border: Border.all(color: Colors.purple.withValues(alpha: 0.2)),
+                              ),
+                              child: const Row(
+                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                children: [
+                                  Text('⚙️ Admin Quản trị (Toàn quyền)', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold)),
+                                  Text('admin@medcare.vn', style: TextStyle(fontSize: 10, color: Colors.grey)),
+                                ],
+                              ),
+                            ),
                           ),
                         ],
                       ),

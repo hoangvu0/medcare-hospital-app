@@ -134,5 +134,40 @@ void main() {
       expect(vip.priceDelta, equals(150000));
       expect(vip.benefits, isNotEmpty);
     });
+
+    test('9. Kiểm tra Đăng nhập tài khoản Bác sĩ & Chuyển đổi vai trò tương tác', () {
+      // Đăng nhập bằng tài khoản Bác sĩ
+      final ok = store.login(identifier: 'doctor@medcare.vn', password: '123456');
+      expect(ok, isTrue);
+      expect(store.isDoctorRole, isTrue);
+      expect(store.currentUserRole, equals(UserRole.doctor));
+      expect(store.activeDoctorUser.name, contains('Trần Minh Đức'));
+
+      // Chuyển đổi sang Bệnh nhân
+      store.switchRole(UserRole.patient);
+      expect(store.isDoctorRole, isFalse);
+      expect(store.currentUserRole, equals(UserRole.patient));
+    });
+
+    test('10. Kiểm tra Tương tác 2 chiều Bác sĩ gọi số, kê đơn và nhắc tái khám cho Bệnh nhân', () {
+      // Bác sĩ gọi bệnh nhân vào phòng 402
+      store.doctorCallNextPatient('Phòng 402');
+      expect(store.queueInfo.room, equals('Phòng 402'));
+
+      // Bác sĩ kê đơn thuốc
+      store.doctorPrescribeMedication(
+        patientName: 'Nguyễn Hoàng Vũ',
+        diagnosis: 'Tăng huyết áp nguyên phát độ 1',
+        medicines: ['Amlodipine 5mg', 'Atorvastatin 10mg'],
+        advice: 'Ăn nhạt, đo huyết áp mỗi ngày',
+      );
+      expect(store.notifications.first.title, contains('đã kê đơn thuốc'));
+
+      // Bác sĩ hoàn tất ca khám
+      final initialReminders = store.followUpReminders.length;
+      store.doctorFinishConsultation('PGS.TS.BS Trần Minh Đức', 'Tim mạch');
+      expect(store.followUpReminders.length, equals(initialReminders + 1));
+      expect(store.followUpReminders.first.doctorName, contains('Trần Minh Đức'));
+    });
   });
 }

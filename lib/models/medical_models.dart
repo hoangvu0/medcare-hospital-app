@@ -78,6 +78,8 @@ class DoctorProfile {
   final String? imageUrl;
 }
 
+enum UserRole { patient, doctor, admin }
+
 enum AppointmentStatus { confirmed, completed, cancelled }
 
 class Appointment {
