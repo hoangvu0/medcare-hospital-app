@@ -34,17 +34,76 @@ class MedicalStore extends ChangeNotifier {
   final List<VaccineRecord> vaccineRecords = MedicalData.initialVaccines;
   final List<HealthPackage> healthPackages = MedicalData.initialHealthPackages;
   final List<HealthArticle> healthArticles = MedicalData.initialArticles;
+  final List<PaymentTransaction> _transactions = List.from(MedicalData.initialTransactions);
 
   List<Appointment> get appointments => List.unmodifiable(_appointments);
   List<AppNotification> get notifications => List.unmodifiable(_notifications);
   List<VitalSignRecord> get vitals => List.unmodifiable(_vitals);
   List<MedicineScheduleItem> get medicineSchedule => List.unmodifiable(_medicineSchedule);
+  List<PaymentTransaction> get transactions => List.unmodifiable(_transactions);
   LiveQueueInfo get queueInfo => _queueInfo;
 
   double get medicineAdherenceRate {
     if (_medicineSchedule.isEmpty) return 1.0;
     final taken = _medicineSchedule.where((m) => m.isTaken).length;
     return taken / _medicineSchedule.length;
+  }
+
+  /// Tổng chi phí y tế thực trả trong năm [year]
+  int yearlyNetSpend(int year) => _transactions
+      .where((t) =>
+          t.timestamp.year == year && t.status == PaymentStatus.success)
+      .fold(0, (sum, t) => sum + t.netAmount);
+
+  /// Thêm giao dịch mới (trạng thái pending) và trả về id
+  PaymentTransaction addTransaction({
+    required String visitCode,
+    required String description,
+    required int grossAmount,
+    required int insuranceAmount,
+    required int netAmount,
+    required PaymentMethod method,
+    String? walletName,
+    String? invoiceEmail,
+  }) {
+    final tx = PaymentTransaction(
+      id: 'TXN-${DateTime.now().millisecondsSinceEpoch}',
+      visitCode: visitCode,
+      description: description,
+      grossAmount: grossAmount,
+      insuranceAmount: insuranceAmount,
+      netAmount: netAmount,
+      method: method,
+      status: PaymentStatus.pending,
+      timestamp: DateTime.now(),
+      walletName: walletName,
+      invoiceEmail: invoiceEmail,
+    );
+    _transactions.insert(0, tx);
+    notifyListeners();
+    return tx;
+  }
+
+  /// Cập nhật trạng thái giao dịch thành công
+  void completeTransaction(String txId, {String? receiptCode}) {
+    final idx = _transactions.indexWhere((t) => t.id == txId);
+    if (idx < 0) return;
+    final old = _transactions[idx];
+    _transactions[idx] = PaymentTransaction(
+      id: old.id,
+      visitCode: old.visitCode,
+      description: old.description,
+      grossAmount: old.grossAmount,
+      insuranceAmount: old.insuranceAmount,
+      netAmount: old.netAmount,
+      method: old.method,
+      status: PaymentStatus.success,
+      timestamp: old.timestamp,
+      walletName: old.walletName,
+      invoiceEmail: old.invoiceEmail,
+      receiptCode: receiptCode ?? 'RC-${DateTime.now().millisecondsSinceEpoch}',
+    );
+    notifyListeners();
   }
 
   void addVitalRecord(VitalSignRecord record) {

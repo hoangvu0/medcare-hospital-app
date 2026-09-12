@@ -567,5 +567,63 @@ abstract final class MedicalData {
       date: '02/02/2026',
     ),
   ];
+
+  /// Lịch sử giao dịch thanh toán viện phí mẫu
+  static List<PaymentTransaction> get initialTransactions => [
+    PaymentTransaction(
+      id: 'TXN-20260312-001',
+      visitCode: '#HS-2026-0891',
+      description: 'Khám Tiêu hóa + Nội soi + XN máu',
+      grossAmount: 1650000,
+      insuranceAmount: 1320000,
+      netAmount: 330000,
+      method: PaymentMethod.vietQr,
+      status: PaymentStatus.pending,
+      timestamp: DateTime(2026, 3, 12, 9, 30),
+      invoiceEmail: 'vu@example.com',
+      receiptCode: null,
+    ),
+    PaymentTransaction(
+      id: 'TXN-20260205-002',
+      visitCode: '#HS-2026-0612',
+      description: 'Khám Tim mạch định kỳ + ECG 12 chuyển đạo',
+      grossAmount: 980000,
+      insuranceAmount: 784000,
+      netAmount: 196000,
+      method: PaymentMethod.momo,
+      status: PaymentStatus.success,
+      timestamp: DateTime(2026, 2, 5, 14, 15),
+      walletName: 'MoMo',
+      invoiceEmail: 'vu@example.com',
+      receiptCode: 'RC-M-20260205-9921',
+    ),
+    PaymentTransaction(
+      id: 'TXN-20260118-003',
+      visitCode: '#HS-2026-0341',
+      description: 'Khám Thần kinh + MRI não 1.5T',
+      grossAmount: 3200000,
+      insuranceAmount: 2560000,
+      netAmount: 640000,
+      method: PaymentMethod.bankCard,
+      status: PaymentStatus.success,
+      timestamp: DateTime(2026, 1, 18, 10, 45),
+      invoiceEmail: 'vu@example.com',
+      receiptCode: 'RC-B-20260118-4477',
+    ),
+    PaymentTransaction(
+      id: 'TXN-20251210-004',
+      visitCode: '#HS-2025-2814',
+      description: 'Xét nghiệm tổng quát cuối năm (15 chỉ số)',
+      grossAmount: 750000,
+      insuranceAmount: 600000,
+      netAmount: 150000,
+      method: PaymentMethod.zalopay,
+      status: PaymentStatus.refunded,
+      timestamp: DateTime(2025, 12, 10, 8, 0),
+      walletName: 'ZaloPay',
+      invoiceEmail: 'vu@example.com',
+      receiptCode: 'RC-Z-20251210-3308',
+    ),
+  ];
 }
 

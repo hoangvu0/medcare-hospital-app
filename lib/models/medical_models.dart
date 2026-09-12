@@ -394,3 +394,54 @@ class HealthArticle {
   final String date;
 }
 
+// ── Thanh toán viện phí ─────────────────────────────────────────────────────
+
+enum PaymentMethod { vietQr, momo, zalopay, vnpay, bankCard, kiosk }
+
+enum PaymentStatus { pending, success, failed, refunded }
+
+class PaymentTransaction {
+  const PaymentTransaction({
+    required this.id,
+    required this.visitCode,
+    required this.description,
+    required this.grossAmount,
+    required this.insuranceAmount,
+    required this.netAmount,
+    required this.method,
+    required this.status,
+    required this.timestamp,
+    this.walletName,
+    this.invoiceEmail,
+    this.receiptCode,
+  });
+
+  final String id;
+  final String visitCode;
+  final String description;
+  final int grossAmount;
+  final int insuranceAmount;
+  final int netAmount;
+  final PaymentMethod method;
+  final PaymentStatus status;
+  final DateTime timestamp;
+  final String? walletName;
+  final String? invoiceEmail;
+  final String? receiptCode;
+
+  String get methodLabel => switch (method) {
+        PaymentMethod.vietQr => 'VietQR / Napas247',
+        PaymentMethod.momo => 'Ví MoMo',
+        PaymentMethod.zalopay => 'Ví ZaloPay',
+        PaymentMethod.vnpay => 'Ví VNPay',
+        PaymentMethod.bankCard => 'Thẻ ngân hàng',
+        PaymentMethod.kiosk => 'Kiosk quầy thu',
+      };
+
+  String get statusLabel => switch (status) {
+        PaymentStatus.pending => 'Chờ thanh toán',
+        PaymentStatus.success => 'Thành công',
+        PaymentStatus.failed => 'Thất bại',
+        PaymentStatus.refunded => 'Đã hoàn tiền',
+      };
+}
