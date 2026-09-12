@@ -42,5 +42,7 @@ abstract final class AppRoutes {
   static const mentalHealth = '/mental-health';
   static const healthNews = '/health-news';
   static const adminSlots = '/admin-slots';
+  static const familyProfiles = '/family-profiles';
+  static const telemedicine = '/telemedicine';
 }
 

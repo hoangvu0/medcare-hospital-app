@@ -16,9 +16,10 @@ class _PatientRecordsPageState extends State<PatientRecordsPage> {
   int selectedTab = 0;
   final tabs = const [
     'Lịch sử khám',
-    'Kết quả xét nghiệm',
-    'Đơn thuốc điện tử',
+    'Xét nghiệm gần nhất',
+    'Xu hướng Xét nghiệm (Trends)',
     'X-Quang / Nội soi',
+    'Đơn thuốc',
   ];
 
   @override
@@ -35,14 +36,7 @@ class _PatientRecordsPageState extends State<PatientRecordsPage> {
           IconButton(
             tooltip: 'Xuất PDF có chữ ký số',
             icon: const Icon(Icons.picture_as_pdf_outlined),
-            onPressed: () {
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(
-                  content: Text('Đang tải trích sao Bệnh án điện tử có chữ ký số Bộ Y Tế...'),
-                  backgroundColor: Color(0xFF0057CD),
-                ),
-              );
-            },
+            onPressed: () => _showPdfExportDialog(context, profile),
           ),
         ],
       ),
@@ -61,7 +55,7 @@ class _PatientRecordsPageState extends State<PatientRecordsPage> {
                 label: Text(tabs[index]),
                 selected: selectedTab == index,
                 onSelected: (_) {
-                  if (index == 2) {
+                  if (index == 4) {
                     Navigator.pushNamed(context, AppRoutes.prescription);
                   } else {
                     setState(() => selectedTab = index);
@@ -75,6 +69,8 @@ class _PatientRecordsPageState extends State<PatientRecordsPage> {
             _history(store.medicalRecords)
           else if (selectedTab == 1)
             _labResults(store.labTests)
+          else if (selectedTab == 2)
+            _labTrendsSection(store.labTrends)
           else if (selectedTab == 3)
             _imagingResults(),
           const SizedBox(height: 16),
@@ -488,6 +484,67 @@ class _PatientRecordsPageState extends State<PatientRecordsPage> {
               ),
               const SizedBox(height: 6),
               const Text('Thời gian thực hiện: 10/02/2026 08:30 • Khoa CĐHA'),
+              const SizedBox(height: 12),
+
+              // Interactive DICOM Viewer simulation
+              Container(
+                height: 160,
+                width: double.infinity,
+                decoration: BoxDecoration(
+                  color: const Color(0xFF0F172A),
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: Colors.white24),
+                ),
+                child: Stack(
+                  alignment: Alignment.center,
+                  children: [
+                    const Icon(Icons.broken_image_rounded, size: 70, color: Colors.white30),
+                    Positioned(
+                      top: 8,
+                      left: 10,
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                        decoration: BoxDecoration(
+                          color: Colors.black54,
+                          borderRadius: BorderRadius.circular(4),
+                        ),
+                        child: const Text('DICOM 1024×1024 • 12-bit Greyscale', style: TextStyle(color: Colors.white70, fontSize: 10)),
+                      ),
+                    ),
+                    Positioned(
+                      bottom: 8,
+                      right: 10,
+                      child: Row(
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.all(4),
+                            decoration: BoxDecoration(color: Colors.black54, borderRadius: BorderRadius.circular(6)),
+                            child: const Row(
+                              children: [
+                                Icon(Icons.zoom_in, color: Colors.white, size: 16),
+                                SizedBox(width: 4),
+                                Text('Zoom 1.5x', style: TextStyle(color: Colors.white, fontSize: 11)),
+                              ],
+                            ),
+                          ),
+                          const SizedBox(width: 6),
+                          Container(
+                            padding: const EdgeInsets.all(4),
+                            decoration: BoxDecoration(color: Colors.black54, borderRadius: BorderRadius.circular(6)),
+                            child: const Row(
+                              children: [
+                                Icon(Icons.contrast, color: Colors.white, size: 16),
+                                SizedBox(width: 4),
+                                Text('Âm bản', style: TextStyle(color: Colors.white, fontSize: 11)),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
               const Divider(height: 20),
               const Text(
                 '• Trường phổi hai bên sáng đều, không thấy tổn thương khu trú dạng thâm nhiễm hay nốt mờ.\n• Rốn phổi hai bên bình thường.\n• Chỉ số tim ngực trong giới hạn bình thường (< 0.5).\n• Góc tâm hoành và sườn hoành hai bên sáng nhọn.',
@@ -499,6 +556,244 @@ class _PatientRecordsPageState extends State<PatientRecordsPage> {
       ),
     ],
   );
+
+  Widget _labTrendsSection(List<LabTrendPoint> points) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            const Text(
+              'Xu hướng Chỉ số Xét nghiệm (5 lần khám)',
+              style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold),
+            ),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+              decoration: BoxDecoration(
+                color: const Color(0xFF10B981).withValues(alpha: 0.12),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: const Text('Chuẩn ADA & EASL', style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: Color(0xFF10B981))),
+            ),
+          ],
+        ),
+        const SizedBox(height: 12),
+
+        // Đường huyết Glucose
+        _trendMetricCard(
+          title: 'Đường huyết đói (Glucose)',
+          unit: 'mg/dL',
+          normalRange: '70 - 99 mg/dL',
+          currentVal: points.last.bloodGlucose,
+          initialVal: points.first.bloodGlucose,
+          points: points.map((p) => p.bloodGlucose).toList(),
+          dates: points.map((p) => p.dateStr).toList(),
+          color: const Color(0xFF0057CD),
+          isImproving: true,
+          statusNote: 'Đã giảm từ 118 xuống 94 mg/dL (Trở về mức bình thường tối ưu).',
+        ),
+        const SizedBox(height: 14),
+
+        // Men gan ALT
+        _trendMetricCard(
+          title: 'Men gan (ALT / SGPT)',
+          unit: 'U/L',
+          normalRange: '< 40 U/L',
+          currentVal: points.last.alt,
+          initialVal: points.first.alt,
+          points: points.map((p) => p.alt).toList(),
+          dates: points.map((p) => p.dateStr).toList(),
+          color: const Color(0xFF10B981),
+          isImproving: true,
+          statusNote: 'Hạ từ 48 U/L xuống 28 U/L, tế bào gan hồi phục tốt.',
+        ),
+        const SizedBox(height: 14),
+
+        // Cholesterol
+        _trendMetricCard(
+          title: 'Cholesterol toàn phần',
+          unit: 'mmol/L',
+          normalRange: '< 5.2 mmol/L',
+          currentVal: points.last.cholesterolTotal,
+          initialVal: points.first.cholesterolTotal,
+          points: points.map((p) => p.cholesterolTotal).toList(),
+          dates: points.map((p) => p.dateStr).toList(),
+          color: const Color(0xFFF59E0B),
+          isImproving: true,
+          statusNote: 'Giảm từ 5.8 xuống 4.6 mmol/L, mỡ máu an toàn.',
+        ),
+      ],
+    );
+  }
+
+  Widget _trendMetricCard({
+    required String title,
+    required String unit,
+    required String normalRange,
+    required double currentVal,
+    required double initialVal,
+    required List<double> points,
+    required List<String> dates,
+    required Color color,
+    required bool isImproving,
+    required String statusNote,
+  }) {
+    return Card(
+      elevation: 1,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(title, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
+                    Text('Ngưỡng an toàn: $normalRange', style: const TextStyle(fontSize: 11, color: Colors.grey)),
+                  ],
+                ),
+                Row(
+                  children: [
+                    Icon(
+                      isImproving ? Icons.trending_down_rounded : Icons.trending_up_rounded,
+                      color: isImproving ? const Color(0xFF10B981) : const Color(0xFFEF4444),
+                      size: 20,
+                    ),
+                    const SizedBox(width: 4),
+                    Text(
+                      '$currentVal $unit',
+                      style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: color),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+            const Divider(height: 18),
+
+            // Visual Timeline Points Bar
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: List.generate(points.length, (i) {
+                final isLast = i == points.length - 1;
+                return Column(
+                  children: [
+                    Text(
+                      '${points[i]}',
+                      style: TextStyle(
+                        fontSize: 11,
+                        fontWeight: isLast ? FontWeight.bold : FontWeight.normal,
+                        color: isLast ? color : Colors.black87,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Container(
+                      width: isLast ? 14 : 10,
+                      height: isLast ? 14 : 10,
+                      decoration: BoxDecoration(
+                        color: isLast ? color : color.withValues(alpha: 0.3),
+                        shape: BoxShape.circle,
+                        border: isLast ? Border.all(color: Colors.white, width: 2) : null,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(dates[i], style: const TextStyle(fontSize: 10, color: Colors.grey)),
+                  ],
+                );
+              }),
+            ),
+            const SizedBox(height: 10),
+
+            Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: const Color(0xFF10B981).withValues(alpha: 0.08),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Row(
+                children: [
+                  const Icon(Icons.check_circle_outline, size: 14, color: Color(0xFF10B981)),
+                  const SizedBox(width: 6),
+                  Expanded(
+                    child: Text(
+                      statusNote,
+                      style: const TextStyle(fontSize: 11.5, color: Color(0xFF065F46)),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _showPdfExportDialog(BuildContext context, PatientProfile profile) {
+    showDialog<void>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: const Row(
+          children: [
+            Icon(Icons.picture_as_pdf, color: Color(0xFFDC2626)),
+            SizedBox(width: 8),
+            Text('Trích sao Bệnh án Điện tử'),
+          ],
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text('Hồ sơ bệnh nhân: ${profile.name} • Mã ${profile.id}', style: const TextStyle(fontWeight: FontWeight.bold)),
+            const SizedBox(height: 6),
+            const Text('Tổ chức cấp: Bệnh viện Đa khoa Quốc tế MedCare\nChuẩn định dạng: HL7 CDA Release 2 / Bộ Y Tế'),
+            const SizedBox(height: 12),
+            Container(
+              padding: const EdgeInsets.all(10),
+              decoration: BoxDecoration(
+                color: const Color(0xFF0057CD).withValues(alpha: 0.08),
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: const Row(
+                children: [
+                  Icon(Icons.verified_user_outlined, color: Color(0xFF0057CD), size: 20),
+                  SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      'Tài liệu đính kèm chữ ký số điện tử PKI & Mã QR xác thực 30 ngày.',
+                      style: TextStyle(fontSize: 11.5, color: Color(0xFF0057CD)),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Đóng')),
+          FilledButton.icon(
+            onPressed: () {
+              Navigator.pop(ctx);
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(
+                  content: Text('Đã tải xuống file: Benh_an_MedCare_MC-89241.pdf'),
+                  backgroundColor: Color(0xFF10B981),
+                  behavior: SnackBarBehavior.floating,
+                ),
+              );
+            },
+            icon: const Icon(Icons.download),
+            label: const Text('Tải file PDF'),
+          ),
+        ],
+      ),
+    );
+  }
 
   Widget _securityBanner() => Container(
     padding: const EdgeInsets.all(14),

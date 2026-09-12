@@ -673,6 +673,139 @@ abstract final class MedicalData {
     }
     return slots;
   }
+
+  /// Danh sách Thành viên Gia đình mẫu
+  static List<FamilyMemberProfile> get initialFamilyMembers => [
+    const FamilyMemberProfile(
+      id: 'fam-01',
+      name: 'Nguyễn Hoàng Vũ',
+      relation: FamilyRelation.self,
+      dateOfBirth: '15/08/2002',
+      gender: 'Nam',
+      insuranceNumber: 'DN4010123456789',
+      bloodType: 'O+',
+      allergies: 'Penicillin, Phấn hoa',
+      phone: '0901 234 567',
+      avatarEmoji: '👨‍💼',
+      medicalNotes: 'Tiền sử đau dạ dày do vi khuẩn Hp (đang điều trị)',
+    ),
+    const FamilyMemberProfile(
+      id: 'fam-02',
+      name: 'Bé Nguyễn Bảo An',
+      relation: FamilyRelation.child,
+      dateOfBirth: '10/05/2022',
+      gender: 'Nam',
+      insuranceNumber: 'TE4010987654321',
+      bloodType: 'O+',
+      allergies: 'Hải sản (tôm, cua)',
+      phone: '0901 234 567',
+      avatarEmoji: '👦',
+      medicalNotes: '4 tuổi • Đã hoàn thành mũi tiêm 6 trong 1',
+    ),
+    const FamilyMemberProfile(
+      id: 'fam-03',
+      name: 'Bác Nguyễn Văn Hùng',
+      relation: FamilyRelation.parent,
+      dateOfBirth: '20/11/1958',
+      gender: 'Nam',
+      insuranceNumber: 'HT3010555666777',
+      bloodType: 'B+',
+      allergies: 'Aspirin',
+      phone: '0912 345 678',
+      avatarEmoji: '👴',
+      medicalNotes: '68 tuổi • Tăng huyết áp độ 2, Đái tháo đường Type 2',
+    ),
+    const FamilyMemberProfile(
+      id: 'fam-04',
+      name: 'Trần Thị Mai Anh',
+      relation: FamilyRelation.spouse,
+      dateOfBirth: '24/09/2003',
+      gender: 'Nữ',
+      insuranceNumber: 'DN4010888999000',
+      bloodType: 'A+',
+      allergies: 'Không có',
+      phone: '0933 456 789',
+      avatarEmoji: '👩‍💼',
+      medicalNotes: 'Sức khỏe tốt • Tầm soát phụ khoa định kỳ hàng năm',
+    ),
+  ];
+
+  /// Dữ liệu xu hướng xét nghiệm cận lâm sàng qua 5 lần khám
+  static List<LabTrendPoint> get initialLabTrends => [
+    LabTrendPoint(
+      dateStr: 'T8/2025',
+      timestamp: DateTime(2025, 8, 15),
+      bloodGlucose: 118.0, // Tiền đái tháo đường
+      alt: 48.0,           // Men gan tăng nhẹ
+      ast: 42.0,
+      cholesterolTotal: 5.8, // Hơi cao
+      uricAcid: 410.0,
+    ),
+    LabTrendPoint(
+      dateStr: 'T10/2025',
+      timestamp: DateTime(2025, 10, 20),
+      bloodGlucose: 108.0,
+      alt: 42.0,
+      ast: 38.0,
+      cholesterolTotal: 5.4,
+      uricAcid: 385.0,
+    ),
+    LabTrendPoint(
+      dateStr: 'T12/2025',
+      timestamp: DateTime(2025, 12, 10),
+      bloodGlucose: 102.0,
+      alt: 36.0,
+      ast: 32.0,
+      cholesterolTotal: 5.0, // Về chuẩn
+      uricAcid: 360.0,
+    ),
+    LabTrendPoint(
+      dateStr: 'T1/2026',
+      timestamp: DateTime(2026, 1, 18),
+      bloodGlucose: 98.0,
+      alt: 31.0,
+      ast: 28.0,
+      cholesterolTotal: 4.8,
+      uricAcid: 340.0,
+    ),
+    LabTrendPoint(
+      dateStr: 'T3/2026',
+      timestamp: DateTime(2026, 3, 12),
+      bloodGlucose: 94.0,  // Tối ưu chuẩn ADA
+      alt: 28.0,           // Bình thường
+      ast: 26.0,
+      cholesterolTotal: 4.6, // Chuẩn
+      uricAcid: 320.0,
+    ),
+  ];
+
+  /// Đơn thuốc giao tận nhà mẫu
+  static List<PharmacyOrder> get initialPharmacyOrders => [
+    PharmacyOrder(
+      id: 'PHARM-20260312-01',
+      prescriptionId: 'DT-2026-0891',
+      patientName: 'Nguyễn Hoàng Vũ',
+      phone: '0901 234 567',
+      deliveryAddress: 'Số 28, Phố Huế, Q. Hoàn Kiếm, Hà Nội',
+      pharmacyName: 'Nhà thuốc Bệnh viện MedCare & FPT Long Châu',
+      itemsCount: 4,
+      medicineTotal: 345000,
+      shippingFee: 25000,
+      status: PharmacyOrderStatus.shipping,
+      orderedAt: DateTime.now().subtract(const Duration(minutes: 25)),
+      estimatedMinutes: 20,
+    ),
+  ];
+
+  /// Chỉ số KPI Bệnh viện hôm nay (Admin & Doctor Dashboard)
+  static HospitalKpiData get initialHospitalKpi => const HospitalKpiData(
+    todayPatients: 342,
+    todayRevenue: 184500000, // 184.5 triệu
+    avgWaitMinutes: 14,
+    occupancyRatePercent: 88,
+    totalDoctorsOnDuty: 18,
+    completedConsultations: 215,
+  );
 }
 
 

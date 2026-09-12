@@ -35,6 +35,12 @@ class MedicalStore extends ChangeNotifier {
   final List<HealthPackage> healthPackages = MedicalData.initialHealthPackages;
   final List<HealthArticle> healthArticles = MedicalData.initialArticles;
   final List<PaymentTransaction> _transactions = List.from(MedicalData.initialTransactions);
+  final List<FamilyMemberProfile> _familyMembers = List.from(MedicalData.initialFamilyMembers);
+  String _activeFamilyMemberId = 'fam-01'; // Default: Bản thân
+  final List<PharmacyOrder> _pharmacyOrders = List.from(MedicalData.initialPharmacyOrders);
+  final List<LabTrendPoint> _labTrends = List.from(MedicalData.initialLabTrends);
+  HospitalKpiData _hospitalKpi = MedicalData.initialHospitalKpi;
+  TelemedicineSession? _currentTelemedicine;
 
   /// Map key = "doctorId_date_time" → SlotConfig
   final Map<String, SlotConfig> _slotConfigs = {
@@ -46,7 +52,157 @@ class MedicalStore extends ChangeNotifier {
   List<VitalSignRecord> get vitals => List.unmodifiable(_vitals);
   List<MedicineScheduleItem> get medicineSchedule => List.unmodifiable(_medicineSchedule);
   List<PaymentTransaction> get transactions => List.unmodifiable(_transactions);
+  List<FamilyMemberProfile> get familyMembers => List.unmodifiable(_familyMembers);
+  List<PharmacyOrder> get pharmacyOrders => List.unmodifiable(_pharmacyOrders);
+  List<LabTrendPoint> get labTrends => List.unmodifiable(_labTrends);
+  HospitalKpiData get hospitalKpi => _hospitalKpi;
+  TelemedicineSession? get currentTelemedicine => _currentTelemedicine;
   LiveQueueInfo get queueInfo => _queueInfo;
+
+  /// Thành viên gia đình đang hoạt động
+  FamilyMemberProfile get activeFamilyMember {
+    final found = _familyMembers.where((m) => m.id == _activeFamilyMemberId);
+    return found.isNotEmpty ? found.first : _familyMembers.first;
+  }
+
+  // ── Trụ cột 1: Quản lý Đa Hồ sơ Gia đình ──────────────────────────────────
+
+  void switchFamilyProfile(String id) {
+    if (_activeFamilyMemberId == id) return;
+    _activeFamilyMemberId = id;
+    final active = activeFamilyMember;
+    // Đồng bộ sang profile chính của hệ thống
+    _profile = _profile.copyWith(
+      name: active.name,
+      phone: active.phone.isNotEmpty ? active.phone : _profile.phone,
+      insuranceNumber: active.insuranceNumber,
+      allergies: active.allergies,
+      bloodType: active.bloodType,
+      gender: active.gender,
+      dateOfBirth: active.dateOfBirth,
+    );
+    notifyListeners();
+  }
+
+  void addFamilyMember(FamilyMemberProfile member) {
+    _familyMembers.add(member);
+    notifyListeners();
+  }
+
+  void deleteFamilyMember(String id) {
+    if (id == 'fam-01') return; // Không cho xóa bản thân
+    _familyMembers.removeWhere((m) => m.id == id);
+    if (_activeFamilyMemberId == id) {
+      _activeFamilyMemberId = 'fam-01';
+      switchFamilyProfile('fam-01');
+    } else {
+      notifyListeners();
+    }
+  }
+
+  // ── Trụ cột 2: Khám từ xa Telemedicine ────────────────────────────────────
+
+  TelemedicineSession startTelemedicine(DoctorProfile doctor) {
+    final session = TelemedicineSession(
+      id: 'TELE-${DateTime.now().millisecondsSinceEpoch}',
+      doctor: doctor,
+      patientName: activeFamilyMember.name,
+      appointmentTime: DateTime.now(),
+      status: TelemedicineStatus.connected,
+    );
+    _currentTelemedicine = session;
+    notifyListeners();
+    return session;
+  }
+
+  void endTelemedicine({String? doctorNotes}) {
+    if (_currentTelemedicine != null) {
+      _currentTelemedicine = _currentTelemedicine!.copyWith(
+        status: TelemedicineStatus.ended,
+        doctorNotes: doctorNotes ?? 'Đã hoàn thành buổi tư vấn khám từ xa. Đơn thuốc điện tử đã được cập nhật.',
+      );
+      notifyListeners();
+    }
+  }
+
+  // ── Trụ cột 3: Giao thuốc tận nhà & Cảnh báo dị ứng ───────────────────────
+
+  /// Kiểm tra xem đơn thuốc có chứa hoạt chất gây dị ứng cho bệnh nhân hiện tại không
+  String? checkPrescriptionAllergy(List<MedicineItem> medicines) {
+    final userAllergies = activeFamilyMember.allergies.toLowerCase();
+    for (final med in medicines) {
+      final name = med.name.toLowerCase();
+      if (userAllergies.contains('penicillin') && (name.contains('amoxicillin') || name.contains('ampicillin') || name.contains('penicillin'))) {
+        return 'Cảnh báo dị ứng nghiêm trọng: Bệnh nhân có tiền sử dị ứng Penicillin. Thuốc ${med.name} thuộc nhóm beta-lactam có thể gây sốc phản vệ!';
+      }
+      if (userAllergies.contains('aspirin') && name.contains('aspirin')) {
+        return 'Cảnh báo: Bệnh nhân dị ứng Aspirin. Vui lòng tham vấn bác sĩ trước khi sử dụng!';
+      }
+    }
+    return null;
+  }
+
+  PharmacyOrder createPharmacyOrder({
+    required String prescriptionId,
+    required String deliveryAddress,
+    required String pharmacyName,
+    required int itemsCount,
+    required int medicineTotal,
+  }) {
+    final order = PharmacyOrder(
+      id: 'PHARM-${DateTime.now().millisecondsSinceEpoch}',
+      prescriptionId: prescriptionId,
+      patientName: activeFamilyMember.name,
+      phone: activeFamilyMember.phone.isNotEmpty ? activeFamilyMember.phone : _profile.phone,
+      deliveryAddress: deliveryAddress,
+      pharmacyName: pharmacyName,
+      itemsCount: itemsCount,
+      medicineTotal: medicineTotal,
+      shippingFee: 25000,
+      status: PharmacyOrderStatus.shipping,
+      orderedAt: DateTime.now(),
+      estimatedMinutes: 45,
+    );
+    _pharmacyOrders.insert(0, order);
+    _notifications.insert(
+      0,
+      AppNotification(
+        id: 'pharm-${order.id}',
+        title: 'Đơn thuốc đang giao hỏa tốc',
+        body: 'Đơn thuốc $prescriptionId đang được vận chuyển đến $deliveryAddress.',
+        createdAt: DateTime.now(),
+      ),
+    );
+    notifyListeners();
+    return order;
+  }
+
+  // ── Trụ cột 6: Phân hệ Bác sĩ (Doctor Workspace) ──────────────────────────
+
+  /// Bác sĩ bấm "Gọi bệnh nhân tiếp theo"
+  void doctorCallNextPatient(String room) {
+    final nextNumber = _queueInfo.currentNumber + 1;
+    final waitRemain = (_queueInfo.patientNumber - nextNumber).clamp(0, 99);
+    _queueInfo = LiveQueueInfo(
+      department: _queueInfo.department,
+      room: room,
+      doctorName: _queueInfo.doctorName,
+      currentNumber: nextNumber,
+      patientNumber: _queueInfo.patientNumber,
+      ticketCode: _queueInfo.ticketCode,
+      estimatedMinutes: waitRemain * 4,
+    );
+    // Cập nhật số ca đã hoàn thành
+    _hospitalKpi = HospitalKpiData(
+      todayPatients: _hospitalKpi.todayPatients,
+      todayRevenue: _hospitalKpi.todayRevenue,
+      avgWaitMinutes: _hospitalKpi.avgWaitMinutes,
+      occupancyRatePercent: _hospitalKpi.occupancyRatePercent,
+      totalDoctorsOnDuty: _hospitalKpi.totalDoctorsOnDuty,
+      completedConsultations: _hospitalKpi.completedConsultations + 1,
+    );
+    notifyListeners();
+  }
 
   // ── Slot management ─────────────────────────────────────────────────────
 

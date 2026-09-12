@@ -57,6 +57,7 @@ class _EPrescriptionPageState extends State<EPrescriptionPage> {
         children: [
           _prescriptionIdentity(profile),
           const SizedBox(height: 14),
+          _buildAllergyAlert(store),
           _dispensingCode(profile.id),
           const SizedBox(height: 14),
           _reminderCard(),
@@ -89,7 +90,7 @@ class _EPrescriptionPageState extends State<EPrescriptionPage> {
           _costSummary(),
           const SizedBox(height: 18),
           FilledButton.icon(
-            onPressed: _orderDelivery,
+            onPressed: () => _showOrderDeliveryModal(context, store),
             icon: const Icon(Icons.local_shipping_outlined),
             label: const Text('Đặt mua & Giao thuốc tận nhà (2h)'),
           ),
@@ -98,6 +99,50 @@ class _EPrescriptionPageState extends State<EPrescriptionPage> {
             onPressed: _downloadPrescription,
             icon: const Icon(Icons.picture_as_pdf_outlined),
             label: const Text('Tải đơn PDF có chữ ký số Bộ Y Tế'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildAllergyAlert(MedicalStore store) {
+    final activeMember = store.activeFamilyMember;
+    final hasPenicillinAllergy = activeMember.allergies.toLowerCase().contains('penicillin');
+
+    if (!hasPenicillinAllergy) return const SizedBox.shrink();
+
+    return Container(
+      margin: const EdgeInsets.only(bottom: 14),
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: const Color(0xFFFEF2F2),
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: const Color(0xFFF87171)),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Icon(Icons.warning_amber_rounded, color: Color(0xFFDC2626), size: 24),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text(
+                  'CẢNH BÁO DỊ ỨNG THUỐC (PENICILLIN)',
+                  style: TextStyle(
+                    fontWeight: FontWeight.bold,
+                    color: Color(0xFFDC2626),
+                    fontSize: 13,
+                  ),
+                ),
+                const SizedBox(height: 3),
+                Text(
+                  'Hồ sơ của ${activeMember.name} ghi nhận tiền sử dị ứng Penicillin. Dược sĩ lâm sàng MedCare đã rà soát đơn thuốc và xác nhận các thuốc trên an toàn, không chứa kháng sinh nhóm beta-lactam.',
+                  style: const TextStyle(fontSize: 12, color: Color(0xFF7F1D1D), height: 1.4),
+                ),
+              ],
+            ),
           ),
         ],
       ),
@@ -446,9 +491,231 @@ class _EPrescriptionPageState extends State<EPrescriptionPage> {
   void _sharePrescription() =>
       _message('Đã tạo liên kết chia sẻ đơn thuốc có bảo mật mã PIN.');
 
-  void _orderDelivery() => _message(
-    'Đã tiếp nhận yêu cầu giao thuốc đến địa chỉ của bạn. Dược sĩ sẽ liên hệ sau 15 phút.',
-  );
+  void _showOrderDeliveryModal(BuildContext context, MedicalStore store) {
+    final activeMember = store.activeFamilyMember;
+    final addrCtrl = TextEditingController(text: 'Số 28, Phố Huế, Q. Hoàn Kiếm, Hà Nội');
+    String selectedPharmacy = 'Nhà thuốc MedCare & FPT Long Châu';
+
+    showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx2, setSheetState) {
+          final bottom = MediaQuery.of(ctx2).viewInsets.bottom;
+          return Padding(
+            padding: EdgeInsets.fromLTRB(20, 16, 20, bottom + 20),
+            child: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Center(
+                    child: Container(
+                      width: 40,
+                      height: 4,
+                      margin: const EdgeInsets.only(bottom: 16),
+                      decoration: BoxDecoration(
+                        color: Colors.grey.shade300,
+                        borderRadius: BorderRadius.circular(2),
+                      ),
+                    ),
+                  ),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      const Text(
+                        'Đặt mua & Giao thuốc tận nhà',
+                        style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                      ),
+                      IconButton(
+                        icon: const Icon(Icons.close),
+                        onPressed: () => Navigator.pop(ctx),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 12),
+
+                  // Bệnh nhân nhận thuốc
+                  Container(
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: _primary.withValues(alpha: 0.08),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Row(
+                      children: [
+                        const Icon(Icons.person_pin, color: _primary),
+                        const SizedBox(width: 10),
+                        Expanded(
+                          child: Text(
+                            'Người nhận: ${activeMember.name} • ${activeMember.phone.isNotEmpty ? activeMember.phone : '0901 234 567'}',
+                            style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 14),
+
+                  // Chọn nhà thuốc
+                  const Text('Chọn Nhà thuốc liên kết:', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13)),
+                  const SizedBox(height: 6),
+                  DropdownButtonFormField<String>(
+                    initialValue: selectedPharmacy,
+                    decoration: const InputDecoration(border: OutlineInputBorder()),
+                    items: const [
+                      DropdownMenuItem(
+                        value: 'Nhà thuốc MedCare & FPT Long Châu',
+                        child: Text('MedCare & FPT Long Châu (Gần bạn nhất • 1.2km)'),
+                      ),
+                      DropdownMenuItem(
+                        value: 'Nhà thuốc Pharmacity Hoàn Kiếm',
+                        child: Text('Pharmacity Hoàn Kiếm (2.4km)'),
+                      ),
+                      DropdownMenuItem(
+                        value: 'Nhà thuốc An Khang',
+                        child: Text('An Khang (3.1km)'),
+                      ),
+                    ],
+                    onChanged: (v) => setSheetState(() => selectedPharmacy = v ?? selectedPharmacy),
+                  ),
+                  const SizedBox(height: 14),
+
+                  // Địa chỉ giao hàng
+                  TextField(
+                    controller: addrCtrl,
+                    decoration: const InputDecoration(
+                      labelText: 'Địa chỉ nhận hàng (Giao hỏa tốc 2 giờ)',
+                      prefixIcon: Icon(Icons.location_on_outlined),
+                      border: OutlineInputBorder(),
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+
+                  // Bảng tính phí
+                  Container(
+                    padding: const EdgeInsets.all(14),
+                    decoration: BoxDecoration(
+                      color: Colors.grey.shade50,
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(color: Colors.grey.shade200),
+                    ),
+                    child: const Column(
+                      children: [
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Text('Tiền thuốc kê đơn (sau BHYT):', style: TextStyle(fontSize: 13)),
+                            Text('170.000đ', style: TextStyle(fontWeight: FontWeight.bold)),
+                          ],
+                        ),
+                        SizedBox(height: 6),
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Text('Phí giao hỏa tốc (Ahamove 2h):', style: TextStyle(fontSize: 13)),
+                            Text('25.000đ', style: TextStyle(color: _primary, fontWeight: FontWeight.bold)),
+                          ],
+                        ),
+                        Divider(height: 16),
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Text('Tổng thanh toán khi nhận hàng:', style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold)),
+                            Text('195.000đ', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: _primary)),
+                          ],
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 20),
+
+                  SizedBox(
+                    width: double.infinity,
+                    height: 50,
+                    child: FilledButton.icon(
+                      onPressed: () {
+                        final order = store.createPharmacyOrder(
+                          prescriptionId: 'DT-2026-89241',
+                          deliveryAddress: addrCtrl.text.trim(),
+                          pharmacyName: selectedPharmacy,
+                          itemsCount: 4,
+                          medicineTotal: 170000,
+                        );
+                        Navigator.pop(ctx);
+                        _showOrderTrackingDialog(context, order);
+                      },
+                      icon: const Icon(Icons.check_circle_outline),
+                      label: const Text('Xác nhận đặt giao ngay (195.000đ)', style: TextStyle(fontSize: 15)),
+                      style: FilledButton.styleFrom(
+                        backgroundColor: _primary,
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          );
+        },
+      ),
+    );
+  }
+
+  void _showOrderTrackingDialog(BuildContext context, PharmacyOrder order) {
+    showDialog<void>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: const Row(
+          children: [
+            Icon(Icons.local_shipping, color: _success),
+            SizedBox(width: 8),
+            Text('Đã đặt thuốc thành công!'),
+          ],
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text('Mã đơn hàng: ${order.id}', style: const TextStyle(fontWeight: FontWeight.bold, color: _primary)),
+            const SizedBox(height: 6),
+            Text('Đơn vị vận chuyển: ${order.pharmacyName}'),
+            Text('Giao đến: ${order.deliveryAddress}'),
+            const SizedBox(height: 12),
+            Container(
+              padding: const EdgeInsets.all(10),
+              decoration: BoxDecoration(
+                color: _success.withValues(alpha: 0.1),
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: Row(
+                children: [
+                  const Icon(Icons.timer_outlined, color: _success, size: 20),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      'Dự kiến giao trong ${order.estimatedMinutes} phút tới.',
+                      style: const TextStyle(fontWeight: FontWeight.bold, color: _success),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          FilledButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('Đóng'),
+          ),
+        ],
+      ),
+    );
+  }
 
   void _downloadPrescription() =>
       _message('Đang tải file PDF đơn thuốc có chữ ký số điện tử...');

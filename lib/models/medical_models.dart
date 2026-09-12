@@ -29,16 +29,20 @@ class PatientProfile {
     String? email,
     String? address,
     String? allergies,
+    String? insuranceNumber,
+    String? bloodType,
+    String? gender,
+    String? dateOfBirth,
   }) =>
       PatientProfile(
         id: id,
         name: name ?? this.name,
         phone: phone ?? this.phone,
         email: email ?? this.email,
-        dateOfBirth: dateOfBirth,
-        insuranceNumber: insuranceNumber,
-        bloodType: bloodType,
-        gender: gender,
+        dateOfBirth: dateOfBirth ?? this.dateOfBirth,
+        insuranceNumber: insuranceNumber ?? this.insuranceNumber,
+        bloodType: bloodType ?? this.bloodType,
+        gender: gender ?? this.gender,
         address: address ?? this.address,
         allergies: allergies ?? this.allergies,
       );
@@ -477,4 +481,193 @@ class SlotConfig {
         capacity: capacity ?? this.capacity,
         booked: booked ?? this.booked,
       );
+}
+
+// ── Trụ cột 1: Đa Hồ sơ Gia đình (Family Profiles) ─────────────────────────
+
+enum FamilyRelation { self, child, parent, spouse }
+
+class FamilyMemberProfile {
+  const FamilyMemberProfile({
+    required this.id,
+    required this.name,
+    required this.relation,
+    required this.dateOfBirth,
+    required this.gender,
+    required this.insuranceNumber,
+    required this.bloodType,
+    this.allergies = 'Không có',
+    this.phone = '',
+    this.avatarEmoji = '👤',
+    this.medicalNotes = '',
+  });
+
+  final String id;
+  final String name;
+  final FamilyRelation relation;
+  final String dateOfBirth;
+  final String gender;
+  final String insuranceNumber;
+  final String bloodType;
+  final String allergies;
+  final String phone;
+  final String avatarEmoji;
+  final String medicalNotes;
+
+  String get relationLabel => switch (relation) {
+        FamilyRelation.self => 'Bản thân',
+        FamilyRelation.child => 'Con cái',
+        FamilyRelation.parent => 'Bố / Mẹ',
+        FamilyRelation.spouse => 'Vợ / Chồng',
+      };
+
+  FamilyMemberProfile copyWith({
+    String? name,
+    FamilyRelation? relation,
+    String? dateOfBirth,
+    String? gender,
+    String? insuranceNumber,
+    String? bloodType,
+    String? allergies,
+    String? phone,
+    String? avatarEmoji,
+    String? medicalNotes,
+  }) =>
+      FamilyMemberProfile(
+        id: id,
+        name: name ?? this.name,
+        relation: relation ?? this.relation,
+        dateOfBirth: dateOfBirth ?? this.dateOfBirth,
+        gender: gender ?? this.gender,
+        insuranceNumber: insuranceNumber ?? this.insuranceNumber,
+        bloodType: bloodType ?? this.bloodType,
+        allergies: allergies ?? this.allergies,
+        phone: phone ?? this.phone,
+        avatarEmoji: avatarEmoji ?? this.avatarEmoji,
+        medicalNotes: medicalNotes ?? this.medicalNotes,
+      );
+}
+
+// ── Trụ cột 2: Khám từ xa Telemedicine ──────────────────────────────────────
+
+enum TelemedicineStatus { waiting, connected, ended }
+
+class TelemedicineSession {
+  const TelemedicineSession({
+    required this.id,
+    required this.doctor,
+    required this.patientName,
+    required this.appointmentTime,
+    this.status = TelemedicineStatus.waiting,
+    this.durationSeconds = 0,
+    this.doctorNotes = '',
+  });
+
+  final String id;
+  final DoctorProfile doctor;
+  final String patientName;
+  final DateTime appointmentTime;
+  final TelemedicineStatus status;
+  final int durationSeconds;
+  final String doctorNotes;
+
+  TelemedicineSession copyWith({
+    TelemedicineStatus? status,
+    int? durationSeconds,
+    String? doctorNotes,
+  }) =>
+      TelemedicineSession(
+        id: id,
+        doctor: doctor,
+        patientName: patientName,
+        appointmentTime: appointmentTime,
+        status: status ?? this.status,
+        durationSeconds: durationSeconds ?? this.durationSeconds,
+        doctorNotes: doctorNotes ?? this.doctorNotes,
+      );
+}
+
+// ── Trụ cột 3: Giao thuốc tận nhà (Pharmacy Delivery) ──────────────────────
+
+enum PharmacyOrderStatus { packing, shipping, delivered, cancelled }
+
+class PharmacyOrder {
+  const PharmacyOrder({
+    required this.id,
+    required this.prescriptionId,
+    required this.patientName,
+    required this.phone,
+    required this.deliveryAddress,
+    required this.pharmacyName,
+    required this.itemsCount,
+    required this.medicineTotal,
+    required this.shippingFee,
+    required this.status,
+    required this.orderedAt,
+    this.estimatedMinutes = 45,
+  });
+
+  final String id;
+  final String prescriptionId;
+  final String patientName;
+  final String phone;
+  final String deliveryAddress;
+  final String pharmacyName;
+  final int itemsCount;
+  final int medicineTotal;
+  final int shippingFee;
+  final PharmacyOrderStatus status;
+  final DateTime orderedAt;
+  final int estimatedMinutes;
+
+  int get totalPayable => medicineTotal + shippingFee;
+
+  String get statusLabel => switch (status) {
+        PharmacyOrderStatus.packing => 'Đang đóng gói thuốc',
+        PharmacyOrderStatus.shipping => 'Đang giao hỏa tốc 2h',
+        PharmacyOrderStatus.delivered => 'Đã giao thành công',
+        PharmacyOrderStatus.cancelled => 'Đã hủy',
+      };
+}
+
+// ── Trụ cột 4: Xu hướng Xét nghiệm (Lab Trends) ─────────────────────────────
+
+class LabTrendPoint {
+  const LabTrendPoint({
+    required this.dateStr,
+    required this.timestamp,
+    required this.bloodGlucose,     // mg/dL (chuẩn 70-99)
+    required this.alt,              // U/L (men gan ALT chuẩn < 40)
+    required this.ast,              // U/L (men gan AST chuẩn < 40)
+    required this.cholesterolTotal, // mmol/L (chuẩn < 5.2)
+    required this.uricAcid,         // umol/L (chuẩn 200-420)
+  });
+
+  final String dateStr;
+  final DateTime timestamp;
+  final double bloodGlucose;
+  final double alt;
+  final double ast;
+  final double cholesterolTotal;
+  final double uricAcid;
+}
+
+// ── Trụ cột 6: Thống kê KPI Viện phí & Bác sĩ ───────────────────────────────
+
+class HospitalKpiData {
+  const HospitalKpiData({
+    required this.todayPatients,
+    required this.todayRevenue,
+    required this.avgWaitMinutes,
+    required this.occupancyRatePercent,
+    required this.totalDoctorsOnDuty,
+    required this.completedConsultations,
+  });
+
+  final int todayPatients;
+  final int todayRevenue;
+  final int avgWaitMinutes;
+  final int occupancyRatePercent;
+  final int totalDoctorsOnDuty;
+  final int completedConsultations;
 }

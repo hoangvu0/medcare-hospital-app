@@ -124,6 +124,88 @@ void main() {
       final ok4 = store.bookSlot(docId, dateStr, timeStr);
       expect(ok4, true);
     });
+
+    test('Trụ cột 1: Kiểm tra Quản lý Đa Hồ sơ Gia đình và chuyển đổi hồ sơ', () {
+      final store = MedicalStore();
+      expect(store.familyMembers.length, greaterThanOrEqualTo(4));
+      expect(store.activeFamilyMember.name, 'Nguyễn Hoàng Vũ');
+
+      // Chuyển sang hồ sơ con cái
+      store.switchFamilyProfile('fam-02');
+      expect(store.activeFamilyMember.name, 'Bé Nguyễn Bảo An');
+      expect(store.activeFamilyMember.relation, FamilyRelation.child);
+      expect(store.profile.name, 'Bé Nguyễn Bảo An');
+
+      // Thêm thành viên mới
+      const newMember = FamilyMemberProfile(
+        id: 'fam-new-99',
+        name: 'Nguyễn Thị Hoa',
+        relation: FamilyRelation.parent,
+        dateOfBirth: '12/03/1962',
+        gender: 'Nữ',
+        insuranceNumber: 'HT3010999888',
+        bloodType: 'A+',
+      );
+      store.addFamilyMember(newMember);
+      expect(store.familyMembers.length, 5);
+
+      // Chuyển sang thành viên mới
+      store.switchFamilyProfile('fam-new-99');
+      expect(store.activeFamilyMember.name, 'Nguyễn Thị Hoa');
+
+      // Chuyển lại bản thân
+      store.switchFamilyProfile('fam-01');
+      expect(store.activeFamilyMember.name, 'Nguyễn Hoàng Vũ');
+    });
+
+    test('Trụ cột 2 & 3: Khám từ xa Telemedicine và Giao thuốc tận nhà', () {
+      final store = MedicalStore();
+      final doctor = store.doctors.first;
+
+      // Khám từ xa
+      final session = store.startTelemedicine(doctor);
+      expect(session.status, TelemedicineStatus.connected);
+      expect(store.currentTelemedicine?.doctor.id, doctor.id);
+
+      store.endTelemedicine(doctorNotes: 'Bệnh nhân ổn định');
+      expect(store.currentTelemedicine?.status, TelemedicineStatus.ended);
+
+      // Kiểm tra cảnh báo dị ứng thuốc
+      store.switchFamilyProfile('fam-01'); // Dị ứng Penicillin
+      final warning = store.checkPrescriptionAllergy([
+        const MedicineItem(
+          name: 'Amoxicillin 500mg',
+          category: 'Kháng sinh',
+          dosage: '1 viên x 2 lần/ngày',
+          quantity: '14 viên',
+          instruction: 'Uống sau ăn',
+        ),
+      ]);
+      expect(warning, contains('Cảnh báo dị ứng nghiêm trọng'));
+
+      // Đặt mua thuốc giao tận nhà
+      final order = store.createPharmacyOrder(
+        prescriptionId: 'DT-TEST-001',
+        deliveryAddress: 'Số 10 Phố Huế, Hà Nội',
+        pharmacyName: 'Nhà thuốc Long Châu',
+        itemsCount: 3,
+        medicineTotal: 250000,
+      );
+      expect(order.status, PharmacyOrderStatus.shipping);
+      expect(order.totalPayable, 275000);
+      expect(store.pharmacyOrders.first.id, order.id);
+    });
+
+    test('Trụ cột 6: Phân hệ Bác sĩ gọi bệnh nhân và cập nhật KPI', () {
+      final store = MedicalStore();
+      final initialCurrent = store.queueInfo.currentNumber;
+      final initialConsults = store.hospitalKpi.completedConsultations;
+
+      // Bác sĩ gọi số kế tiếp
+      store.doctorCallNextPatient('Phòng 204');
+      expect(store.queueInfo.currentNumber, initialCurrent + 1);
+      expect(store.hospitalKpi.completedConsultations, initialConsults + 1);
+    });
   });
 
   group('Extended Pages Widget Tests', () {
@@ -192,6 +274,7 @@ void main() {
     testWidgets('HospitalMapPage render lộ trình và các tòa nhà', (tester) async {
       await tester.pumpWidget(buildTestApp(const HospitalMapPage()));
       expect(find.text('Sơ đồ & Chỉ đường Nội viện'), findsOneWidget);
+      await tester.scrollUntilVisible(find.text('Tòa A'), 200);
       expect(find.text('Tòa A'), findsOneWidget);
     });
 

@@ -62,6 +62,48 @@ class VaccinationPage extends StatelessWidget {
                     ],
                   ),
                 ),
+                const SizedBox(height: 14),
+
+                // Next dose countdown
+                Container(
+                  padding: const EdgeInsets.all(14),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF10B981).withValues(alpha: 0.1),
+                    borderRadius: BorderRadius.circular(16),
+                    border: Border.all(color: const Color(0xFF10B981).withValues(alpha: 0.3)),
+                  ),
+                  child: Row(
+                    children: [
+                      const Icon(Icons.alarm_on_rounded, color: Color(0xFF10B981), size: 28),
+                      const SizedBox(width: 12),
+                      const Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'LỊCH TIÊM NHẮC KẾ TIẾP: CÒN 38 NGÀY',
+                              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 11, color: Color(0xFF065F46)),
+                            ),
+                            SizedBox(height: 2),
+                            Text(
+                              'Vắc-xin Phế cầu 13 (Prevenar 13) • 20/04/2026',
+                              style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold),
+                            ),
+                            Text(
+                              'Phòng ngừa viêm phổi, viêm màng não do phế cầu khuẩn.',
+                              style: TextStyle(fontSize: 11, color: Colors.black54),
+                            ),
+                          ],
+                        ),
+                      ),
+                      IconButton(
+                        tooltip: 'Mở QR Hộ chiếu tiêm chủng',
+                        icon: const Icon(Icons.qr_code_2, color: Color(0xFF0057CD), size: 30),
+                        onPressed: () => _showVaccinePassportDialog(context, store),
+                      ),
+                    ],
+                  ),
+                ),
                 const SizedBox(height: 16),
                 ...vaccines.map((v) => _buildVaccineCard(context, v)),
               ],
@@ -247,6 +289,66 @@ class VaccinationPage extends StatelessWidget {
             ),
             child: const Text('Đăng ký', style: TextStyle(fontSize: 12)),
           ),
+        ],
+      ),
+    );
+  }
+
+  void _showVaccinePassportDialog(BuildContext context, MedicalStore store) {
+    final profile = store.activeFamilyMember;
+    showDialog<void>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: const Row(
+          children: [
+            Icon(Icons.verified, color: Color(0xFF10B981)),
+            SizedBox(width: 8),
+            Text('Hộ chiếu Vắc-xin Điện tử'),
+          ],
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(14),
+                border: Border.all(color: Colors.grey.shade300),
+              ),
+              child: const Icon(Icons.qr_code_2, size: 140, color: Color(0xFF0057CD)),
+            ),
+            const SizedBox(height: 12),
+            Text(
+              profile.name.toUpperCase(),
+              style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+            ),
+            Text(
+              'BHYT: ${profile.insuranceNumber} • Sinh: ${profile.dateOfBirth}',
+              style: const TextStyle(fontSize: 12, color: Colors.grey),
+            ),
+            const SizedBox(height: 10),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+              decoration: BoxDecoration(
+                color: const Color(0xFF10B981).withValues(alpha: 0.12),
+                borderRadius: BorderRadius.circular(20),
+              ),
+              child: const Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(Icons.check_circle, size: 14, color: Color(0xFF10B981)),
+                  SizedBox(width: 4),
+                  Text('CHỨNG NHẬN TIÊM ĐỦ LIỀU CƠ BẢN',
+                      style: TextStyle(color: Color(0xFF065F46), fontWeight: FontWeight.bold, fontSize: 11)),
+                ],
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          FilledButton(onPressed: () => Navigator.pop(ctx), child: const Text('Đóng')),
         ],
       ),
     );

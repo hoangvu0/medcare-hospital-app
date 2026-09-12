@@ -200,6 +200,86 @@ class LiveQueuePage extends StatelessWidget {
               padding: const EdgeInsets.symmetric(vertical: 14),
             ),
           ),
+          const SizedBox(height: 10),
+
+          // Nút thử chuông gọi số
+          OutlinedButton.icon(
+            onPressed: () => _simulateAudioCall(context, queue),
+            icon: const Icon(Icons.volume_up_rounded, color: Color(0xFF0057CD)),
+            label: const Text('Thử chuông gọi số tự động (Ting-tong AI)'),
+            style: OutlinedButton.styleFrom(
+              padding: const EdgeInsets.symmetric(vertical: 13),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            ),
+          ),
+          const SizedBox(height: 10),
+
+          // Nút xem bản đồ phòng khám
+          TextButton.icon(
+            onPressed: () => Navigator.pushNamed(context, '/hospital-map'),
+            icon: const Icon(Icons.map_outlined),
+            label: const Text('Xem sơ đồ & chỉ đường tới phòng khám này'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _simulateAudioCall(BuildContext context, dynamic queue) {
+    showDialog<void>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: const Row(
+          children: [
+            Icon(Icons.record_voice_over_rounded, color: Color(0xFF0057CD)),
+            SizedBox(width: 8),
+            Text('Hệ thống Loa Phát Thanh'),
+          ],
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              width: 80,
+              height: 80,
+              decoration: BoxDecoration(
+                color: const Color(0xFF0057CD).withValues(alpha: 0.1),
+                shape: BoxShape.circle,
+              ),
+              child: const Icon(Icons.campaign_rounded, size: 44, color: Color(0xFF0057CD)),
+            ),
+            const SizedBox(height: 16),
+            const Text(
+              '🔔 *Ting-tong!*',
+              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Color(0xFF0057CD)),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              '"Xin mời bệnh nhân có số thứ tự ${queue.currentNumber}\nvào phòng ${queue.room} để khám bệnh!"',
+              textAlign: TextAlign.center,
+              style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600, height: 1.4),
+            ),
+            const SizedBox(height: 12),
+            Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: const Color(0xFF10B981).withValues(alpha: 0.12),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: const Text(
+                'Điện thoại của bạn sẽ rung và đổ chuông thông báo đẩy khi còn 2 số nữa là tới phiên.',
+                textAlign: TextAlign.center,
+                style: TextStyle(fontSize: 11, color: Color(0xFF065F46)),
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          FilledButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('Đã nghe rõ'),
+          ),
         ],
       ),
     );

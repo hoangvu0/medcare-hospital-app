@@ -35,26 +35,63 @@ class _AdminSlotPageState extends State<AdminSlotPage> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('Admin — Quản lý Slot Khám'),
-        backgroundColor: const Color(0xFF0D2657),
-        foregroundColor: Colors.white,
-        actions: [
-          if (_authenticated)
+    if (!_authenticated) {
+      return Scaffold(
+        appBar: AppBar(
+          title: const Text('Admin & Bác sĩ — Đăng nhập'),
+          backgroundColor: const Color(0xFF0D2657),
+          foregroundColor: Colors.white,
+        ),
+        body: _buildLoginScreen(),
+      );
+    }
+
+    return DefaultTabController(
+      length: 3,
+      child: Scaffold(
+        appBar: AppBar(
+          title: const Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text('Cổng Quản trị MedCare Hospital',
+                  style: TextStyle(fontSize: 17, fontWeight: FontWeight.bold)),
+              Text('Phân hệ Quản trị viện phí & Bác sĩ lâm sàng',
+                  style: TextStyle(fontSize: 11, color: Colors.white70)),
+            ],
+          ),
+          backgroundColor: const Color(0xFF0D2657),
+          foregroundColor: Colors.white,
+          bottom: const TabBar(
+            indicatorColor: Colors.white,
+            labelColor: Colors.white,
+            unselectedLabelColor: Colors.white60,
+            tabs: [
+              Tab(icon: Icon(Icons.event_seat, size: 18), text: 'Quản lý Slot'),
+              Tab(icon: Icon(Icons.medical_services, size: 18), text: 'Bàn Bác sĩ'),
+              Tab(icon: Icon(Icons.insights, size: 18), text: 'Doanh thu & KPI'),
+            ],
+          ),
+          actions: [
             Padding(
               padding: const EdgeInsets.only(right: 12),
               child: Chip(
                 avatar: const Icon(Icons.admin_panel_settings,
                     size: 16, color: Colors.white),
-                label: const Text('Admin',
+                label: const Text('Admin & Doctor',
                     style: TextStyle(color: Colors.white, fontSize: 11)),
                 backgroundColor: Colors.white.withValues(alpha: 0.15),
               ),
             ),
-        ],
+          ],
+        ),
+        body: TabBarView(
+          children: [
+            _buildSlotPanel(),
+            _buildDoctorWorkspace(),
+            _buildHospitalKpiDashboard(),
+          ],
+        ),
       ),
-      body: _authenticated ? _buildPanel() : _buildLoginScreen(),
     );
   }
 
@@ -142,9 +179,9 @@ class _AdminSlotPageState extends State<AdminSlotPage> {
     }
   }
 
-  // ── Admin Panel ────────────────────────────────────────────────────────────
+  // ── Tab 1: Cấu hình Slot Panel ───────────────────────────────────────────
 
-  Widget _buildPanel() {
+  Widget _buildSlotPanel() {
     final store = MedicalScope.of(context);
     final doctors = store.doctors;
     final dates = List.generate(
@@ -408,6 +445,345 @@ class _AdminSlotPageState extends State<AdminSlotPage> {
 
   String _weekday(DateTime value) =>
       const ['CN', 'T2', 'T3', 'T4', 'T5', 'T6', 'T7'][value.weekday % 7];
+
+  // ── Tab 2: Bàn làm việc Bác sĩ (Doctor Clinic Workspace) ──────────────────
+
+  Widget _buildDoctorWorkspace() {
+    final store = MedicalScope.of(context);
+    final queue = store.queueInfo;
+
+    return ListView(
+      padding: const EdgeInsets.all(16),
+      children: [
+        // Clinic room status
+        Container(
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            color: const Color(0xFF0D2657),
+            borderRadius: BorderRadius.circular(16),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  const Icon(Icons.meeting_room_rounded, color: Colors.white, size: 22),
+                  const SizedBox(width: 8),
+                  Text(
+                    '${queue.room} • ${queue.department}',
+                    style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 6),
+              Text(
+                'Bác sĩ phụ trách: ${queue.doctorName}',
+                style: const TextStyle(color: Colors.white70, fontSize: 12),
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(height: 16),
+
+        // Current Active Patient
+        Card(
+          elevation: 1,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          child: Padding(
+            padding: const EdgeInsets.all(16),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    const Text('BỆNH NHÂN ĐANG KHÁM TRONG PHÒNG',
+                        style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: _kPrimary)),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                      decoration: BoxDecoration(
+                        color: _kSuccess.withValues(alpha: 0.12),
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      child: const Text('Đang thăm khám',
+                          style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: _kSuccess)),
+                    ),
+                  ],
+                ),
+                const Divider(height: 20),
+                Row(
+                  children: [
+                    CircleAvatar(
+                      radius: 24,
+                      backgroundColor: _kPrimary.withValues(alpha: 0.1),
+                      child: Text(
+                        '#${queue.currentNumber}',
+                        style: const TextStyle(fontWeight: FontWeight.bold, color: _kPrimary, fontSize: 16),
+                      ),
+                    ),
+                    const SizedBox(width: 14),
+                    const Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text('Bệnh nhân: Nguyễn Hoàng Vũ',
+                              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15)),
+                          Text('Mã BN: MC-89241 • Nam • 24 tuổi • BHYT: Đúng tuyến (80%)',
+                              style: TextStyle(fontSize: 12, color: Colors.grey)),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 12),
+                Container(
+                  padding: const EdgeInsets.all(10),
+                  decoration: BoxDecoration(
+                    color: Colors.grey.shade50,
+                    borderRadius: BorderRadius.circular(10),
+                    border: Border.all(color: Colors.grey.shade200),
+                  ),
+                  child: const Text(
+                    'Lý do khám: Đau quặn thượng vị sau ăn 2 tuần, kèm ợ chua nhiều. Nghi ngờ viêm loét dạ dày tá tràng Hp (+).',
+                    style: TextStyle(fontSize: 12),
+                  ),
+                ),
+                const SizedBox(height: 16),
+
+                Row(
+                  children: [
+                    Expanded(
+                      child: OutlinedButton.icon(
+                        onPressed: () {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(content: Text('Đã lưu bệnh án và xuất đơn thuốc điện tử!')),
+                          );
+                        },
+                        icon: const Icon(Icons.assignment_turned_in_outlined, size: 16),
+                        label: const Text('Khám xong / Kê đơn', style: TextStyle(fontSize: 12)),
+                      ),
+                    ),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: FilledButton.icon(
+                        onPressed: () {
+                          store.doctorCallNextPatient(queue.room);
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                              content: Text('Loa phát thanh & chuông gọi số đã gọi bệnh nhân số #${queue.currentNumber + 1}!'),
+                              backgroundColor: _kSuccess,
+                              behavior: SnackBarBehavior.floating,
+                            ),
+                          );
+                        },
+                        icon: const Icon(Icons.campaign_rounded, size: 18),
+                        label: const Text('Gọi số kế tiếp', style: TextStyle(fontSize: 12)),
+                        style: FilledButton.styleFrom(backgroundColor: _kPrimary),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        ),
+        const SizedBox(height: 16),
+
+        // Waiting Queue List
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            const Text('HÀNG ĐỢI ĐANG CHỜ TẠI SẢNH',
+                style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: _kPrimary)),
+            Text('Còn ${queue.waitCount} người chờ', style: const TextStyle(fontSize: 11, color: Colors.grey)),
+          ],
+        ),
+        const SizedBox(height: 10),
+
+        ...List.generate(3, (i) {
+          final patientNum = queue.currentNumber + i + 1;
+          final names = ['Trần Văn Hưng', 'Lê Thị Thu Thảo', 'Hoàng Minh Quân'];
+          return Card(
+            elevation: 0,
+            margin: const EdgeInsets.only(bottom: 8),
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            child: ListTile(
+              leading: CircleAvatar(
+                backgroundColor: Colors.grey.shade200,
+                child: Text('#$patientNum',
+                    style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 12, color: Colors.black87)),
+              ),
+              title: Text(names[i % names.length], style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
+              subtitle: Text('Thời gian chờ dự kiến: ${(i + 1) * 6} phút', style: const TextStyle(fontSize: 11)),
+              trailing: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFF59E0B).withValues(alpha: 0.12),
+                  borderRadius: BorderRadius.circular(6),
+                ),
+                child: const Text('Chờ khám', style: TextStyle(fontSize: 10, color: Color(0xFFD97706), fontWeight: FontWeight.bold)),
+              ),
+            ),
+          );
+        }),
+      ],
+    );
+  }
+
+  // ── Tab 3: Báo cáo Doanh thu & Thống kê KPI Bệnh viện ─────────────────────
+
+  Widget _buildHospitalKpiDashboard() {
+    final store = MedicalScope.of(context);
+    final kpi = store.hospitalKpi;
+
+    return ListView(
+      padding: const EdgeInsets.all(16),
+      children: [
+        // KPI Summary Cards
+        Row(
+          children: [
+            Expanded(
+              child: _kpiCard(
+                title: 'Tổng lượt khám hôm nay',
+                value: '${kpi.todayPatients}',
+                sub: '+12% so với hôm qua',
+                icon: Icons.people_alt_outlined,
+                color: const Color(0xFF0057CD),
+              ),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: _kpiCard(
+                title: 'Doanh thu viện phí',
+                value: '184.5 tr',
+                sub: 'Đạt 94% chỉ tiêu ngày',
+                icon: Icons.payments_outlined,
+                color: const Color(0xFF10B981),
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 12),
+        Row(
+          children: [
+            Expanded(
+              child: _kpiCard(
+                title: 'Thời gian chờ TB',
+                value: '${kpi.avgWaitMinutes} phút',
+                sub: 'Chuẩn Bộ Y Tế: <30p',
+                icon: Icons.timer_outlined,
+                color: const Color(0xFFF59E0B),
+              ),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: _kpiCard(
+                title: 'Công suất phòng khám',
+                value: '${kpi.occupancyRatePercent}%',
+                sub: '${kpi.totalDoctorsOnDuty} bác sĩ đang trực',
+                icon: Icons.local_hospital_outlined,
+                color: const Color(0xFF8B5CF6),
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 20),
+
+        // Revenue Breakdown Chart Simulation
+        Card(
+          elevation: 1,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          child: Padding(
+            padding: const EdgeInsets.all(16),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text('Cơ cấu Doanh thu Viện phí theo Khoa',
+                    style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold)),
+                const SizedBox(height: 4),
+                const Text('Tỷ lệ BHYT & Thu ngoài danh mục', style: TextStyle(fontSize: 11, color: Colors.grey)),
+                const SizedBox(height: 14),
+
+                _departmentBar('Khoa Tim mạch', 0.85, '52.4 triệu', const Color(0xFF0057CD)),
+                _departmentBar('Khoa Tiêu hóa & Nội soi', 0.72, '44.8 triệu', const Color(0xFF10B981)),
+                _departmentBar('Khoa Xét nghiệm & Sinh hóa', 0.65, '38.2 triệu', const Color(0xFFF59E0B)),
+                _departmentBar('Khoa CĐHA (X-Quang/MRI)', 0.54, '31.6 triệu', const Color(0xFF8B5CF6)),
+                _departmentBar('Khoa Dược Bệnh viện', 0.42, '17.5 triệu', const Color(0xFFEC4899)),
+              ],
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _kpiCard({
+    required String title,
+    required String value,
+    required String sub,
+    required IconData icon,
+    required Color color,
+  }) {
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: Colors.grey.shade200),
+        boxShadow: const [BoxShadow(color: Colors.black12, blurRadius: 4, offset: Offset(0, 2))],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Icon(icon, color: color, size: 22),
+              Container(
+                width: 8,
+                height: 8,
+                decoration: BoxDecoration(color: color, shape: BoxShape.circle),
+              ),
+            ],
+          ),
+          const SizedBox(height: 10),
+          Text(value, style: TextStyle(fontWeight: FontWeight.w900, fontSize: 20, color: color)),
+          const SizedBox(height: 2),
+          Text(title, style: const TextStyle(fontSize: 11.5, fontWeight: FontWeight.w600, color: Colors.black87)),
+          const SizedBox(height: 2),
+          Text(sub, style: const TextStyle(fontSize: 10, color: Colors.grey)),
+        ],
+      ),
+    );
+  }
+
+  Widget _departmentBar(String name, double ratio, String amount, Color color) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 10),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(name, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600)),
+              Text(amount, style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: color)),
+            ],
+          ),
+          const SizedBox(height: 4),
+          ClipRRect(
+            borderRadius: BorderRadius.circular(4),
+            child: LinearProgressIndicator(
+              value: ratio,
+              minHeight: 8,
+              backgroundColor: Colors.grey.shade200,
+              valueColor: AlwaysStoppedAnimation<Color>(color),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
 }
 
 // ── Thẻ slot riêng lẻ ───────────────────────────────────────────────────────

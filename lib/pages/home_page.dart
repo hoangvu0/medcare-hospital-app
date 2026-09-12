@@ -181,36 +181,64 @@ class _HomePageState extends State<HomePage> {
               ),
             ],
           ),
-          const SizedBox(height: 14),
-          InkWell(
-          onTap: () => Navigator.pushNamed(context, AppRoutes.search),
-          borderRadius: BorderRadius.circular(12),
-          child: Container(
-            height: 48,
-            padding: const EdgeInsets.symmetric(horizontal: 12),
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(12),
-              boxShadow: const [
-                BoxShadow(color: Color(0x0D000000), blurRadius: 3),
-              ],
-            ),
-            child: const Row(
-              children: [
-                Icon(Icons.search, size: 19, color: Color(0xFF727787)),
-                SizedBox(width: 8),
-                Text(
-                  'Tìm bác sĩ, chuyên khoa, gói khám...',
-                  style: TextStyle(color: Color(0xFF727787), fontSize: 13),
-                ),
-              ],
+
+          // Family profile switcher banner
+          GestureDetector(
+            onTap: () => Navigator.pushNamed(context, AppRoutes.familyProfiles),
+            child: Container(
+              margin: const EdgeInsets.only(top: 12),
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+              decoration: BoxDecoration(
+                color: primary.withValues(alpha: 0.08),
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: primary.withValues(alpha: 0.2)),
+              ),
+              child: Row(
+                children: [
+                  Text(MedicalScope.of(context).activeFamilyMember.avatarEmoji, style: const TextStyle(fontSize: 18)),
+                  const SizedBox(width: 8),
+                  Text(
+                    'Đang khám cho: ${MedicalScope.of(context).activeFamilyMember.name} (${MedicalScope.of(context).activeFamilyMember.relationLabel})',
+                    style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: primary),
+                  ),
+                  const Spacer(),
+                  const Text('Đổi', style: TextStyle(fontSize: 11, color: primary, fontWeight: FontWeight.w600)),
+                  const Icon(Icons.swap_horiz_rounded, size: 16, color: primary),
+                ],
+              ),
             ),
           ),
-        ),
-      ],
-    ),
-  );
-}
+
+          const SizedBox(height: 14),
+          InkWell(
+            onTap: () => Navigator.pushNamed(context, AppRoutes.search),
+            borderRadius: BorderRadius.circular(12),
+            child: Container(
+              height: 48,
+              padding: const EdgeInsets.symmetric(horizontal: 12),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(12),
+                boxShadow: const [
+                  BoxShadow(color: Color(0x0D000000), blurRadius: 3),
+                ],
+              ),
+              child: const Row(
+                children: [
+                  Icon(Icons.search, size: 19, color: Color(0xFF727787)),
+                  SizedBox(width: 8),
+                  Text(
+                    'Tìm bác sĩ, chuyên khoa, gói khám...',
+                    style: TextStyle(color: Color(0xFF727787), fontSize: 13),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
 
   Widget _aiAssistantBanner() => Padding(
     padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
@@ -508,18 +536,21 @@ class _HomePageState extends State<HomePage> {
 
   Widget _quickActions() {
     const actions = [
+      (Icons.family_restroom_rounded, 'Hồ sơ\ngia đình', AppRoutes.familyProfiles, Color(0xFFEFF6FF), Color(0xFF0057CD)),
+      (Icons.video_call_rounded, 'Khám\ntừ xa AI', AppRoutes.telemedicine, Color(0xFFDCFCE7), Color(0xFF15803D)),
       (Icons.calendar_month_rounded, 'Đặt khám\nnhanh', AppRoutes.appointments, Color(0xFFE2E7FF), Color(0xFF0057CD)),
       (Icons.medication_rounded, 'Nhắc uống\nthuốc', AppRoutes.medicationTracker, Color(0xFFDCFCE7), Color(0xFF15803D)),
+
       (Icons.monitor_heart_rounded, 'Chỉ số\nsinh hiệu', AppRoutes.vitalsTracker, Color(0xFFFFE4E6), Color(0xFFBE123C)),
       (Icons.people_alt_rounded, 'Hàng đợi\nkhám', AppRoutes.liveQueue, Color(0xFFFEF3C7), Color(0xFFB45309)),
-
       (Icons.vaccines_rounded, 'Sổ tiêm\nchủng', AppRoutes.vaccination, Color(0xFFCCFBF1), Color(0xFF0F766E)),
       (Icons.inventory_2_rounded, 'Gói khám\ntầm soát', AppRoutes.healthPackages, Color(0xFFEDE9FE), Color(0xFF6D28D9)),
+
       (Icons.map_rounded, 'Sơ đồ\nbệnh viện', AppRoutes.hospitalMap, Color(0xFFFEF9C3), Color(0xFFB45309)),
       (Icons.credit_card_rounded, 'Thẻ y tế\nBHYT 3D', AppRoutes.digitalCard, Color(0xFFE0E7FF), Color(0xFF1D4ED8)),
-
       (Icons.description_rounded, 'Bệnh án\nđiện tử', AppRoutes.records, Color(0xFFE2E7FF), Color(0xFF0057CD)),
       (Icons.account_balance_wallet_rounded, 'Thanh toán\nviện phí', AppRoutes.payment, Color(0xFFDCFCE7), Color(0xFF15803D)),
+
       (Icons.spa_rounded, 'Thư giãn\ntinh thần', AppRoutes.mentalHealth, Color(0xFFF3E8FF), Color(0xFF7E22CE)),
       (Icons.menu_book_rounded, 'Cẩm nang\ny khoa', AppRoutes.healthNews, Color(0xFFFFEDD5), Color(0xFFC2410C)),
     ];

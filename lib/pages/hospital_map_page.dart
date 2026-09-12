@@ -9,6 +9,150 @@ class HospitalMapPage extends StatefulWidget {
 
 class _HospitalMapPageState extends State<HospitalMapPage> {
   String _selectedBuilding = 'A';
+  String _startPoint = 'Cổng số 1 (Sảnh chính)';
+  String _destPoint = 'Phòng 204: Khám Tiêu hóa (Tầng 2 Tòa A)';
+  bool _isNavigating = false;
+
+  Widget _buildIndoorRoutingCard(bool isDark) {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: isDark ? const Color(0xFF1E293B) : Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: isDark ? Colors.white12 : const Color(0xFFE2E8F0)),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.04),
+            blurRadius: 10,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: const Color(0xFF0057CD).withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: const Icon(Icons.directions_walk_rounded, color: Color(0xFF0057CD), size: 22),
+              ),
+              const SizedBox(width: 10),
+              const Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text('TÌM ĐƯỜNG ĐI TRONG BỆNH VIỆN',
+                        style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Color(0xFF0057CD))),
+                    Text('Chỉ dẫn di chuyển từng bước (Indoor Navigation)',
+                        style: TextStyle(fontSize: 11, color: Colors.grey)),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 14),
+
+          // Start Point Dropdown
+          DropdownButtonFormField<String>(
+            initialValue: _startPoint,
+            decoration: const InputDecoration(
+              labelText: 'Điểm xuất phát',
+              prefixIcon: Icon(Icons.my_location_rounded, color: Color(0xFF0057CD), size: 20),
+              isDense: true,
+              border: OutlineInputBorder(),
+            ),
+            items: const [
+              DropdownMenuItem(value: 'Cổng số 1 (Sảnh chính)', child: Text('Cổng số 1 (Sảnh chính)')),
+              DropdownMenuItem(value: 'Kiosk lấy số (Tầng 1 Tòa A)', child: Text('Kiosk lấy số (Tầng 1 Tòa A)')),
+              DropdownMenuItem(value: 'Nhà xe Bệnh viện', child: Text('Nhà xe Bệnh viện')),
+              DropdownMenuItem(value: 'Khoa Cấp cứu 24/7', child: Text('Khoa Cấp cứu 24/7')),
+            ],
+            onChanged: (v) => setState(() => _startPoint = v ?? _startPoint),
+          ),
+          const SizedBox(height: 10),
+
+          // Destination Dropdown
+          DropdownButtonFormField<String>(
+            initialValue: _destPoint,
+            decoration: const InputDecoration(
+              labelText: 'Điểm đến',
+              prefixIcon: Icon(Icons.location_on_rounded, color: Color(0xFFEF4444), size: 20),
+              isDense: true,
+              border: OutlineInputBorder(),
+            ),
+            items: const [
+              DropdownMenuItem(
+                value: 'Phòng 204: Khám Tiêu hóa (Tầng 2 Tòa A)',
+                child: Text('Phòng 204: Khám Tiêu hóa (Tầng 2 Tòa A)'),
+              ),
+              DropdownMenuItem(
+                value: 'Khoa Xét nghiệm (Tầng 2 Tòa B)',
+                child: Text('Khoa Xét nghiệm (Tầng 2 Tòa B)'),
+              ),
+              DropdownMenuItem(
+                value: 'Khoa Chẩn đoán Hình ảnh X-Quang (Tòa C)',
+                child: Text('Khoa X-Quang / MRI (Tòa C)'),
+              ),
+              DropdownMenuItem(
+                value: 'Nhà thuốc Bệnh viện (Tầng 1 Tòa A)',
+                child: Text('Nhà thuốc Bệnh viện (Tầng 1 Tòa A)'),
+              ),
+            ],
+            onChanged: (v) => setState(() => _destPoint = v ?? _destPoint),
+          ),
+          const SizedBox(height: 12),
+
+          // Route Guide Steps
+          if (_isNavigating) ...[
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: const Color(0xFF10B981).withValues(alpha: 0.08),
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: const Color(0xFF10B981).withValues(alpha: 0.3)),
+              ),
+              child: const Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Icon(Icons.route_rounded, color: Color(0xFF10B981), size: 18),
+                      SizedBox(width: 8),
+                      Text('Khoảng cách: 65 mét • Khoảng 1.5 phút đi bộ',
+                          style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12, color: Color(0xFF065F46))),
+                    ],
+                  ),
+                  Divider(height: 14),
+                  Text('• Bước 1: Từ Sảnh chính, đi thẳng 20 mét qua quầy Lễ tân.'),
+                  Text('• Bước 2: Rẽ phải vào Khu thang máy A, bấm lên Tầng 2.'),
+                  Text('• Bước 3: Ra khỏi thang máy, rẽ trái đi dọc hành lang 15 mét.'),
+                  Text('• Bước 4: Phòng 204 nằm ở bên tay phải (cửa màu xanh dương).'),
+                ],
+              ),
+            ),
+            const SizedBox(height: 10),
+          ],
+
+          SizedBox(
+            width: double.infinity,
+            child: FilledButton.icon(
+              onPressed: () => setState(() => _isNavigating = !_isNavigating),
+              icon: Icon(_isNavigating ? Icons.close : Icons.navigation_rounded),
+              label: Text(_isNavigating ? 'Ẩn lộ trình' : 'Bắt đầu chỉ đường chi tiết'),
+              style: FilledButton.styleFrom(
+                backgroundColor: const Color(0xFF0057CD),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -21,6 +165,8 @@ class _HospitalMapPageState extends State<HospitalMapPage> {
       body: ListView(
         padding: const EdgeInsets.all(16),
         children: [
+          _buildIndoorRoutingCard(isDark),
+          const SizedBox(height: 20),
           // 4-step Clinic Workflow
           Container(
             padding: const EdgeInsets.all(16),
