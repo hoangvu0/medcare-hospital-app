@@ -625,5 +625,54 @@ abstract final class MedicalData {
       receiptCode: 'RC-Z-20251210-3308',
     ),
   ];
+
+  /// Danh sách các time slot cấu hình mặc định (Admin có thể chỉnh sửa)
+  /// Mặc định: 10 bác sĩ × 6 khung giờ × 7 ngày tới
+  static List<SlotConfig> buildInitialSlotConfigs() {
+    const doctorIds = [
+      'doc-01', 'doc-02', 'doc-03', 'doc-04', 'doc-05',
+      'doc-06', 'doc-07', 'doc-08', 'doc-09', 'doc-10',
+    ];
+    const times = ['08:00', '09:00', '10:00', '14:00', '15:00', '16:00'];
+    // Capacity mặc định theo khung giờ (sáng đông hơn chiều)
+    const defaultCapacity = {
+      '08:00': 8,
+      '09:00': 10,
+      '10:00': 8,
+      '14:00': 6,
+      '15:00': 6,
+      '16:00': 4,
+    };
+
+    final slots = <SlotConfig>[];
+    final today = DateTime.now();
+    for (var d = 1; d <= 7; d++) {
+      final day = today.add(Duration(days: d));
+      final dateStr =
+          '${day.year}-${day.month.toString().padLeft(2, '0')}-${day.day.toString().padLeft(2, '0')}';
+      for (final docId in doctorIds) {
+        for (final time in times) {
+          // Giả lập một số slot đã có người đặt sẵn
+          final cap = defaultCapacity[time] ?? 5;
+          final booked = switch ('${docId}_$time') {
+            'doc-01_09:00' when d == 1 => 9,  // gần đầy
+            'doc-01_10:00' when d == 1 => 8,  // đầy
+            'doc-02_08:00' when d == 1 => 8,  // đầy
+            'doc-03_09:00' when d == 2 => 5,  // đầy
+            _ => (d == 1 && time == '09:00') ? 2 : 0,
+          };
+          slots.add(SlotConfig(
+            doctorId: docId,
+            date: dateStr,
+            time: time,
+            capacity: cap,
+            booked: booked.clamp(0, cap),
+          ));
+        }
+      }
+    }
+    return slots;
+  }
 }
+
 

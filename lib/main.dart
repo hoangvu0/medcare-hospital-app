@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import 'pages/admin_slot_page.dart';
 import 'pages/ai_health_assistant_page.dart';
 import 'pages/appointment_page.dart';
 import 'pages/additional_pages.dart';
@@ -159,6 +160,7 @@ class _HospitalAppState extends State<HospitalApp> {
                 AppRoutes.emergencySos: (context) => const EmergencySosPage(),
                 AppRoutes.mentalHealth: (context) => const MentalHealthPage(),
                 AppRoutes.healthNews: (context) => const HealthNewsPage(),
+                AppRoutes.adminSlots: (context) => const AdminSlotPage(),
               },
 
             );

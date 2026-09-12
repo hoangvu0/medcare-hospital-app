@@ -1547,6 +1547,15 @@ class _SettingsPageState extends State<SettingsPage> {
             trailing: const Icon(Icons.chevron_right),
             onTap: () => Navigator.pushNamed(context, AppRoutes.profile),
           ),
+          const Divider(),
+          _sectionHeader('Quản trị & Bác sĩ'),
+          ListTile(
+            leading: const Icon(Icons.admin_panel_settings_outlined, color: Color(0xFF0D6EFD)),
+            title: const Text('Quản lý Slot khám (Admin)'),
+            subtitle: const Text('Giới hạn lượt đặt phòng theo khung giờ'),
+            trailing: const Icon(Icons.chevron_right),
+            onTap: () => Navigator.pushNamed(context, AppRoutes.adminSlots),
+          ),
           ListTile(
             leading: const Icon(Icons.logout, color: Colors.red),
             title: const Text('Đăng xuất', style: TextStyle(color: Colors.red)),

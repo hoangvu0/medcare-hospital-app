@@ -36,12 +36,70 @@ class MedicalStore extends ChangeNotifier {
   final List<HealthArticle> healthArticles = MedicalData.initialArticles;
   final List<PaymentTransaction> _transactions = List.from(MedicalData.initialTransactions);
 
+  /// Map key = "doctorId_date_time" → SlotConfig
+  final Map<String, SlotConfig> _slotConfigs = {
+    for (final s in MedicalData.buildInitialSlotConfigs()) s.key: s
+  };
+
   List<Appointment> get appointments => List.unmodifiable(_appointments);
   List<AppNotification> get notifications => List.unmodifiable(_notifications);
   List<VitalSignRecord> get vitals => List.unmodifiable(_vitals);
   List<MedicineScheduleItem> get medicineSchedule => List.unmodifiable(_medicineSchedule);
   List<PaymentTransaction> get transactions => List.unmodifiable(_transactions);
   LiveQueueInfo get queueInfo => _queueInfo;
+
+  // ── Slot management ─────────────────────────────────────────────────────
+
+  /// Lấy thông tin slot cho bác sĩ × ngày × giờ.
+  /// Nếu chưa có cấu hình, trả về slot mặc định capacity=5.
+  SlotConfig getSlotInfo(String doctorId, String date, String time) {
+    final key = '${doctorId}_${date}_$time';
+    return _slotConfigs[key] ??
+        SlotConfig(doctorId: doctorId, date: date, time: time, capacity: 5);
+  }
+
+  /// Lấy tất cả slot của bác sĩ trong một ngày.
+  List<SlotConfig> getSlotsForDoctorDate(String doctorId, String date) {
+    const times = ['08:00', '09:00', '10:00', '14:00', '15:00', '16:00'];
+    return times.map((t) => getSlotInfo(doctorId, date, t)).toList();
+  }
+
+  /// [Admin] Cập nhật capacity của một slot.
+  void setSlotCapacity(String doctorId, String date, String time, int capacity) {
+    final key = '${doctorId}_${date}_$time';
+    final existing = _slotConfigs[key];
+    _slotConfigs[key] = (existing ?? SlotConfig(doctorId: doctorId, date: date, time: time, capacity: capacity))
+        .copyWith(capacity: capacity.clamp(1, 50));
+    notifyListeners();
+  }
+
+  /// [Bệnh nhân] Đặt 1 chỗ vào slot. Trả về true nếu thành công, false nếu hết chỗ.
+  /// Đây là atomic check-and-decrement: nếu vừa đầy ngay lúc đặt → từ chối.
+  bool bookSlot(String doctorId, String date, String time) {
+    final key = '${doctorId}_${date}_$time';
+    final slot = getSlotInfo(doctorId, date, time);
+    if (slot.isFull) return false;
+    // Ghi nhận slot vào map (tạo mới nếu chưa có)
+    final updated = SlotConfig(
+      doctorId: slot.doctorId,
+      date: slot.date,
+      time: slot.time,
+      capacity: slot.capacity,
+      booked: slot.booked + 1,
+    );
+    _slotConfigs[key] = updated;
+    notifyListeners();
+    return true;
+  }
+
+  /// [Admin] Giải phóng 1 chỗ khi hủy lịch.
+  void releaseSlot(String doctorId, String date, String time) {
+    final key = '${doctorId}_${date}_$time';
+    final slot = _slotConfigs[key];
+    if (slot == null || slot.booked <= 0) return;
+    _slotConfigs[key] = slot.copyWith(booked: slot.booked - 1);
+    notifyListeners();
+  }
 
   double get medicineAdherenceRate {
     if (_medicineSchedule.isEmpty) return 1.0;
@@ -250,6 +308,12 @@ class MedicalStore extends ChangeNotifier {
       fee: useInsurance ? (doctor.price * .2).round() : doctor.price,
       ticketNumber: ticketNum,
     );
+    final dateStr =
+        '${dateTime.year}-${dateTime.month.toString().padLeft(2, '0')}-${dateTime.day.toString().padLeft(2, '0')}';
+    final timeStr =
+        '${dateTime.hour.toString().padLeft(2, '0')}:${dateTime.minute.toString().padLeft(2, '0')}';
+    bookSlot(doctor.id, dateStr, timeStr);
+
     _appointments.insert(0, appointment);
     _notifications.insert(
       0,
@@ -267,6 +331,13 @@ class MedicalStore extends ChangeNotifier {
   void cancelAppointment(String id) {
     final index = _appointments.indexWhere((item) => item.id == id);
     if (index < 0) return;
+    final app = _appointments[index];
+    final dateStr =
+        '${app.dateTime.year}-${app.dateTime.month.toString().padLeft(2, '0')}-${app.dateTime.day.toString().padLeft(2, '0')}';
+    final timeStr =
+        '${app.dateTime.hour.toString().padLeft(2, '0')}:${app.dateTime.minute.toString().padLeft(2, '0')}';
+    releaseSlot(app.doctorId, dateStr, timeStr);
+
     _appointments[index] = _appointments[index].copyWith(
       status: AppointmentStatus.cancelled,
     );

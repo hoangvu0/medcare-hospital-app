@@ -83,6 +83,47 @@ void main() {
       expect(store.healthPackages.length, greaterThanOrEqualTo(3));
       expect(store.healthArticles.length, greaterThanOrEqualTo(3));
     });
+
+    test('Kiểm tra giới hạn slot đặt khám và Admin điều chỉnh capacity', () {
+      final store = MedicalStore();
+      const docId = 'doc-test-99';
+      const dateStr = '2026-09-20';
+      const timeStr = '09:00';
+
+      // Admin cấu hình slot này chỉ có đúng 2 chỗ
+      store.setSlotCapacity(docId, dateStr, timeStr, 2);
+      final slotInitial = store.getSlotInfo(docId, dateStr, timeStr);
+      expect(slotInitial.capacity, 2);
+      expect(slotInitial.booked, 0);
+      expect(slotInitial.remaining, 2);
+      expect(slotInitial.isFull, false);
+
+      // Người 1 đặt thành công
+      final ok1 = store.bookSlot(docId, dateStr, timeStr);
+      expect(ok1, true);
+      expect(store.getSlotInfo(docId, dateStr, timeStr).remaining, 1);
+      expect(store.getSlotInfo(docId, dateStr, timeStr).isFull, false);
+
+      // Người 2 đặt thành công -> slot đầy
+      final ok2 = store.bookSlot(docId, dateStr, timeStr);
+      expect(ok2, true);
+      expect(store.getSlotInfo(docId, dateStr, timeStr).remaining, 0);
+      expect(store.getSlotInfo(docId, dateStr, timeStr).isFull, true);
+
+      // Người 3 đặt muộn -> BỊ CHẶN (hết chỗ)
+      final ok3 = store.bookSlot(docId, dateStr, timeStr);
+      expect(ok3, false);
+      expect(store.getSlotInfo(docId, dateStr, timeStr).remaining, 0);
+
+      // Hủy 1 chỗ -> giải phóng slot
+      store.releaseSlot(docId, dateStr, timeStr);
+      expect(store.getSlotInfo(docId, dateStr, timeStr).remaining, 1);
+      expect(store.getSlotInfo(docId, dateStr, timeStr).isFull, false);
+
+      // Người khác lại đặt được
+      final ok4 = store.bookSlot(docId, dateStr, timeStr);
+      expect(ok4, true);
+    });
   });
 
   group('Extended Pages Widget Tests', () {

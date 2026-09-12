@@ -445,3 +445,36 @@ class PaymentTransaction {
         PaymentStatus.refunded => 'Đã hoàn tiền',
       };
 }
+
+// ── Quản lý slot đặt khám (Admin) ──────────────────────────────────────────
+
+/// Cấu hình slot đặt khám cho một bác sĩ tại một khung giờ cụ thể.
+class SlotConfig {
+  SlotConfig({
+    required this.doctorId,
+    required this.date,   // "2026-09-15"
+    required this.time,   // "09:00"
+    required this.capacity,
+    this.booked = 0,
+  });
+
+  final String doctorId;
+  final String date;
+  final String time;
+  final int capacity;
+  int booked;
+
+  int get remaining => (capacity - booked).clamp(0, capacity);
+  bool get isFull => remaining <= 0;
+
+  /// Key dùng để tra cứu trong Map
+  String get key => '${doctorId}_${date}_$time';
+
+  SlotConfig copyWith({int? capacity, int? booked}) => SlotConfig(
+        doctorId: doctorId,
+        date: date,
+        time: time,
+        capacity: capacity ?? this.capacity,
+        booked: booked ?? this.booked,
+      );
+}
