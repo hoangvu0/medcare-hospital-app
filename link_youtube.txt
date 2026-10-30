@@ -1,0 +1,9 @@
+BÀI TẬP THỰC HÀNH LAB 01 - PHÁT TRIỂN ỨNG DỤNG DI ĐỘNG ĐA NỀN TẢNG (LING190)
+Giảng viên: ThS. Võ Văn Lên
+Sinh viên thực hiện:
+- Họ và tên: Nguyễn Hoàng Vũ
+- MSSV: 2324801030077
+
+Link video YouTube demo ứng dụng trên điện thoại (có hiển thị Tên + MSSV):
+https://www.youtube.com/watch?v=YOUR_VIDEO_LINK_HERE
+(Vui lòng dán link video YouTube sau khi quay và tải lên vào đây)
