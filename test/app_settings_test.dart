@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
-import 'package:bt2_2324801030077/pages/diagnostics_page.dart';
+import 'package:bt2_2324801030077/pages/chan_doan_he_thong_page.dart';
 import 'package:bt2_2324801030077/state/app_settings_store.dart';
 
 void main() {

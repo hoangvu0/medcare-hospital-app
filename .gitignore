@@ -31,6 +31,23 @@ migrate_working_dir/
 .pub-cache/
 .pub/
 /build/
+**/build/
+**/.dart_tool/
+*.sqlite
+*.sqlite3
+*.db
+server/medcare_uploads/
+tmp_docx_render/
+.docx_render_check/
+*.docx
+*.docx.pdf
+*_report.py
+polish_*.py
+update_report*.py
+write_report*.py
+expand_report*.py
+collapse_report*.py
+add_chapter4_screenshot_guide.py
 /coverage/
 
 # Symbolication related

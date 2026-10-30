@@ -2,19 +2,53 @@
   "version": "0.2.0",
   "configurations": [
     {
+      "name": "MedCare Hospital (Android Emulator)",
+      "request": "launch",
+      "type": "dart",
+      "deviceId": "emulator-5554",
+      "program": "lib/main.dart",
+      "toolArgs": [
+        "--dart-define=MEDCARE_API_BASE_URL=http://10.0.2.2:8080"
+      ]
+    },
+    {
       "name": "MedCare Hospital (Chrome Web)",
       "request": "launch",
       "type": "dart",
       "deviceId": "chrome",
-      "program": "lib/main.dart"
+      "program": "lib/main.dart",
+      "toolArgs": [
+        "--dart-define=MEDCARE_API_BASE_URL=http://127.0.0.1:8080"
+      ]
     },
     {
       "name": "MedCare Hospital (Edge Web)",
       "request": "launch",
       "type": "dart",
       "deviceId": "edge",
-      "program": "lib/main.dart"
+      "program": "lib/main.dart",
+      "toolArgs": [
+        "--dart-define=MEDCARE_API_BASE_URL=http://127.0.0.1:8080"
+      ]
+    }
+  ],
+  "compounds": [
+    {
+      "name": "MedCare: Bệnh nhân Android + Nhân viên Chrome",
+      "configurations": [
+        "MedCare Hospital (Android Emulator)",
+        "MedCare Hospital (Chrome Web)"
+      ],
+      "stopAll": true
+    },
+    {
+      "name": "MedCare: Bệnh nhân + Bác sĩ + Admin",
+      "configurations": [
+        "MedCare Hospital (Android Emulator)",
+        "MedCare Hospital (Chrome Web)",
+        "MedCare Hospital (Edge Web)"
+      ],
+      "stopAll": true
     }
   ]
 }
-

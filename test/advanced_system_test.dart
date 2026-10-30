@@ -27,51 +27,81 @@ void main() {
       expect(specialties, contains('Hô hấp & Phổi'));
     });
 
-    test('2. Kiểm tra Trợ lý AI Diễn giải Xét nghiệm (12 chỉ số chuẩn hóa)', () {
-      final labs = store.labReports;
-      expect(labs.length, equals(12));
+    test(
+      '2. Kiểm tra Trợ lý AI Diễn giải Xét nghiệm (12 chỉ số chuẩn hóa)',
+      () {
+        final labs = store.labReports;
+        expect(labs.length, equals(12));
 
-      final hematology = labs.where((l) => l.category == LabCategory.hematology).toList();
-      expect(hematology.length, equals(4)); // WBC, RBC, HGB, PLT
+        final hematology = labs
+            .where((l) => l.category == LabCategory.hematology)
+            .toList();
+        expect(hematology.length, equals(4)); // WBC, RBC, HGB, PLT
 
-      final biochemistry = labs.where((l) => l.category == LabCategory.biochemistry).toList();
-      expect(biochemistry.length, equals(8)); // GLU, HbA1c, ALT, AST, CREA, URIC, CHOL, TRIG
+        final biochemistry = labs
+            .where((l) => l.category == LabCategory.biochemistry)
+            .toList();
+        expect(
+          biochemistry.length,
+          equals(8),
+        ); // GLU, HbA1c, ALT, AST, CREA, URIC, CHOL, TRIG
 
-      final uric = labs.firstWhere((l) => l.code == 'URIC');
-      expect(uric.riskLevel, equals(LabRiskLevel.critical));
-      expect(uric.clinicalMeaning, contains('Gout'));
+        final uric = labs.firstWhere((l) => l.code == 'URIC');
+        expect(uric.riskLevel, equals(LabRiskLevel.critical));
+        expect(uric.clinicalMeaning, contains('Gout'));
 
-      final glu = labs.firstWhere((l) => l.code == 'GLU');
-      expect(glu.dietaryAdvice, isNotEmpty);
-    });
+        final glu = labs.firstWhere((l) => l.code == 'GLU');
+        expect(glu.dietaryAdvice, isNotEmpty);
+      },
+    );
 
-    test('3. Kiểm tra Bảo lãnh Viện phí Tư nhân Trực tiếp (Cashless Claim)', () {
-      expect(store.insurancePolicies.length, greaterThanOrEqualTo(3));
+    test(
+      '3. Kiểm tra Bảo lãnh Viện phí Tư nhân Trực tiếp (Cashless Claim)',
+      () {
+        expect(store.insurancePolicies.length, greaterThanOrEqualTo(3));
 
-      final claim = store.submitCashlessClaim(
-        policyNumber: 'BV-AG-998241',
-        providerName: 'Bảo Việt An Gia',
-        totalBill: 1000000,
-        coveredPercent: 100,
-      );
+        final claim = store.submitCashlessClaim(
+          policyNumber: 'BV-AG-998241',
+          providerName: 'Bảo Việt An Gia',
+          totalBill: 1000000,
+          coveredPercent: 100,
+        );
 
-      expect(claim.coveredAmount, equals(1000000));
-      expect(claim.patientCoPay, equals(0));
-      expect(claim.status, equals(CashlessClaimStatus.approved));
-      expect(store.cashlessClaims.length, equals(1));
+        expect(claim.coveredAmount, equals(1000000));
+        expect(claim.patientCoPay, equals(0));
+        expect(claim.status, equals(CashlessClaimStatus.pending));
+        expect(store.cashlessClaims.length, equals(1));
 
-      // Kiểm tra có ghi nhận vào Audit Log
-      final latestLog = store.securityAuditLogs.first;
-      expect(latestLog.action, contains('Bảo lãnh viện phí'));
-    });
+        // Kiểm tra có ghi nhận vào Audit Log
+        final latestLog = store.securityAuditLogs.first;
+        expect(latestLog.action, contains('Bảo lãnh viện phí'));
+      },
+    );
 
     test('4. Kiểm tra Tự động nhắc Tái khám & Đánh giá Bác sĩ NPS', () {
       final initialReviewsCount = store.hospitalKpi.totalReviews;
+      final appointment = store.book(
+        doctor: store.activeDoctorUser,
+        dateTime: DateTime(2026, 2, 9, 9),
+        patientName: store.activeFamilyMember.name,
+        reason: 'Khám chuyên khoa',
+        useInsurance: true,
+      );
+      final appointmentFee = store.transactions.firstWhere(
+        (tx) => tx.visitCode == '#${appointment.id}',
+      );
+      store.completeTransaction(appointmentFee.id);
 
       // Bác sĩ hoàn tất ca khám
-      store.doctorFinishConsultation('GS.TS.BS Nguyễn Chấn Hùng', 'Ung bướu & Xạ trị');
+      store.doctorFinishConsultation(
+        'GS.TS.BS Nguyễn Chấn Hùng',
+        'Ung bướu & Xạ trị',
+      );
       expect(store.followUpReminders.isNotEmpty, isTrue);
-      expect(store.followUpReminders.first.doctorName, equals('GS.TS.BS Nguyễn Chấn Hùng'));
+      expect(
+        store.followUpReminders.first.doctorName,
+        equals('GS.TS.BS Nguyễn Chấn Hùng'),
+      );
 
       // Bệnh nhân gửi đánh giá 5 sao
       final review = DoctorReview(
@@ -88,21 +118,27 @@ void main() {
       store.submitDoctorReview(review);
       expect(store.doctorReviews.length, greaterThanOrEqualTo(3));
       expect(store.hospitalKpi.totalReviews, equals(initialReviewsCount + 1));
-      expect(store.hospitalKpi.npsSatisfactionScore, greaterThanOrEqualTo(90.0));
+      expect(
+        store.hospitalKpi.npsSatisfactionScore,
+        greaterThanOrEqualTo(90.0),
+      );
     });
 
-    test('5. Kiểm tra Giám Sát An Ninh & Khóa Hệ Thống Khẩn Cấp (Lockdown)', () {
-      expect(store.isEmergencyLockdown, isFalse);
-      store.toggleEmergencyLockdown();
-      expect(store.isEmergencyLockdown, isTrue);
+    test(
+      '5. Kiểm tra Giám Sát An Ninh & Khóa Hệ Thống Khẩn Cấp (Lockdown)',
+      () {
+        expect(store.isEmergencyLockdown, isFalse);
+        store.toggleEmergencyLockdown();
+        expect(store.isEmergencyLockdown, isTrue);
 
-      final latestLog = store.securityAuditLogs.first;
-      expect(latestLog.action, contains('KHÓA HỆ THỐNG KHẨN CẤP'));
-      expect(latestLog.severity, equals(SecuritySeverity.danger));
+        final latestLog = store.securityAuditLogs.first;
+        expect(latestLog.action, contains('KHÓA HỆ THỐNG KHẨN CẤP'));
+        expect(latestLog.severity, equals(SecuritySeverity.danger));
 
-      store.toggleEmergencyLockdown();
-      expect(store.isEmergencyLockdown, isFalse);
-    });
+        store.toggleEmergencyLockdown();
+        expect(store.isEmergencyLockdown, isFalse);
+      },
+    );
 
     test('6. Kiểm tra Chế độ Người cao tuổi (Senior Mode Toggle)', () {
       expect(store.isSeniorMode, isFalse);
@@ -112,18 +148,30 @@ void main() {
       expect(store.isSeniorMode, isFalse);
     });
 
-    test('7. Kiểm tra Ví Viện Phí & Tự Động Hoàn Tiền Tạm Ứng (Auto-Refund)', () {
-      final initialBalance = store.walletBalance;
-      final initialDeposit = store.advanceDeposit;
+    test(
+      '7. Kiểm tra Ví Viện Phí & Tự Động Hoàn Tiền Tạm Ứng (Auto-Refund)',
+      () {
+        expect(store.walletBalance, equals(0));
+        expect(store.advanceDeposit, equals(0));
 
-      expect(initialDeposit, greaterThan(0));
+        store.topUpWallet(1000000);
+        final initialBalance = store.walletBalance;
 
-      // Thực hiện hoàn tiền tự động 100%
-      store.autoRefundAdvance();
-      expect(store.advanceDeposit, equals(0));
-      expect(store.walletBalance, equals(initialBalance + initialDeposit));
-      expect(store.walletTransactions.first.title, contains('Tự động hoàn trả'));
-    });
+        store.depositAdvance(400000);
+        final initialDeposit = store.advanceDeposit;
+        expect(initialDeposit, equals(400000));
+        expect(store.walletBalance, equals(initialBalance - initialDeposit));
+
+        // Thực hiện hoàn tiền tự động 100%
+        store.autoRefundAdvance();
+        expect(store.advanceDeposit, equals(0));
+        expect(store.walletBalance, equals(initialBalance));
+        expect(
+          store.walletTransactions.first.title,
+          contains('Tự động hoàn trả'),
+        );
+      },
+    );
 
     test('8. Kiểm tra Gói thời gian khám bệnh (Appointment Passes)', () {
       final passes = store.appointmentPasses;
@@ -135,19 +183,25 @@ void main() {
       expect(vip.benefits, isNotEmpty);
     });
 
-    test('9. Kiểm tra Đăng nhập tài khoản Bác sĩ & Chuyển đổi vai trò tương tác', () {
-      // Đăng nhập bằng tài khoản Bác sĩ
-      final ok = store.login(identifier: 'doctor@medcare.vn', password: '123456');
-      expect(ok, isTrue);
-      expect(store.isDoctorRole, isTrue);
-      expect(store.currentUserRole, equals(UserRole.doctor));
-      expect(store.activeDoctorUser.name, contains('Trần Minh Đức'));
+    test(
+      '9. Kiểm tra Đăng nhập tài khoản Bác sĩ & Chuyển đổi vai trò tương tác',
+      () {
+        // Đăng nhập bằng tài khoản Bác sĩ
+        final ok = store.login(
+          identifier: 'doctor@medcare.vn',
+          password: '123456',
+        );
+        expect(ok, isTrue);
+        expect(store.isDoctorRole, isTrue);
+        expect(store.currentUserRole, equals(UserRole.doctor));
+        expect(store.activeDoctorUser.name, contains('Trần Minh Đức'));
 
-      // Chuyển đổi sang Bệnh nhân
-      store.switchRole(UserRole.patient);
-      expect(store.isDoctorRole, isFalse);
-      expect(store.currentUserRole, equals(UserRole.patient));
-    });
+        // Chuyển đổi sang Bệnh nhân
+        store.switchRole(UserRole.patient);
+        expect(store.isDoctorRole, isFalse);
+        expect(store.currentUserRole, equals(UserRole.patient));
+      },
+    );
 
     test('10. Kiểm tra Tương tác 2 chiều Bác sĩ gọi số, kê đơn và nhắc tái khám cho Bệnh nhân', () {
       // Bác sĩ gọi bệnh nhân vào phòng 402
@@ -161,47 +215,69 @@ void main() {
         medicines: ['Amlodipine 5mg', 'Atorvastatin 10mg'],
         advice: 'Ăn nhạt, đo huyết áp mỗi ngày',
       );
-      expect(store.notifications.first.title, contains('đã kê đơn thuốc'));
+      expect(store.notifications.first.title, contains('Mời vào phòng khám'));
+      expect(store.securityAuditLogs.first.action, 'DRAFT_PRESCRIPTION');
+
+      final appointment = store.book(
+        doctor: store.activeDoctorUser,
+        dateTime: DateTime(2026, 2, 11, 9),
+        patientName: store.activeFamilyMember.name,
+        reason: 'Khám tim mạch',
+        useInsurance: true,
+      );
+      final appointmentFee = store.transactions.firstWhere(
+        (tx) => tx.visitCode == '#${appointment.id}',
+      );
+      store.completeTransaction(appointmentFee.id);
 
       // Bác sĩ hoàn tất ca khám
       final initialReminders = store.followUpReminders.length;
       store.doctorFinishConsultation('PGS.TS.BS Trần Minh Đức', 'Tim mạch');
       expect(store.followUpReminders.length, equals(initialReminders + 1));
-      expect(store.followUpReminders.first.doctorName, contains('Trần Minh Đức'));
+      expect(
+        store.followUpReminders.first.doctorName,
+        contains('Trần Minh Đức'),
+      );
     });
 
     test('11. Kiểm tra Quy trình & Lộ trình khám bệnh 6 bước chuẩn (Clinical Pathway Tracker)', () {
       final pathway = store.clinicalPathway;
       expect(pathway.length, equals(6));
 
-      // Ban đầu: Bước 1, 2 xong, Bước 3 đang thực hiện
-      expect(store.completedStepsCount, equals(2));
-      expect(store.currentPathwayStep.stepNumber, equals(3));
-      expect(store.currentPathwayStep.title, contains('Cận lâm sàng'));
-      expect(store.currentPathwayStep.location, contains('Phòng 204'));
+      // Ban đầu: Bước 1 đang thực hiện, chưa hoàn tất bước nào
+      expect(store.completedStepsCount, equals(0));
+      expect(store.currentPathwayStep.stepNumber, equals(1));
+      expect(store.currentPathwayStep.title, contains('Tiếp đón'));
+      expect(store.currentPathwayStep.location, contains('Sảnh chính'));
 
-      // Hoàn thành Bước 3 (Xét nghiệm xong) -> Chuyển sang Bước 4 (Quay lại Bác sĩ kết luận)
-      store.advancePathwayStep(3);
-      expect(store.completedStepsCount, equals(3));
-      expect(store.currentPathwayStep.stepNumber, equals(4));
-      expect(store.currentPathwayStep.title, contains('Quay lại Bác sĩ'));
+      // Hoàn thành Bước 1 -> Chuyển sang Bước 2
+      store.advancePathwayStep(1);
+      expect(store.completedStepsCount, equals(1));
+      expect(store.currentPathwayStep.stepNumber, equals(2));
+      expect(store.currentPathwayStep.title, contains('Khám lâm sàng'));
 
       // Đặt lại lộ trình
       store.resetPathway();
-      expect(store.completedStepsCount, equals(2));
-      expect(store.currentPathwayStep.stepNumber, equals(3));
+      expect(store.completedStepsCount, equals(0));
+      expect(store.currentPathwayStep.stepNumber, equals(1));
     });
 
     test('12. Kiểm tra Phân quyền Đăng nhập Độc lập 3 vai trò (Bệnh nhân, Bác sĩ, Admin)', () {
       // 1. Đăng nhập Bệnh nhân
-      final patientOk = store.login(identifier: 'vu@example.com', password: 'password123');
+      final patientOk = store.login(
+        identifier: 'vu@example.com',
+        password: 'password123',
+      );
       expect(patientOk, isTrue);
       expect(store.currentUserRole, equals(UserRole.patient));
       expect(store.isDoctorRole, isFalse);
       expect(store.isAdminRole, isFalse);
 
       // 2. Đăng nhập Bác sĩ
-      final doctorOk = store.login(identifier: 'doctor@medcare.vn', password: 'password123');
+      final doctorOk = store.login(
+        identifier: 'doctor@medcare.vn',
+        password: 'password123',
+      );
       expect(doctorOk, isTrue);
       expect(store.currentUserRole, equals(UserRole.doctor));
       expect(store.isDoctorRole, isTrue);
@@ -209,7 +285,10 @@ void main() {
       expect(store.activeDoctorUser.name, contains('Trần Minh Đức'));
 
       // 3. Đăng nhập Admin
-      final adminOk = store.login(identifier: 'admin@medcare.vn', password: 'admin123password');
+      final adminOk = store.login(
+        identifier: 'admin@medcare.vn',
+        password: 'admin123password',
+      );
       expect(adminOk, isTrue);
       expect(store.currentUserRole, equals(UserRole.admin));
       expect(store.isAdminRole, isTrue);
@@ -238,6 +317,17 @@ void main() {
 
       final initialRecordsCount = store.medicalRecords.length;
       final initialScheduleCount = store.medicineSchedule.length;
+      final appointment = store.book(
+        doctor: store.activeDoctorUser,
+        dateTime: DateTime(2026, 2, 12, 9),
+        patientName: store.activeFamilyMember.name,
+        reason: 'Khám tim mạch và đánh giá huyết áp',
+        useInsurance: true,
+      );
+      final appointmentFee = store.transactions.firstWhere(
+        (tx) => tx.visitCode == '#${appointment.id}',
+      );
+      store.completeTransaction(appointmentFee.id);
 
       // Bác sĩ thực thi buổi khám hoàn chỉnh và truyền dữ liệu
       store.doctorExecuteFullConsultationSync(
@@ -247,7 +337,8 @@ void main() {
         symptoms: 'Đau đầu chẩm, hồi hộp khi gắng sức',
         physicalExam: 'Tim đều T1 T2 rõ, huyết áp 135/85 mmHg, bụng mềm',
         labNotes: 'Glucose 5.6 mmol/L, Creatinine 82 µmol/L (eGFR 95)',
-        doctorAdvice: 'Ăn nhạt dưới 5g muối/ngày, tập thể dục nhẹ, không hút thuốc',
+        doctorAdvice:
+            'Ăn nhạt dưới 5g muối/ngày, tập thể dục nhẹ, không hút thuốc',
         followUpDate: '26/02/2026',
         prescribedMedicines: prescribed,
         riskLevel: 'Theo dõi định kỳ tim mạch',
@@ -260,27 +351,63 @@ void main() {
       expect(latestRecord.icd10Name, contains('Tăng huyết áp'));
       expect(latestRecord.physicalExamNotes, contains('135/85'));
       expect(latestRecord.doctorInstructions, contains('Ăn nhạt'));
-      expect(latestRecord.digitalSignatureToken, contains('EMR-SHA256-VN-VALIDATED'));
-      expect(latestRecord.prescribedMedicinesSummary, contains('Amlodipine Besylate'));
+      expect(
+        latestRecord.digitalSignatureToken,
+        contains('EMR-SHA256-VN-VALIDATED'),
+      );
+      expect(
+        latestRecord.prescribedMedicinesSummary,
+        contains('Amlodipine Besylate'),
+      );
 
       // 2. Kiểm tra Danh mục thuốc và Lịch uống thuốc tự động của Bệnh nhân
       expect(store.medicineSchedule.length, equals(initialScheduleCount + 2));
       expect(store.medicineSchedule.first.medicineName, equals('Rosuvastatin'));
-      expect(store.medicineSchedule[1].medicineName, equals('Amlodipine Besylate'));
+      expect(
+        store.medicineSchedule[1].medicineName,
+        equals('Amlodipine Besylate'),
+      );
+
+      // 2b. Lịch hẹn được chuyển trạng thái đã khám sau khi ký EMR
+      expect(
+        store.appointments.first.status,
+        equals(AppointmentStatus.completed),
+      );
 
       // 3. Kiểm tra Lộ trình khám bệnh Clinical Pathway tự động hoàn thành
-      expect(store.clinicalPathway[2].status, equals(ClinicalStepStatus.completed)); // Bước 3 xong
-      expect(store.clinicalPathway[3].status, equals(ClinicalStepStatus.completed)); // Bước 4 xong
+      expect(
+        store.clinicalPathway[2].status,
+        equals(ClinicalStepStatus.completed),
+      ); // Bước 3 xong
+      expect(
+        store.clinicalPathway[3].status,
+        equals(ClinicalStepStatus.completed),
+      ); // Bước 4 xong
 
       // 4. Kiểm tra Push Notification gửi tới ứng dụng Bệnh nhân
       expect(store.notifications.first.title, contains('ký số'));
       expect(store.notifications.first.body, contains('Trần Minh Đức'));
 
       // 5. Kiểm tra Nhật ký an ninh kiểm toán HIPAA EMR ghi nhận
-      expect(store.securityAuditLogs.first.action, equals('EMR_FINAL_CONSULTATION_SYNC'));
+      expect(
+        store.securityAuditLogs.first.action,
+        equals('EMR_FINAL_CONSULTATION_SYNC'),
+      );
     });
 
     test('14. Kiểm tra 32 Chức năng Lâm sàng chuyên sâu của Bác sĩ', () {
+      final appointment = store.book(
+        doctor: store.activeDoctorUser,
+        dateTime: DateTime(2026, 2, 14, 9),
+        patientName: store.activeFamilyMember.name,
+        reason: 'Khám chuyên sâu tim mạch',
+        useInsurance: true,
+      );
+      final appointmentFee = store.transactions.firstWhere(
+        (tx) => tx.visitCode == '#${appointment.id}',
+      );
+      store.completeTransaction(appointmentFee.id);
+
       // Sinh hiệu
       store.doctorRecordVitals(
         bpSys: 130,
@@ -301,7 +428,10 @@ void main() {
       expect(store.labTests.first.name, contains('Creatinine'));
 
       // Dược lâm sàng: Tương tác thuốc & Tính liều thận
-      final interaction = store.doctorCheckDrugInteraction('Amlodipine', 'Atorvastatin');
+      final interaction = store.doctorCheckDrugInteraction(
+        'Amlodipine',
+        'Atorvastatin',
+      );
       expect(interaction, contains('Không phát hiện tương tác đối kháng'));
 
       final isAllergic = store.doctorCheckAllergyRisk('Penicillin');
@@ -311,7 +441,10 @@ void main() {
       expect(renalDose, contains('Chức năng thận bảo tồn'));
 
       // Ký số EMR
-      final token = store.doctorDigitalSignEmr(signer: 'PGS.TS.BS Trần Minh Đức', certKey: 'TEST-KEY');
+      final token = store.doctorDigitalSignEmr(
+        signer: 'PGS.TS.BS Trần Minh Đức',
+        certKey: 'TEST-KEY',
+      );
       expect(token, contains('EMR-SHA256'));
 
       // Y lệnh & Lời dặn

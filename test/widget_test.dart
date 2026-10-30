@@ -10,8 +10,6 @@ void main() {
 
     await tester.tap(find.text('Bắt đầu'));
     await tester.pumpAndSettle();
-    await tester.tap(find.text('Đăng nhập'));
-    await tester.pumpAndSettle();
 
     await tester.enterText(find.byType(TextField).at(0), 'vu@example.com');
     await tester.enterText(find.byType(TextField).at(1), '123456');

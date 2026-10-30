@@ -1,0 +1,507 @@
+import 'package:flutter/material.dart';
+
+import '../routes/app_routes.dart';
+import '../state/medical_store.dart';
+
+class LiveQueuePage extends StatefulWidget {
+  const LiveQueuePage({super.key});
+
+  @override
+  State<LiveQueuePage> createState() => _LiveQueuePageState();
+}
+
+class _LiveQueuePageState extends State<LiveQueuePage> {
+  late MedicalStore _store;
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    _store = MedicalScope.of(context);
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      MedicalScope.of(context).connectQueueRealtime();
+    });
+  }
+
+  @override
+  void dispose() {
+    _store.disconnectQueueRealtime();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final store = MedicalScope.of(context);
+    final queue = store.queueInfo;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final isYourTurn = queue.currentNumber >= queue.patientNumber;
+
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text('Theo dõi Hàng đợi Khám'),
+        actions: [
+          IconButton(
+            tooltip: 'Kết nối realtime hàng đợi',
+            icon: Icon(
+              store.queueRealtimeConnected
+                  ? Icons.sensors_rounded
+                  : Icons.sensors_off_rounded,
+            ),
+            onPressed: () async {
+              final ok = await store.connectQueueRealtime();
+              if (!context.mounted) return;
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Text(
+                    ok
+                        ? 'Đã kết nối realtime queue qua backend SSE.'
+                        : (store.queueRealtimeError ??
+                              'Chưa kết nối được realtime queue.'),
+                  ),
+                  duration: Duration(seconds: 1),
+                ),
+              );
+            },
+          ),
+        ],
+      ),
+      body: ListView(
+        padding: const EdgeInsets.all(20),
+        children: [
+          _realtimeStatus(context, store),
+          const SizedBox(height: 12),
+          // Clinic banner
+          Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: isDark ? const Color(0xFF1E293B) : Colors.white,
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(
+                color: isDark ? Colors.white12 : const Color(0xFFE2E8F0),
+              ),
+            ),
+            child: Row(
+              children: [
+                const CircleAvatar(
+                  radius: 24,
+                  backgroundColor: Color(0xFFE0E7FF),
+                  child: Icon(
+                    Icons.meeting_room_rounded,
+                    color: Color(0xFF0057CD),
+                  ),
+                ),
+                const SizedBox(width: 14),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        queue.department,
+                        style: const TextStyle(
+                          fontSize: 12,
+                          color: Color(0xFF0057CD),
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      Text(
+                        queue.room,
+                        style: const TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      Text(
+                        'Bác sĩ: ${queue.doctorName}',
+                        style: const TextStyle(
+                          fontSize: 12,
+                          color: Colors.grey,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 20),
+
+          // Big Queue display
+          Container(
+            padding: const EdgeInsets.all(24),
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                colors: isYourTurn
+                    ? [const Color(0xFF16A34A), const Color(0xFF15803D)]
+                    : [const Color(0xFF0057CD), const Color(0xFF003882)],
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+              ),
+              borderRadius: BorderRadius.circular(24),
+              boxShadow: [
+                BoxShadow(
+                  color: (isYourTurn ? Colors.green : const Color(0xFF0057CD))
+                      .withValues(alpha: 0.3),
+                  blurRadius: 16,
+                  offset: const Offset(0, 6),
+                ),
+              ],
+            ),
+            child: Column(
+              children: [
+                Text(
+                  isYourTurn
+                      ? 'ĐÃ ĐẾN LƯỢT KHÁM CỦA BẠN!'
+                      : 'SỐ THỨ TỰ ĐANG KHÁM',
+                  style: const TextStyle(
+                    color: Colors.white70,
+                    fontSize: 12,
+                    fontWeight: FontWeight.bold,
+                    letterSpacing: 1,
+                  ),
+                ),
+                const SizedBox(height: 12),
+                Text(
+                  '${queue.currentNumber}',
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 64,
+                    fontWeight: FontWeight.w900,
+                    letterSpacing: 2,
+                  ),
+                ),
+                const SizedBox(height: 12),
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 8,
+                  ),
+                  decoration: BoxDecoration(
+                    color: Colors.white.withValues(alpha: 0.2),
+                    borderRadius: BorderRadius.circular(20),
+                  ),
+                  child: Text(
+                    'Số thứ tự của bạn: ${queue.patientNumber} • Mã lượt: ${queue.ticketCode}',
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontWeight: FontWeight.bold,
+                      fontSize: 14,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 20),
+
+          // Wait stats
+          Row(
+            children: [
+              Expanded(
+                child: _queueStatBox(
+                  context,
+                  title: 'Người đang chờ trước',
+                  value: '${queue.waitCount} người',
+                  icon: Icons.people_alt_outlined,
+                  color: Colors.blue,
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: _queueStatBox(
+                  context,
+                  title: 'Ước tính thời gian',
+                  value: '~${queue.estimatedMinutes} phút',
+                  icon: Icons.timer_outlined,
+                  color: Colors.orange,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 24),
+
+          // Guidelines card
+          Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: isDark ? const Color(0xFF1E293B) : const Color(0xFFF8FAFC),
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(
+                color: isDark ? Colors.white12 : const Color(0xFFE2E8F0),
+              ),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Icon(
+                      Icons.checklist_rounded,
+                      color: Color(0xFF0057CD),
+                      size: 20,
+                    ),
+                    SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        'HƯỚNG DẪN TRƯỚC KHI VÀO PHÒNG KHÁM',
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.bold,
+                          color: Color(0xFF0057CD),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+                const Divider(height: 20),
+                _bulletItem(
+                  '1. Chuẩn bị sẵn thẻ BHYT bản cứng hoặc trên ứng dụng.',
+                ),
+                _bulletItem(
+                  '2. Cầm sẵn sổ khám bệnh và các kết quả xét nghiệm máu / chẩn đoán hình ảnh gần nhất.',
+                ),
+                _bulletItem(
+                  '3. Bật chuông điện thoại để nhận thông báo rung khi còn 2 số nữa đến lượt.',
+                ),
+                _bulletItem(
+                  '4. Khi màn hình báo đến lượt, vui lòng gõ cửa và bước vào phòng 305.',
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 20),
+
+          FilledButton.icon(
+            onPressed: () async {
+              if (!await store.connectQueueRealtime()) {
+                store.refreshQueue();
+              }
+            },
+            icon: const Icon(Icons.sync_rounded),
+            label: Text(
+              store.queueRealtimeConnected
+                  ? 'Đang nghe realtime hàng đợi'
+                  : 'Kết nối realtime / cập nhật thủ công',
+            ),
+            style: FilledButton.styleFrom(
+              padding: const EdgeInsets.symmetric(vertical: 14),
+            ),
+          ),
+          const SizedBox(height: 10),
+
+          // Nút thử chuông gọi số
+          SizedBox(
+            width: double.infinity,
+            child: OutlinedButton(
+              onPressed: () => _simulateAudioCall(context, queue),
+              style: OutlinedButton.styleFrom(
+                padding: const EdgeInsets.symmetric(
+                  vertical: 13,
+                  horizontal: 12,
+                ),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+              ),
+              child: const Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(Icons.volume_up_rounded, color: Color(0xFF0057CD)),
+                  SizedBox(width: 8),
+                  Flexible(
+                    child: Text(
+                      'Thử chuông gọi số tự động (Ting-tong AI)',
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      textAlign: TextAlign.center,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+          const SizedBox(height: 10),
+
+          // Nút xem bản đồ phòng khám
+          TextButton(
+            onPressed: () =>
+                Navigator.pushNamed(context, AppRoutes.hospitalMap),
+            child: const Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(Icons.map_outlined),
+                SizedBox(width: 8),
+                Flexible(
+                  child: Text(
+                    'Xem sơ đồ & chỉ đường tới phòng khám này',
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                    textAlign: TextAlign.center,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _realtimeStatus(BuildContext context, MedicalStore store) {
+    final connected = store.queueRealtimeConnected;
+    final color = connected ? const Color(0xFF10B981) : Colors.orange;
+    final message = connected
+        ? 'Realtime queue đang kết nối qua SSE backend.'
+        : (store.queueRealtimeError ??
+              'Realtime queue chưa kết nối. App sẽ dùng cập nhật thủ công nếu backend chưa chạy.');
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.1),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: color.withValues(alpha: 0.35)),
+      ),
+      child: Row(
+        children: [
+          Icon(
+            connected ? Icons.sensors_rounded : Icons.info_outline_rounded,
+            color: color,
+            size: 18,
+          ),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Text(
+              message,
+              style: TextStyle(
+                color: color,
+                fontSize: 12,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _simulateAudioCall(BuildContext context, dynamic queue) {
+    showDialog<void>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: const Row(
+          children: [
+            Icon(Icons.record_voice_over_rounded, color: Color(0xFF0057CD)),
+            SizedBox(width: 8),
+            Text('Hệ thống Loa Phát Thanh'),
+          ],
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              width: 80,
+              height: 80,
+              decoration: BoxDecoration(
+                color: const Color(0xFF0057CD).withValues(alpha: 0.1),
+                shape: BoxShape.circle,
+              ),
+              child: const Icon(
+                Icons.campaign_rounded,
+                size: 44,
+                color: Color(0xFF0057CD),
+              ),
+            ),
+            const SizedBox(height: 16),
+            const Text(
+              '🔔 *Ting-tong!*',
+              style: TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.bold,
+                color: Color(0xFF0057CD),
+              ),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              '"Xin mời bệnh nhân có số thứ tự ${queue.currentNumber}\nvào phòng ${queue.room} để khám bệnh!"',
+              textAlign: TextAlign.center,
+              style: const TextStyle(
+                fontSize: 14,
+                fontWeight: FontWeight.w600,
+                height: 1.4,
+              ),
+            ),
+            const SizedBox(height: 12),
+            Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: const Color(0xFF10B981).withValues(alpha: 0.12),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: const Text(
+                'Điện thoại của bạn sẽ rung và đổ chuông thông báo đẩy khi còn 2 số nữa là tới phiên.',
+                textAlign: TextAlign.center,
+                style: TextStyle(fontSize: 11, color: Color(0xFF065F46)),
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          FilledButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('Đã nghe rõ'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _queueStatBox(
+    BuildContext context, {
+    required String title,
+    required String value,
+    required IconData icon,
+    required Color color,
+  }) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: isDark ? const Color(0xFF1E293B) : Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(
+          color: isDark ? Colors.white12 : const Color(0xFFE2E8F0),
+        ),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Icon(icon, color: color, size: 22),
+          const SizedBox(height: 10),
+          Text(title, style: const TextStyle(fontSize: 11, color: Colors.grey)),
+          const SizedBox(height: 4),
+          Text(
+            value,
+            style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _bulletItem(String text) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 8),
+      child: Text(text, style: const TextStyle(fontSize: 12, height: 1.4)),
+    );
+  }
+}

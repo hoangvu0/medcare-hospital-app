@@ -46,24 +46,23 @@ class _AppLockScreenState extends State<AppLockScreen> {
   }
 
   void _biometricUnlock() {
-    final settings = AppSettingsScope.of(context);
-    // Simulate biometric authentication (FaceID/Fingerprint)
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(
-        content: Text('Xác thực sinh trắc học thành công!'),
-        duration: Duration(seconds: 1),
+        content: Text(
+          'Thiết bị này chưa được tích hợp plugin sinh trắc học. Vui lòng dùng mã PIN.',
+        ),
       ),
     );
-    settings.unlockWithPin(settings.pinCode ?? '');
   }
 
   @override
   Widget build(BuildContext context) {
-    final settings = AppSettingsScope.of(context);
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return Scaffold(
-      backgroundColor: isDark ? const Color(0xFF0F172A) : const Color(0xFFF8FAFC),
+      backgroundColor: isDark
+          ? const Color(0xFF0F172A)
+          : const Color(0xFFF8FAFC),
       body: SafeArea(
         child: Column(
           children: [
@@ -83,10 +82,7 @@ class _AppLockScreenState extends State<AppLockScreen> {
             const SizedBox(height: 20),
             const Text(
               'MedCare Security Lock',
-              style: TextStyle(
-                fontSize: 22,
-                fontWeight: FontWeight.bold,
-              ),
+              style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 8),
             Text(
@@ -108,7 +104,9 @@ class _AppLockScreenState extends State<AppLockScreen> {
                   height: 18,
                   decoration: BoxDecoration(
                     shape: BoxShape.circle,
-                    color: filled ? const Color(0xFF0057CD) : Colors.transparent,
+                    color: filled
+                        ? const Color(0xFF0057CD)
+                        : Colors.transparent,
                     border: Border.all(
                       color: filled ? const Color(0xFF0057CD) : Colors.grey,
                       width: 2,
@@ -128,12 +126,13 @@ class _AppLockScreenState extends State<AppLockScreen> {
             // Numeric Keypad
             _keypad(isDark),
             const SizedBox(height: 16),
-            TextButton(
-              onPressed: () {
-                // Bypass for testing/demo
-                settings.setPinCode(null);
-              },
-              child: const Text('Bỏ qua mã khóa (Chế độ Demo)'),
+            Text(
+              'Quên mã PIN? Vui lòng đăng nhập lại hoặc liên hệ quầy hỗ trợ.',
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                fontSize: 12,
+                color: isDark ? Colors.white60 : Colors.black54,
+              ),
             ),
             const SizedBox(height: 16),
           ],
@@ -192,7 +191,11 @@ class _AppLockScreenState extends State<AppLockScreen> {
           shape: BoxShape.circle,
           color: isDark ? const Color(0xFF1E293B) : Colors.white,
           boxShadow: const [
-            BoxShadow(color: Color(0x0A000000), blurRadius: 4, offset: Offset(0, 2)),
+            BoxShadow(
+              color: Color(0x0A000000),
+              blurRadius: 4,
+              offset: Offset(0, 2),
+            ),
           ],
         ),
         alignment: Alignment.center,
@@ -204,4 +207,3 @@ class _AppLockScreenState extends State<AppLockScreen> {
     );
   }
 }
-

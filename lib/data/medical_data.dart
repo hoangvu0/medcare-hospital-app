@@ -299,142 +299,20 @@ abstract final class MedicalData {
     'Hô hấp & Phổi',
   ];
 
-  /// Hồ sơ bệnh án điện tử (3 đợt khám thực tế)
-  static const List<MedicalRecord> initialRecords = [
-    MedicalRecord(
-      id: 'HS-2026-0891',
-      date: '10/02/2026',
-      department: 'Khoa Tiêu hóa - Gan mật',
-      doctorName: 'PGS.TS.BS Nguyễn Văn An',
-      diagnosis: 'K29.0 - Viêm loét dạ dày tá tràng sung huyết, nhiễm vi khuẩn HP (+)',
-      symptoms: 'Đau rát vùng thượng vị, ợ chua, buồn nôn, khó tiêu sau ăn kéo dài 2 tuần.',
-      treatmentPlan: 'Phác đồ 4 thuốc tiệt trừ Helicobacter Pylori trong 14 ngày. Nội soi kiểm tra sau 4 tuần.',
-      followUpDate: '10/03/2026',
-      prescriptionCode: 'DT-2026-89241',
-      totalFee: 1650000,
-      insuranceCovered: 1320000,
-    ),
-    MedicalRecord(
-      id: 'HS-2025-1104',
-      date: '15/11/2025',
-      department: 'Khoa Tai Mũi Họng',
-      doctorName: 'TS.BS Phạm Đức Thắng',
-      diagnosis: 'J02.9 - Viêm họng cấp thể mủ, viêm amidan hốc mủ đợt cấp',
-      symptoms: 'Đau rát họng khi nuốt, sốt 38.5°C, có giả mạc mủ nhẹ trên amidan.',
-      treatmentPlan: 'Kháng sinh phổ rộng đường uống 7 ngày, kháng viêm giảm phù nề, súc họng sát khuẩn.',
-      followUpDate: '22/11/2025',
-      prescriptionCode: 'DT-2025-44120',
-      totalFee: 550000,
-      insuranceCovered: 440000,
-    ),
-    MedicalRecord(
-      id: 'HS-2025-0520',
-      date: '20/05/2025',
-      department: 'Khoa Khám sức khỏe Tổng quát',
-      doctorName: 'PGS.TS.BS Trần Minh Đức',
-      diagnosis: 'Z00.0 - Khám sức khỏe định kỳ, huyết áp và tim mạch bình thường',
-      symptoms: 'Khám định kỳ hàng năm. Không có triệu chứng bất thường.',
-      treatmentPlan: 'Duy trì chế độ ăn ít muối, tăng cường rau xanh và tập thể dục 30 phút/ngày.',
-      followUpDate: '20/05/2026',
-      prescriptionCode: 'DT-2025-09112',
-      totalFee: 1200000,
-      insuranceCovered: 960000,
-    ),
-  ];
+  /// Hồ sơ bệnh án chỉ phát sinh sau khi bác sĩ hoàn tất/ký EMR.
+  static const List<MedicalRecord> initialRecords = [];
 
-  /// Kết quả xét nghiệm sinh hóa máu chuẩn tham chiếu y khoa
-  static const List<LabTestItem> initialLabTests = [
-    LabTestItem(name: 'Đường huyết lúc đói (Glucose)', value: '5.1', unit: 'mmol/L', normalRange: '3.9 - 6.4'),
-    LabTestItem(name: 'Chức năng thận (Ure)', value: '4.8', unit: 'mmol/L', normalRange: '2.5 - 7.5'),
-    LabTestItem(name: 'Chức năng thận (Creatinine)', value: '82', unit: 'µmol/L', normalRange: '62 - 106'),
-    LabTestItem(name: 'Men gan (AST / SGOT)', value: '24', unit: 'U/L', normalRange: '< 40'),
-    LabTestItem(name: 'Men gan (ALT / SGPT)', value: '28', unit: 'U/L', normalRange: '< 41'),
-    LabTestItem(name: 'Mỡ máu (Cholesterol toàn phần)', value: '4.6', unit: 'mmol/L', normalRange: '< 5.2'),
-    LabTestItem(name: 'Mỡ máu (Triglycerid)', value: '1.4', unit: 'mmol/L', normalRange: '< 1.7'),
-    LabTestItem(name: 'Vi khuẩn HP (Clotest qua nội soi)', value: 'Dương tính (+)', unit: 'Kết quả', normalRange: 'Âm tính (-)', isAbnormal: true, note: 'Chỉ định phác đồ diệt trừ Hp'),
-  ];
+  /// Kết quả xét nghiệm bệnh nhân chỉ phát sinh sau khi bác sĩ/cận lâm sàng cập nhật.
+  static const List<LabTestItem> initialLabTests = [];
 
-  /// Đơn thuốc điện tử điều trị Hp thực tế
-  static const List<MedicineItem> initialMedicines = [
-    MedicineItem(
-      name: 'Nexium 40mg (Esomeprazole)',
-      category: 'Ức chế tiết acid dạ dày (PPI)',
-      dosage: '40mg',
-      quantity: '28 viên',
-      instruction: 'Uống 1 viên trước ăn sáng 30 phút. Uống nguyên viên, không nhai.',
-    ),
-    MedicineItem(
-      name: 'Clarithromycin 500mg',
-      category: 'Kháng sinh diệt khuẩn Hp',
-      dosage: '500mg',
-      quantity: '28 viên',
-      instruction: 'Uống 1 viên sáng, 1 viên tối sau bữa ăn. Dùng đủ 14 ngày.',
-      warning: 'Không dùng cùng rượu bia hoặc thức uống có cồn.',
-    ),
-    MedicineItem(
-      name: 'Amoxicillin 500mg',
-      category: 'Kháng sinh nhóm Penicillin',
-      dosage: '500mg',
-      quantity: '56 viên',
-      instruction: 'Uống 2 viên sáng, 2 viên tối sau bữa ăn.',
-      warning: 'Uống nhiều nước trong ngày.',
-    ),
-    MedicineItem(
-      name: 'Phosphalugel (Gel nhôm phosphat)',
-      category: 'Bảo vệ niêm mạc dạ dày',
-      dosage: 'Gói 20g',
-      quantity: '30 gói',
-      instruction: 'Uống 1 gói khi đau rát thượng vị hoặc sau ăn 2 giờ.',
-    ),
-  ];
+  /// Đơn thuốc chỉ được phát hành sau ca khám đã hoàn tất.
+  static const List<MedicineItem> initialMedicines = [];
 
-  /// Lịch hẹn khám mặc định ban đầu
-  static List<Appointment> get initialAppointments => [
-    Appointment(
-      id: 'MED-1001',
-      doctorId: 'doc-05',
-      doctorName: 'PGS.TS.BS Nguyễn Văn An',
-      specialty: 'Tiêu hóa',
-      location: 'Phòng 305, Tòa B - Khoa Tiêu hóa',
-      dateTime: DateTime.now().add(const Duration(days: 2, hours: 3)),
-      patientName: 'Nguyễn Hoàng Vũ',
-      reason: 'Tái khám dạ dày & đánh giá phác đồ Hp',
-      insuranceApplied: true,
-      status: AppointmentStatus.confirmed,
-      fee: 100000,
-      ticketNumber: 'KB-0824',
-    ),
-    Appointment(
-      id: 'MED-1000',
-      doctorId: 'doc-01',
-      doctorName: 'PGS.TS.BS Trần Minh Đức',
-      specialty: 'Tim mạch',
-      location: 'Phòng 402, Tòa A',
-      dateTime: DateTime(2026, 2, 10, 9, 30),
-      patientName: 'Nguyễn Hoàng Vũ',
-      reason: 'Khám định kỳ & đo điện tim ECG',
-      insuranceApplied: true,
-      status: AppointmentStatus.completed,
-      fee: 90000,
-      ticketNumber: 'KB-0112',
-    ),
-  ];
+  /// Lịch hẹn ban đầu rỗng: bệnh nhân phải đặt lịch thật trong app.
+  static List<Appointment> get initialAppointments => [];
 
-  /// Thông báo hệ thống ban đầu
-  static List<AppNotification> get initialNotifications => [
-    AppNotification(
-      id: 'notif-01',
-      title: 'Lịch hẹn sắp tới',
-      body: 'Bạn có lịch tái khám Tiêu hóa với PGS.TS Nguyễn Văn An vào 09:00 ngày tới.',
-      createdAt: DateTime.now().subtract(const Duration(hours: 2)),
-    ),
-    AppNotification(
-      id: 'notif-02',
-      title: 'Đã có kết quả xét nghiệm máu',
-      body: 'Kết quả xét nghiệm sinh hóa ngày 10/02/2026 đã được cập nhật vào hồ sơ bệnh án.',
-      createdAt: DateTime.now().subtract(const Duration(days: 2)),
-    ),
-  ];
+  /// Thông báo ban đầu rỗng: chỉ sinh ra từ nghiệp vụ thật.
+  static List<AppNotification> get initialNotifications => [];
 
   /// Danh sách chỉ số sinh hiệu thực tế của bệnh nhân Nguyễn Hoàng Vũ
   static List<VitalSignRecord> get initialVitals => [
@@ -470,74 +348,10 @@ abstract final class MedicalData {
     ),
   ];
 
-  /// Lịch uống thuốc hôm nay theo đơn tiệt trừ Hp
-  static List<MedicineScheduleItem> get initialMedicineSchedule => [
-    const MedicineScheduleItem(
-      id: 'sch-01',
-      medicineName: 'Nexium 40mg (Esomeprazole)',
-      dosage: '1 viên',
-      timeSlot: '06:30',
-      period: 'Sáng',
-      instruction: 'Uống trước ăn sáng 30 phút, nuốt nguyên viên.',
-      isTaken: true,
-    ),
-    const MedicineScheduleItem(
-      id: 'sch-02',
-      medicineName: 'Amoxicillin 500mg',
-      dosage: '2 viên',
-      timeSlot: '07:30',
-      period: 'Sáng',
-      instruction: 'Uống ngay sau ăn sáng, uống cùng nhiều nước.',
-      isTaken: true,
-    ),
-    const MedicineScheduleItem(
-      id: 'sch-03',
-      medicineName: 'Clarithromycin 500mg',
-      dosage: '1 viên',
-      timeSlot: '07:30',
-      period: 'Sáng',
-      instruction: 'Uống sau ăn sáng cùng Amoxicillin.',
-      isTaken: true,
-    ),
-    const MedicineScheduleItem(
-      id: 'sch-04',
-      medicineName: 'Nexium 40mg (Esomeprazole)',
-      dosage: '1 viên',
-      timeSlot: '18:30',
-      period: 'Tối',
-      instruction: 'Uống trước ăn tối 30 phút.',
-      isTaken: false,
-    ),
-    const MedicineScheduleItem(
-      id: 'sch-05',
-      medicineName: 'Amoxicillin 500mg',
-      dosage: '2 viên',
-      timeSlot: '19:30',
-      period: 'Tối',
-      instruction: 'Uống sau ăn tối, uống đủ 2 viên.',
-      isTaken: false,
-    ),
-    const MedicineScheduleItem(
-      id: 'sch-06',
-      medicineName: 'Clarithromycin 500mg',
-      dosage: '1 viên',
-      timeSlot: '19:30',
-      period: 'Tối',
-      instruction: 'Uống sau ăn tối, tránh rượu bia hoàn toàn.',
-      isTaken: false,
-    ),
-    const MedicineScheduleItem(
-      id: 'sch-07',
-      medicineName: 'Phosphalugel (Gel nhôm)',
-      dosage: '1 gói 20g',
-      timeSlot: '21:30',
-      period: 'Tối',
-      instruction: 'Uống khi đau hoặc trước khi đi ngủ 30 phút.',
-      isTaken: false,
-    ),
-  ];
+  /// Lịch uống thuốc chỉ sinh ra từ đơn thuốc đã phát hành sau khám.
+  static List<MedicineScheduleItem> get initialMedicineSchedule => [];
 
-  /// Thông tin hàng đợi khám trực tiếp mô phỏng phòng khám
+  /// Dữ liệu khởi tạo cho hàng đợi khi chưa nhận dữ liệu từ backend.
   static const LiveQueueInfo defaultQueue = LiveQueueInfo(
     department: 'Khoa Tiêu hóa & Gan Mật',
     room: 'Phòng 305 (Tầng 3 - Tòa B)',
@@ -667,13 +481,13 @@ abstract final class MedicalData {
   static const List<HealthArticle> initialArticles = [
     HealthArticle(
       id: 'art-01',
-      title: 'Chế độ ăn uống khoa học cho người viêm loét dạ dày có vi khuẩn Hp',
+      title:
+          'Chế độ ăn uống khoa học cho người viêm loét dạ dày có vi khuẩn Hp',
       category: 'Tiêu hóa',
       author: 'PGS.TS.BS Nguyễn Văn An',
       readTime: '4 phút đọc',
       summary: 'Các nguyên tắc vàng trong dinh dưỡng giúp bảo vệ niêm mạc dạ dày và tăng hiệu quả tiệt trừ vi khuẩn Hp.',
-      content:
-          'Khi đang điều trị vi khuẩn Helicobacter Pylori (Hp), chế độ ăn uống đóng vai trò then chốt quyết định 30% tỷ lệ khỏi bệnh. Bệnh nhân cần:\n\n1. Chia nhỏ bữa ăn thành 4-5 bữa nhẹ trong ngày để dạ dày không bao giờ quá đói hoặc quá no.\n2. Tránh tuyệt đối đồ uống có cồn, bia rượu, cà phê đặc và trà đặc vì chúng kích thích tăng tiết acid chlohydric.\n3. Hạn chế đồ chiên xào nhiều dầu mỡ, đồ muối chua lên men (dưa cà muối).\n4. Bổ sung các loại rau họ cải như bông cải xanh (chứa sulforaphane diệt khuẩn Hp tự nhiên), nghệ vàng và sữa chua men sống sau bữa ăn 1 tiếng.',
+      content: 'Khi đang điều trị vi khuẩn Helicobacter Pylori (Hp), chế độ ăn uống đóng vai trò then chốt quyết định 30% tỷ lệ khỏi bệnh. Bệnh nhân cần:\n\n1. Chia nhỏ bữa ăn thành 4-5 bữa nhẹ trong ngày để dạ dày không bao giờ quá đói hoặc quá no.\n2. Tránh tuyệt đối đồ uống có cồn, bia rượu, cà phê đặc và trà đặc vì chúng kích thích tăng tiết acid chlohydric.\n3. Hạn chế đồ chiên xào nhiều dầu mỡ, đồ muối chua lên men (dưa cà muối).\n4. Bổ sung các loại rau họ cải như bông cải xanh (chứa sulforaphane diệt khuẩn Hp tự nhiên), nghệ vàng và sữa chua men sống sau bữa ăn 1 tiếng.',
       date: '10/02/2026',
     ),
     HealthArticle(
@@ -683,8 +497,7 @@ abstract final class MedicalData {
       author: 'PGS.TS.BS Trần Minh Đức',
       readTime: '5 phút đọc',
       summary: 'Rất nhiều bệnh nhân nhầm lẫn giữa trào ngược thực quản dạ dày (GERD) và cơn thiếu máu cơ tim cấp.',
-      content:
-          'Đau ngực là triệu chứng thường gặp khiến người bệnh rất lo lắng. Để phân biệt:\n\n• Đau do Tim mạch: Thường có cảm giác đè nặng, bóp nghẹt như có đá đè lên vùng ngực trái hoặc sau xương ức, có thể lan lên cằm, vai trái hoặc cánh tay trái. Cơn đau tăng khi gắng sức hoặc xúc động, kéo dài từ 5-15 phút.\n\n• Đau do Trào ngược dạ dày: Thường có cảm giác nóng rát (ợ nóng - heartburn) lan từ vùng thượng vị lên cổ họng, thường xuất hiện sau khi ăn no, khi cúi người hoặc nằm xuống, kèm theo ợ chua, đắng miệng.\n\nKhi có biểu hiện đau tức ngực kèm khó thở, vã mồ hôi lạnh, hãy gọi ngay cấp cứu 1900 8899 để được hỗ trợ kịp thời.',
+      content: 'Đau ngực là triệu chứng thường gặp khiến người bệnh rất lo lắng. Để phân biệt:\n\n• Đau do Tim mạch: Thường có cảm giác đè nặng, bóp nghẹt như có đá đè lên vùng ngực trái hoặc sau xương ức, có thể lan lên cằm, vai trái hoặc cánh tay trái. Cơn đau tăng khi gắng sức hoặc xúc động, kéo dài từ 5-15 phút.\n\n• Đau do Trào ngược dạ dày: Thường có cảm giác nóng rát (ợ nóng - heartburn) lan từ vùng thượng vị lên cổ họng, thường xuất hiện sau khi ăn no, khi cúi người hoặc nằm xuống, kèm theo ợ chua, đắng miệng.\n\nKhi có biểu hiện đau tức ngực kèm khó thở, vã mồ hôi lạnh, hãy gọi ngay cấp cứu 1900 8899 để được hỗ trợ kịp thời.',
       date: '08/02/2026',
     ),
     HealthArticle(
@@ -694,76 +507,28 @@ abstract final class MedicalData {
       author: 'BSCKII Hoàng Quốc Việt',
       readTime: '3 phút đọc',
       summary: 'Chuẩn bị đúng cách giúp cuộc nội soi diễn ra an toàn, không đau và hình ảnh niêm mạc rõ nét nhất.',
-      content:
-          'Để chuẩn bị cho buổi nội soi dạ dày êm ái không đau:\n\n1. Nhịn ăn ít nhất 6-8 tiếng trước giờ nội soi để dạ dày sạch hoàn toàn.\n2. Nhịn uống nước ít nhất 2 tiếng trước khi vào phòng soi để tránh trào ngược dịch vào đường thở khi gây mê.\n3. Thông báo cho bác sĩ tiền sử dị ứng thuốc, bệnh lý tim mạch, hen suyễn hoặc nếu đang uống thuốc chống đông máu.\n4. Cần có người nhà đi cùng để hỗ trợ đưa về sau khi hết thuốc mê.',
+      content: 'Để chuẩn bị cho buổi nội soi dạ dày êm ái không đau:\n\n1. Nhịn ăn ít nhất 6-8 tiếng trước giờ nội soi để dạ dày sạch hoàn toàn.\n2. Nhịn uống nước ít nhất 2 tiếng trước khi vào phòng soi để tránh trào ngược dịch vào đường thở khi gây mê.\n3. Thông báo cho bác sĩ tiền sử dị ứng thuốc, bệnh lý tim mạch, hen suyễn hoặc nếu đang uống thuốc chống đông máu.\n4. Cần có người nhà đi cùng để hỗ trợ đưa về sau khi hết thuốc mê.',
       date: '02/02/2026',
     ),
   ];
 
-  /// Lịch sử giao dịch thanh toán viện phí mẫu
-  static List<PaymentTransaction> get initialTransactions => [
-    PaymentTransaction(
-      id: 'TXN-20260312-001',
-      visitCode: '#HS-2026-0891',
-      description: 'Khám Tiêu hóa + Nội soi + XN máu',
-      grossAmount: 1650000,
-      insuranceAmount: 1320000,
-      netAmount: 330000,
-      method: PaymentMethod.vietQr,
-      status: PaymentStatus.pending,
-      timestamp: DateTime(2026, 3, 12, 9, 30),
-      invoiceEmail: 'vu@example.com',
-      receiptCode: null,
-    ),
-    PaymentTransaction(
-      id: 'TXN-20260205-002',
-      visitCode: '#HS-2026-0612',
-      description: 'Khám Tim mạch định kỳ + ECG 12 chuyển đạo',
-      grossAmount: 980000,
-      insuranceAmount: 784000,
-      netAmount: 196000,
-      method: PaymentMethod.momo,
-      status: PaymentStatus.success,
-      timestamp: DateTime(2026, 2, 5, 14, 15),
-      walletName: 'MoMo',
-      invoiceEmail: 'vu@example.com',
-      receiptCode: 'RC-M-20260205-9921',
-    ),
-    PaymentTransaction(
-      id: 'TXN-20260118-003',
-      visitCode: '#HS-2026-0341',
-      description: 'Khám Thần kinh + MRI não 1.5T',
-      grossAmount: 3200000,
-      insuranceAmount: 2560000,
-      netAmount: 640000,
-      method: PaymentMethod.bankCard,
-      status: PaymentStatus.success,
-      timestamp: DateTime(2026, 1, 18, 10, 45),
-      invoiceEmail: 'vu@example.com',
-      receiptCode: 'RC-B-20260118-4477',
-    ),
-    PaymentTransaction(
-      id: 'TXN-20251210-004',
-      visitCode: '#HS-2025-2814',
-      description: 'Xét nghiệm tổng quát cuối năm (15 chỉ số)',
-      grossAmount: 750000,
-      insuranceAmount: 600000,
-      netAmount: 150000,
-      method: PaymentMethod.zalopay,
-      status: PaymentStatus.refunded,
-      timestamp: DateTime(2025, 12, 10, 8, 0),
-      walletName: 'ZaloPay',
-      invoiceEmail: 'vu@example.com',
-      receiptCode: 'RC-Z-20251210-3308',
-    ),
-  ];
+  /// Giao dịch viện phí ban đầu rỗng; chỉ sinh ra khi đặt lịch/khám/thanh toán.
+  static List<PaymentTransaction> get initialTransactions => [];
 
   /// Danh sách các time slot cấu hình mặc định (Admin có thể chỉnh sửa)
   /// Mặc định: 10 bác sĩ × 6 khung giờ × 7 ngày tới
   static List<SlotConfig> buildInitialSlotConfigs() {
     const doctorIds = [
-      'doc-01', 'doc-02', 'doc-03', 'doc-04', 'doc-05',
-      'doc-06', 'doc-07', 'doc-08', 'doc-09', 'doc-10',
+      'doc-01',
+      'doc-02',
+      'doc-03',
+      'doc-04',
+      'doc-05',
+      'doc-06',
+      'doc-07',
+      'doc-08',
+      'doc-09',
+      'doc-10',
     ];
     const times = ['08:00', '09:00', '10:00', '14:00', '15:00', '16:00'];
     // Capacity mặc định theo khung giờ (sáng đông hơn chiều)
@@ -784,29 +549,32 @@ abstract final class MedicalData {
           '${day.year}-${day.month.toString().padLeft(2, '0')}-${day.day.toString().padLeft(2, '0')}';
       for (final docId in doctorIds) {
         for (final time in times) {
-          // Giả lập một số slot đã có người đặt sẵn
+          // Dữ liệu khởi tạo để kiểm tra giới hạn slot khi chưa có backend.
           final cap = defaultCapacity[time] ?? 5;
           final booked = switch ('${docId}_$time') {
-            'doc-01_09:00' when d == 1 => 9,  // gần đầy
-            'doc-01_10:00' when d == 1 => 8,  // đầy
-            'doc-02_08:00' when d == 1 => 8,  // đầy
-            'doc-03_09:00' when d == 2 => 5,  // đầy
+            'doc-01_09:00' when d == 1 => 9, // gần đầy
+            'doc-01_10:00' when d == 1 => 8, // đầy
+            'doc-02_08:00' when d == 1 => 8, // đầy
+            'doc-03_09:00' when d == 2 => 5, // đầy
             _ => (d == 1 && time == '09:00') ? 2 : 0,
           };
-          slots.add(SlotConfig(
-            doctorId: docId,
-            date: dateStr,
-            time: time,
-            capacity: cap,
-            booked: booked.clamp(0, cap),
-          ));
+          slots.add(
+            SlotConfig(
+              doctorId: docId,
+              date: dateStr,
+              time: time,
+              capacity: cap,
+              booked: booked.clamp(0, cap),
+            ),
+          );
         }
       }
     }
     return slots;
   }
 
-  /// Danh sách Thành viên Gia đình mẫu
+  /// Danh sách Thành viên Gia đình mặc định.
+  /// Tài khoản mới chỉ có hồ sơ bệnh nhân đang đăng nhập; người thân phải được thêm thủ công.
   static List<FamilyMemberProfile> get initialFamilyMembers => [
     const FamilyMemberProfile(
       id: 'fam-01',
@@ -819,115 +587,15 @@ abstract final class MedicalData {
       allergies: 'Penicillin, Phấn hoa',
       phone: '0901 234 567',
       avatarEmoji: '👨‍💼',
-      medicalNotes: 'Tiền sử đau dạ dày do vi khuẩn Hp (đang điều trị)',
-    ),
-    const FamilyMemberProfile(
-      id: 'fam-02',
-      name: 'Bé Nguyễn Bảo An',
-      relation: FamilyRelation.child,
-      dateOfBirth: '10/05/2022',
-      gender: 'Nam',
-      insuranceNumber: 'TE4010987654321',
-      bloodType: 'O+',
-      allergies: 'Hải sản (tôm, cua)',
-      phone: '0901 234 567',
-      avatarEmoji: '👦',
-      medicalNotes: '4 tuổi • Đã hoàn thành mũi tiêm 6 trong 1',
-    ),
-    const FamilyMemberProfile(
-      id: 'fam-03',
-      name: 'Bác Nguyễn Văn Hùng',
-      relation: FamilyRelation.parent,
-      dateOfBirth: '20/11/1958',
-      gender: 'Nam',
-      insuranceNumber: 'HT3010555666777',
-      bloodType: 'B+',
-      allergies: 'Aspirin',
-      phone: '0912 345 678',
-      avatarEmoji: '👴',
-      medicalNotes: '68 tuổi • Tăng huyết áp độ 2, Đái tháo đường Type 2',
-    ),
-    const FamilyMemberProfile(
-      id: 'fam-04',
-      name: 'Trần Thị Mai Anh',
-      relation: FamilyRelation.spouse,
-      dateOfBirth: '24/09/2003',
-      gender: 'Nữ',
-      insuranceNumber: 'DN4010888999000',
-      bloodType: 'A+',
-      allergies: 'Không có',
-      phone: '0933 456 789',
-      avatarEmoji: '👩‍💼',
-      medicalNotes: 'Sức khỏe tốt • Tầm soát phụ khoa định kỳ hàng năm',
+      medicalNotes: 'Tiền sử đau dạ dày do vi khuẩn Hp',
     ),
   ];
 
-  /// Dữ liệu xu hướng xét nghiệm cận lâm sàng qua 5 lần khám
-  static List<LabTrendPoint> get initialLabTrends => [
-    LabTrendPoint(
-      dateStr: 'T8/2025',
-      timestamp: DateTime(2025, 8, 15),
-      bloodGlucose: 118.0, // Tiền đái tháo đường
-      alt: 48.0,           // Men gan tăng nhẹ
-      ast: 42.0,
-      cholesterolTotal: 5.8, // Hơi cao
-      uricAcid: 410.0,
-    ),
-    LabTrendPoint(
-      dateStr: 'T10/2025',
-      timestamp: DateTime(2025, 10, 20),
-      bloodGlucose: 108.0,
-      alt: 42.0,
-      ast: 38.0,
-      cholesterolTotal: 5.4,
-      uricAcid: 385.0,
-    ),
-    LabTrendPoint(
-      dateStr: 'T12/2025',
-      timestamp: DateTime(2025, 12, 10),
-      bloodGlucose: 102.0,
-      alt: 36.0,
-      ast: 32.0,
-      cholesterolTotal: 5.0, // Về chuẩn
-      uricAcid: 360.0,
-    ),
-    LabTrendPoint(
-      dateStr: 'T1/2026',
-      timestamp: DateTime(2026, 1, 18),
-      bloodGlucose: 98.0,
-      alt: 31.0,
-      ast: 28.0,
-      cholesterolTotal: 4.8,
-      uricAcid: 340.0,
-    ),
-    LabTrendPoint(
-      dateStr: 'T3/2026',
-      timestamp: DateTime(2026, 3, 12),
-      bloodGlucose: 94.0,  // Tối ưu chuẩn ADA
-      alt: 28.0,           // Bình thường
-      ast: 26.0,
-      cholesterolTotal: 4.6, // Chuẩn
-      uricAcid: 320.0,
-    ),
-  ];
+  /// Xu hướng xét nghiệm chỉ có khi bệnh nhân có nhiều kết quả xét nghiệm thật.
+  static List<LabTrendPoint> get initialLabTrends => [];
 
-  /// Đơn thuốc giao tận nhà mẫu
-  static List<PharmacyOrder> get initialPharmacyOrders => [
-    PharmacyOrder(
-      id: 'PHARM-20260312-01',
-      prescriptionId: 'DT-2026-0891',
-      patientName: 'Nguyễn Hoàng Vũ',
-      phone: '0901 234 567',
-      deliveryAddress: 'Số 28, Phố Huế, Q. Hoàn Kiếm, Hà Nội',
-      pharmacyName: 'Nhà thuốc Bệnh viện MedCare & FPT Long Châu',
-      itemsCount: 4,
-      medicineTotal: 345000,
-      shippingFee: 25000,
-      status: PharmacyOrderStatus.shipping,
-      orderedAt: DateTime.now().subtract(const Duration(minutes: 25)),
-      estimatedMinutes: 20,
-    ),
-  ];
+  /// Đơn thuốc giao tận nhà chỉ sinh ra sau khi có đơn thuốc hợp lệ.
+  static List<PharmacyOrder> get initialPharmacyOrders => [];
 
   /// Chỉ số KPI Bệnh viện hôm nay (Admin & Doctor Dashboard)
   static HospitalKpiData get initialHospitalKpi => const HospitalKpiData(
@@ -979,7 +647,8 @@ abstract final class MedicalData {
       referenceRange: '130 - 175 g/L',
       riskLevel: LabRiskLevel.normal,
       clinicalMeaning: 'Chỉ số Hemoglobin tối ưu, không có dấu hiệu thiếu máu hay xuất huyết tiềm ẩn.',
-      dietaryAdvice: 'Tiếp tục duy trì khẩu phần ăn uống cân đối, tập thể thao đều đặn.',
+      dietaryAdvice:
+          'Tiếp tục duy trì khẩu phần ăn uống cân đối, tập thể thao đều đặn.',
       testedAt: '12/03/2026',
     ),
     const LabReportItem(
@@ -1203,7 +872,8 @@ abstract final class MedicalData {
       doctorName: 'PGS.TS.BS Trần Minh Đức',
       specialty: 'Tim mạch',
       reminderDate: DateTime.now().add(const Duration(days: 14)),
-      clinicalReason: 'Tái khám định kỳ tăng huyết áp & đánh giá hiệu quả thuốc Amlodipine',
+      clinicalReason:
+          'Tái khám định kỳ tăng huyết áp & đánh giá hiệu quả thuốc Amlodipine',
       doctorInstructions: 'Uống thuốc đúng giờ, đo huyết áp mỗi sáng ghi vào nhật ký sinh hiệu, mang theo đơn thuốc cũ.',
     ),
   ];
@@ -1242,7 +912,8 @@ abstract final class MedicalData {
       ipAddress: '192.168.1.10 (Mạng Nội viện)',
       timestamp: DateTime.now().subtract(const Duration(minutes: 8)),
       severity: SecuritySeverity.info,
-      statusDescription: 'Thành công - Điều chỉnh tăng capacity lên 12 bệnh nhân',
+      statusDescription:
+          'Thành công - Điều chỉnh tăng capacity lên 12 bệnh nhân',
     ),
     SecurityAuditLog(
       id: 'audit-102',
@@ -1272,17 +943,19 @@ abstract final class MedicalData {
       ipAddress: '185.220.101.5 (IP Ngoại biên)',
       timestamp: DateTime.now().subtract(const Duration(hours: 3)),
       severity: SecuritySeverity.danger,
-      statusDescription: 'Đã chặn tự động - Phát hiện mẫu dò quét SQL Injection',
+      statusDescription:
+          'Đã chặn tự động - Phát hiện mẫu dò quét SQL Injection',
     ),
     SecurityAuditLog(
       id: 'audit-105',
       actor: 'Dược sĩ Nhà thuốc MedCare',
       action: 'Kiểm tra tương tác dị ứng thuốc',
-      targetResource: 'Đơn thuốc: DT-2026-0891',
+      targetResource: 'Đơn thuốc đã phát hành từ EMR',
       ipAddress: '192.168.1.52 (Quầy Dược Nhà A)',
       timestamp: DateTime.now().subtract(const Duration(hours: 4)),
       severity: SecuritySeverity.warning,
-      statusDescription: 'Cảnh báo - Tự động đối chiếu dị ứng Penicillin thành công',
+      statusDescription:
+          'Cảnh báo - Tự động đối chiếu dị ứng Penicillin thành công',
     ),
   ];
 
@@ -1349,9 +1022,9 @@ abstract final class MedicalData {
       title: 'Tiếp đón & Đo sinh hiệu ban đầu',
       subtitle: 'Đo Huyết áp, Chiều cao, Cân nặng, SpO2 tại Kiosk số 2',
       location: 'Sảnh chính Tầng 1, Tòa A',
-      doctorInstruction: 'Người bệnh quét thẻ BHYT điện tử để lấy số thứ tự tự động.',
-      status: ClinicalStepStatus.completed,
-      completedTime: '08:15',
+      doctorInstruction:
+          'Người bệnh quét thẻ BHYT điện tử để lấy số thứ tự tự động.',
+      status: ClinicalStepStatus.inProgress,
     ),
     const ClinicalPathwayStep(
       stepNumber: 2,
@@ -1359,8 +1032,7 @@ abstract final class MedicalData {
       subtitle: 'Thăm khám tổng quát cùng PGS.TS.BS Trần Minh Đức',
       location: 'Phòng khám 402, Tầng 4, Tòa A',
       doctorInstruction: 'Bác sĩ nghe tim phổi, khai thác tiền sử đau ngực và chỉ định xét nghiệm.',
-      status: ClinicalStepStatus.completed,
-      completedTime: '08:45',
+      status: ClinicalStepStatus.upcoming,
     ),
     const ClinicalPathwayStep(
       stepNumber: 3,
@@ -1368,7 +1040,7 @@ abstract final class MedicalData {
       subtitle: 'Lấy máu sinh hóa tại P.204 và Chụp X-quang tim phổi tại P.105',
       location: 'Phòng 204 (Tòa A) & Phòng 105 (Tòa B)',
       doctorInstruction: 'Nhịn ăn sáng trước khi lấy máu, cởi bỏ trang sức kim loại trước khi chụp phim X-quang. Thời gian trả kết quả dự kiến: 20 phút.',
-      status: ClinicalStepStatus.inProgress,
+      status: ClinicalStepStatus.upcoming,
       actionText: 'Xem Sơ đồ chỉ đường đến Phòng Xét nghiệm',
       actionRoute: '/hospital-map',
       etaMinutes: 15,
@@ -1386,7 +1058,8 @@ abstract final class MedicalData {
     const ClinicalPathwayStep(
       stepNumber: 5,
       title: 'Quyết toán viện phí BHYT & Lấy thuốc theo đơn',
-      subtitle: 'Bảo lãnh viện phí không tiền mặt và nhận thuốc tại Quầy Dược số 3',
+      subtitle:
+          'Bảo lãnh viện phí không tiền mặt và nhận thuốc tại Quầy Dược số 3',
       location: 'Quầy Thu ngân Tầng 1 & Nhà thuốc Tòa C',
       doctorInstruction: 'Xác nhận trừ bảo lãnh BHYT 80%, kiểm tra đúng tên thuốc và hạn sử dụng trước khi rời viện.',
       status: ClinicalStepStatus.upcoming,
@@ -1396,7 +1069,8 @@ abstract final class MedicalData {
     const ClinicalPathwayStep(
       stepNumber: 6,
       title: 'Chăm sóc tại nhà & Tự động nhắc Tái khám sau 14 ngày',
-      subtitle: 'Uống thuốc đúng giờ, đo huyết áp mỗi sáng, tái khám sau 14 ngày',
+      subtitle:
+          'Uống thuốc đúng giờ, đo huyết áp mỗi sáng, tái khám sau 14 ngày',
       location: 'Tại nhà người bệnh',
       doctorInstruction: 'Hạn chế ăn mặn < 5g muối, duy trì vận động nhẹ nhàng. Nếu đau ngực tái phát lập tức bấm nút SOS 115 trên app.',
       status: ClinicalStepStatus.upcoming,
@@ -1405,6 +1079,3 @@ abstract final class MedicalData {
     ),
   ];
 }
-
-
-

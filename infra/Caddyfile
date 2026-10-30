@@ -1,0 +1,13 @@
+{$MEDCARE_DOMAIN} {
+  encode gzip zstd
+
+  @api path /health /auth/* /me /appointments* /prescriptions* /records* /queue* /sync /audit
+  reverse_proxy @api medcare-api:8080
+
+  header {
+    Strict-Transport-Security "max-age=31536000; includeSubDomains; preload"
+    X-Content-Type-Options "nosniff"
+    X-Frame-Options "DENY"
+    Referrer-Policy "no-referrer"
+  }
+}

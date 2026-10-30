@@ -3,17 +3,17 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import 'package:bt2_2324801030077/models/medical_models.dart';
-import 'package:bt2_2324801030077/pages/ai_health_assistant_page.dart';
-import 'package:bt2_2324801030077/pages/digital_card_page.dart';
-import 'package:bt2_2324801030077/pages/emergency_sos_page.dart';
-import 'package:bt2_2324801030077/pages/health_news_page.dart';
-import 'package:bt2_2324801030077/pages/health_packages_page.dart';
-import 'package:bt2_2324801030077/pages/hospital_map_page.dart';
-import 'package:bt2_2324801030077/pages/live_queue_page.dart';
-import 'package:bt2_2324801030077/pages/medication_tracker_page.dart';
-import 'package:bt2_2324801030077/pages/mental_health_page.dart';
-import 'package:bt2_2324801030077/pages/vaccination_page.dart';
-import 'package:bt2_2324801030077/pages/vitals_tracker_page.dart';
+import 'package:bt2_2324801030077/pages/tro_ly_suc_khoe_ai_page.dart';
+import 'package:bt2_2324801030077/pages/the_y_te_dien_tu_page.dart';
+import 'package:bt2_2324801030077/pages/sos_cap_cuu_page.dart';
+import 'package:bt2_2324801030077/pages/tin_tuc_suc_khoe_page.dart';
+import 'package:bt2_2324801030077/pages/goi_kham_suc_khoe_page.dart';
+import 'package:bt2_2324801030077/pages/ban_do_benh_vien_page.dart';
+import 'package:bt2_2324801030077/pages/hang_doi_kham_page.dart';
+import 'package:bt2_2324801030077/pages/nhac_lich_uong_thuoc_page.dart';
+import 'package:bt2_2324801030077/pages/suc_khoe_tinh_than_page.dart';
+import 'package:bt2_2324801030077/pages/tiem_chung_page.dart';
+import 'package:bt2_2324801030077/pages/theo_doi_sinh_hieu_page.dart';
 import 'package:bt2_2324801030077/state/app_settings_store.dart';
 import 'package:bt2_2324801030077/state/medical_store.dart';
 
@@ -54,16 +54,46 @@ void main() {
 
     test('Kiểm tra lịch uống thuốc & tính tỷ lệ tuân thủ điều trị', () {
       final store = MedicalStore();
-      expect(store.medicineSchedule.length, 7);
+      expect(store.medicineSchedule, isEmpty);
 
       final initialRate = store.medicineAdherenceRate;
-      expect(initialRate, closeTo(3 / 7, 0.01));
+      expect(initialRate, 0.0);
 
-      store.toggleMedicineTaken('sch-04');
-      expect(store.medicineAdherenceRate, closeTo(4 / 7, 0.01));
-
-      store.toggleMedicineTaken('sch-04');
-      expect(store.medicineAdherenceRate, closeTo(3 / 7, 0.01));
+      final prescribed = [
+        const MedicineItem(
+          name: 'Amlodipine Besylate',
+          category: 'Thuốc hạ áp',
+          dosage: '5mg',
+          quantity: '30 viên',
+          instruction: 'Uống 1 viên vào 8:00 sáng sau ăn',
+        ),
+      ];
+      final appointment = store.book(
+        doctor: store.activeDoctorUser,
+        dateTime: DateTime(2026, 2, 12, 9),
+        patientName: store.activeFamilyMember.name,
+        reason: 'Khám tim mạch',
+        useInsurance: true,
+      );
+      final appointmentFee = store.transactions.firstWhere(
+        (tx) => tx.visitCode == '#${appointment.id}',
+      );
+      store.completeTransaction(appointmentFee.id);
+      store.doctorExecuteFullConsultationSync(
+        diagnosis: 'Tăng huyết áp nguyên phát độ 1',
+        icd10Code: 'I10',
+        icd10Name: 'Tăng huyết áp vô căn',
+        symptoms: 'Đau đầu nhẹ',
+        physicalExam: 'Huyết áp 135/85 mmHg',
+        labNotes: 'Glucose 5.6 mmol/L',
+        doctorAdvice: 'Theo dõi huyết áp tại nhà',
+        followUpDate: '26/02/2026',
+        prescribedMedicines: prescribed,
+      );
+      expect(store.medicineSchedule.length, 1);
+      expect(store.medicineAdherenceRate, 0.0);
+      store.toggleMedicineTaken(store.medicineSchedule.first.id);
+      expect(store.medicineAdherenceRate, 1.0);
     });
 
     test('Kiểm tra hàng đợi khám & cập nhật tiến độ (Live Queue)', () {
@@ -125,38 +155,35 @@ void main() {
       expect(ok4, true);
     });
 
-    test('Trụ cột 1: Kiểm tra Quản lý Đa Hồ sơ Gia đình và chuyển đổi hồ sơ', () {
-      final store = MedicalStore();
-      expect(store.familyMembers.length, greaterThanOrEqualTo(4));
-      expect(store.activeFamilyMember.name, 'Nguyễn Hoàng Vũ');
+    test(
+      'Trụ cột 1: Kiểm tra Quản lý Đa Hồ sơ Gia đình và chuyển đổi hồ sơ',
+      () {
+        final store = MedicalStore();
+        expect(store.familyMembers.length, 1);
+        expect(store.activeFamilyMember.name, 'Nguyễn Hoàng Vũ');
 
-      // Chuyển sang hồ sơ con cái
-      store.switchFamilyProfile('fam-02');
-      expect(store.activeFamilyMember.name, 'Bé Nguyễn Bảo An');
-      expect(store.activeFamilyMember.relation, FamilyRelation.child);
-      expect(store.profile.name, 'Bé Nguyễn Bảo An');
+        // Thêm thành viên mới
+        const newMember = FamilyMemberProfile(
+          id: 'fam-new-99',
+          name: 'Nguyễn Thị Hoa',
+          relation: FamilyRelation.parent,
+          dateOfBirth: '12/03/1962',
+          gender: 'Nữ',
+          insuranceNumber: 'HT3010999888',
+          bloodType: 'A+',
+        );
+        store.addFamilyMember(newMember);
+        expect(store.familyMembers.length, 2);
 
-      // Thêm thành viên mới
-      const newMember = FamilyMemberProfile(
-        id: 'fam-new-99',
-        name: 'Nguyễn Thị Hoa',
-        relation: FamilyRelation.parent,
-        dateOfBirth: '12/03/1962',
-        gender: 'Nữ',
-        insuranceNumber: 'HT3010999888',
-        bloodType: 'A+',
-      );
-      store.addFamilyMember(newMember);
-      expect(store.familyMembers.length, 5);
+        // Chuyển sang thành viên mới
+        store.switchFamilyProfile('fam-new-99');
+        expect(store.activeFamilyMember.name, 'Nguyễn Thị Hoa');
 
-      // Chuyển sang thành viên mới
-      store.switchFamilyProfile('fam-new-99');
-      expect(store.activeFamilyMember.name, 'Nguyễn Thị Hoa');
-
-      // Chuyển lại bản thân
-      store.switchFamilyProfile('fam-01');
-      expect(store.activeFamilyMember.name, 'Nguyễn Hoàng Vũ');
-    });
+        // Chuyển lại bản thân
+        store.switchFamilyProfile('fam-01');
+        expect(store.activeFamilyMember.name, 'Nguyễn Hoàng Vũ');
+      },
+    );
 
     test('Trụ cột 2 & 3: Khám từ xa Telemedicine và Giao thuốc tận nhà', () {
       final store = MedicalStore();
@@ -183,12 +210,54 @@ void main() {
       ]);
       expect(warning, contains('Cảnh báo dị ứng nghiêm trọng'));
 
-      // Đặt mua thuốc giao tận nhà
+      expect(
+        () => store.createPharmacyOrder(
+          prescriptionId: 'DT-TEST-001',
+          deliveryAddress: 'Số 10 Phố Huế, Hà Nội',
+          pharmacyName: 'Nhà thuốc Long Châu',
+          itemsCount: 3,
+          medicineTotal: 250000,
+        ),
+        throwsA(isA<StateError>()),
+      );
+
+      final appointment = store.book(
+        doctor: store.activeDoctorUser,
+        dateTime: DateTime(2026, 2, 13, 9),
+        patientName: store.activeFamilyMember.name,
+        reason: 'Khám sau tư vấn từ xa',
+        useInsurance: true,
+      );
+      final appointmentFee = store.transactions.firstWhere(
+        (tx) => tx.visitCode == '#${appointment.id}',
+      );
+      store.completeTransaction(appointmentFee.id);
+      store.doctorExecuteFullConsultationSync(
+        diagnosis: 'Tư vấn sau khám từ xa',
+        icd10Code: 'Z71.9',
+        icd10Name: 'Tư vấn y tế không đặc hiệu',
+        symptoms: 'Ổn định',
+        physicalExam: 'Tổng trạng ổn',
+        labNotes: 'Chưa chỉ định cận lâm sàng',
+        doctorAdvice: 'Theo dõi triệu chứng tại nhà',
+        followUpDate: '27/02/2026',
+        prescribedMedicines: const [
+          MedicineItem(
+            name: 'Paracetamol 500mg',
+            category: 'Giảm đau hạ sốt',
+            dosage: '500mg',
+            quantity: '10 viên',
+            instruction: 'Uống khi sốt hoặc đau theo hướng dẫn bác sĩ',
+          ),
+        ],
+      );
+
+      // Đặt mua thuốc giao tận nhà sau khi có đơn thuốc thật
       final order = store.createPharmacyOrder(
-        prescriptionId: 'DT-TEST-001',
+        prescriptionId: store.medicalRecords.first.prescriptionCode,
         deliveryAddress: 'Số 10 Phố Huế, Hà Nội',
         pharmacyName: 'Nhà thuốc Long Châu',
-        itemsCount: 3,
+        itemsCount: store.medicines.length,
         medicineTotal: 250000,
       );
       expect(order.status, PharmacyOrderStatus.shipping);
@@ -209,39 +278,43 @@ void main() {
   });
 
   group('Extended Pages Widget Tests', () {
-    Widget buildTestApp(Widget page, {MedicalStore? store, AppSettingsStore? settings}) {
+    Widget buildTestApp(
+      Widget page, {
+      MedicalStore? store,
+      AppSettingsStore? settings,
+    }) {
       final s = store ?? MedicalStore();
       final set = settings ?? AppSettingsStore();
       return MedicalScope(
         store: s,
         child: AppSettingsScope(
           store: set,
-          child: MaterialApp(
-            home: page,
-          ),
+          child: MaterialApp(home: page),
         ),
       );
     }
 
-    testWidgets('AiHealthAssistantPage render đầy đủ giao diện và chat', (tester) async {
+    testWidgets('AiHealthAssistantPage render đầy đủ giao diện và chat', (
+      tester,
+    ) async {
       await tester.pumpWidget(buildTestApp(const AiHealthAssistantPage()));
       expect(find.text('MedCare AI Health'), findsOneWidget);
       expect(find.text('Trợ lý y tế thông minh 24/7'), findsOneWidget);
       expect(find.text('Đau quặn dạ dày, ợ chua'), findsOneWidget);
     });
 
-    testWidgets('MedicationTrackerPage render tiến độ uống thuốc', (tester) async {
+    testWidgets('MedicationTrackerPage render tiến độ uống thuốc', (
+      tester,
+    ) async {
       await tester.pumpWidget(buildTestApp(const MedicationTrackerPage()));
-      expect(find.text('Nhắc lịch Uống thuốc'), findsOneWidget);
+      expect(find.text('Nhắc lịch uống thuốc'), findsOneWidget);
       expect(find.text('Tuân thủ phác đồ hôm nay'), findsOneWidget);
-      expect(find.text('Buổi Sáng'), findsOneWidget);
-      await tester.drag(find.byType(ListView), const Offset(0, -400));
-      await tester.pumpAndSettle();
-      expect(find.text('Buổi Tối'), findsOneWidget);
+      expect(find.text('Chưa có lịch uống thuốc'), findsOneWidget);
     });
 
-
-    testWidgets('VitalsTrackerPage render các chỉ số sinh hiệu', (tester) async {
+    testWidgets('VitalsTrackerPage render các chỉ số sinh hiệu', (
+      tester,
+    ) async {
       await tester.pumpWidget(buildTestApp(const VitalsTrackerPage()));
       expect(find.text('Chỉ số Sinh hiệu & Sức khỏe'), findsOneWidget);
       expect(find.text('Huyết áp'), findsOneWidget);
@@ -271,14 +344,18 @@ void main() {
       expect(find.text('Tầm Soát Ung Thư Sớm Đường Tiêu Hóa'), findsOneWidget);
     });
 
-    testWidgets('HospitalMapPage render lộ trình và các tòa nhà', (tester) async {
+    testWidgets('HospitalMapPage render lộ trình và các tòa nhà', (
+      tester,
+    ) async {
       await tester.pumpWidget(buildTestApp(const HospitalMapPage()));
       expect(find.text('Sơ đồ & Chỉ đường Nội viện'), findsOneWidget);
       await tester.scrollUntilVisible(find.text('Tòa A'), 200);
       expect(find.text('Tòa A'), findsOneWidget);
     });
 
-    testWidgets('DigitalCardPage render thẻ bệnh nhân và nút quét Kiosk', (tester) async {
+    testWidgets('DigitalCardPage render thẻ bệnh nhân và nút quét Kiosk', (
+      tester,
+    ) async {
       await tester.pumpWidget(buildTestApp(const DigitalCardPage()));
       expect(find.text('Thẻ Y tế Điện tử'), findsOneWidget);
       expect(find.text('Quét Kiosk'), findsOneWidget);
@@ -291,16 +368,25 @@ void main() {
       expect(find.text('THẺ Y TẾ KHẨN CẤP (MEDICAL ID)'), findsOneWidget);
     });
 
-    testWidgets('MentalHealthPage render bài tập thở Box Breathing', (tester) async {
+    testWidgets('MentalHealthPage render bài tập thở Box Breathing', (
+      tester,
+    ) async {
       await tester.pumpWidget(buildTestApp(const MentalHealthPage()));
       expect(find.text('Sức khỏe Tinh thần & Thư giãn'), findsOneWidget);
       expect(find.text('Bắt đầu thư giãn'), findsOneWidget);
     });
 
-    testWidgets('HealthNewsPage render danh sách cẩm nang sức khỏe', (tester) async {
+    testWidgets('HealthNewsPage render danh sách cẩm nang sức khỏe', (
+      tester,
+    ) async {
       await tester.pumpWidget(buildTestApp(const HealthNewsPage()));
       expect(find.text('Cẩm nang Y khoa & Sức khỏe'), findsOneWidget);
-      expect(find.text('Chế độ ăn uống khoa học cho người viêm loét dạ dày có vi khuẩn Hp'), findsOneWidget);
+      expect(
+        find.text(
+          'Chế độ ăn uống khoa học cho người viêm loét dạ dày có vi khuẩn Hp',
+        ),
+        findsOneWidget,
+      );
     });
   });
 }

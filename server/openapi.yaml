@@ -1,0 +1,256 @@
+openapi: 3.1.0
+info:
+  title: MedCare Backend API
+  version: 1.0.0
+servers:
+  - url: http://127.0.0.1:8080
+security:
+  - bearerAuth: []
+paths:
+  /health:
+    get:
+      security: []
+      responses:
+        '200':
+          description: Service health
+  /auth/login:
+    post:
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [identifier, password]
+              properties:
+                identifier:
+                  type: string
+                password:
+                  type: string
+      responses:
+        '200':
+          description: Access token, refresh token and user profile
+        '401':
+          description: Invalid credentials
+  /auth/refresh:
+    post:
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [refreshToken]
+              properties:
+                refreshToken:
+                  type: string
+      responses:
+        '200':
+          description: Rotated access and refresh token
+  /auth/logout:
+    post:
+      security: []
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                refreshToken:
+                  type: string
+      responses:
+        '200':
+          description: Refresh token revoked when supplied
+  /me:
+    get:
+      responses:
+        '200':
+          description: Current authenticated user
+  /appointments:
+    get:
+      responses:
+        '200':
+          description: Appointments visible to current role
+    post:
+      description: Patient-only appointment booking
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [doctorId, doctorName, specialty, appointmentTime, reason]
+              properties:
+                doctorId:
+                  type: string
+                doctorName:
+                  type: string
+                specialty:
+                  type: string
+                appointmentTime:
+                  type: string
+                reason:
+                  type: string
+      responses:
+        '201':
+          description: Appointment created
+        '403':
+          description: Only patient can create appointments
+  /appointments/{id}:
+    patch:
+      description: Patient cancellation/rescheduling or doctor/admin status update
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                status:
+                  type: string
+                  enum: [confirmed, completed, cancelled]
+                appointmentTime:
+                  type: string
+      responses:
+        '200':
+          description: Appointment updated
+        '403':
+          description: Role or ownership check failed
+  /payments/confirm:
+    post:
+      description: Submit a payment verification request with server-side idempotency
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [clientTransactionId, amount, method]
+              properties:
+                clientTransactionId:
+                  type: string
+                amount:
+                  type: integer
+                method:
+                  type: string
+      responses:
+        '200':
+          description: Payment confirmed
+        '409':
+          description: Payment conflict
+  /support/requests:
+    post:
+      description: Create an authenticated patient support request
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [category, message]
+              properties:
+                category:
+                  type: string
+                message:
+                  type: string
+      responses:
+        '201':
+          description: Support request created
+        '400':
+          description: Invalid support request
+        '401':
+          description: Authentication required
+  /prescriptions:
+    get:
+      responses:
+        '200':
+          description: Prescriptions visible to current role
+    post:
+      description: Doctor/admin prescription creation
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [patientId, diagnosis, medications]
+              properties:
+                patientId:
+                  type: string
+                diagnosis:
+                  type: string
+                medications:
+                  type: array
+                  items:
+                    type: object
+      responses:
+        '201':
+          description: Prescription created
+        '403':
+          description: Doctor/admin role required
+  /records:
+    get:
+      responses:
+        '200':
+          description: Medical records visible to current role
+    post:
+      description: Doctor/admin medical record creation
+      responses:
+        '201':
+          description: Record created
+        '403':
+          description: Doctor/admin role required
+  /queue:
+    get:
+      responses:
+        '200':
+          description: Current queue state
+  /queue/call-next:
+    post:
+      description: Doctor/admin calls next queue number and broadcasts realtime event
+      responses:
+        '200':
+          description: Queue advanced
+        '403':
+          description: Doctor/admin role required
+  /queue/events:
+    get:
+      description: Realtime queue stream using Server-Sent Events
+      responses:
+        '200':
+          description: SSE stream
+          content:
+            text/event-stream:
+              schema:
+                type: string
+  /sync:
+    post:
+      description: Authenticated sync snapshot upload from app
+      responses:
+        '202':
+          description: Snapshot accepted
+        '401':
+          description: Bearer token required
+  /audit:
+    get:
+      description: Admin-only audit logs
+      responses:
+        '200':
+          description: Audit logs
+        '403':
+          description: Admin role required
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT

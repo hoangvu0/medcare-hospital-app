@@ -1,3 +1,5 @@
+import '../models/medical_models.dart';
+
 abstract final class AppRoutes {
   static const home = '/';
   static const appointments = '/appointments';
@@ -6,9 +8,9 @@ abstract final class AppRoutes {
   static const records = '/records';
   static const prescription = '/prescription';
   static const payment = '/payment';
+  static const walletTopUp = '/wallet-top-up';
   static const specialty = '/specialty';
   static const splash = '/splash';
-  static const intro = '/intro';
   static const login = '/login';
   static const register = '/register';
   static const forgotPassword = '/forgot-password';
@@ -42,11 +44,19 @@ abstract final class AppRoutes {
   static const mentalHealth = '/mental-health';
   static const healthNews = '/health-news';
   static const adminSlots = '/admin-slots';
+  static const adminApprovals = '/admin-approvals';
+  static const adminControl = '/admin-control';
   static const familyProfiles = '/family-profiles';
   static const telemedicine = '/telemedicine';
   static const labExplainer = '/lab-explainer';
   static const insuranceGuarantee = '/insurance-guarantee';
   static const doctorPortal = '/doctor-portal';
   static const clinicalPathway = '/clinical-pathway';
-}
+  static const support = '/support';
 
+  static String landingForRole(UserRole role) => switch (role) {
+    UserRole.doctor => doctorPortal,
+    UserRole.admin => adminSlots,
+    UserRole.patient => home,
+  };
+}

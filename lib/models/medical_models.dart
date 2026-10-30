@@ -33,19 +33,18 @@ class PatientProfile {
     String? bloodType,
     String? gender,
     String? dateOfBirth,
-  }) =>
-      PatientProfile(
-        id: id,
-        name: name ?? this.name,
-        phone: phone ?? this.phone,
-        email: email ?? this.email,
-        dateOfBirth: dateOfBirth ?? this.dateOfBirth,
-        insuranceNumber: insuranceNumber ?? this.insuranceNumber,
-        bloodType: bloodType ?? this.bloodType,
-        gender: gender ?? this.gender,
-        address: address ?? this.address,
-        allergies: allergies ?? this.allergies,
-      );
+  }) => PatientProfile(
+    id: id,
+    name: name ?? this.name,
+    phone: phone ?? this.phone,
+    email: email ?? this.email,
+    dateOfBirth: dateOfBirth ?? this.dateOfBirth,
+    insuranceNumber: insuranceNumber ?? this.insuranceNumber,
+    bloodType: bloodType ?? this.bloodType,
+    gender: gender ?? this.gender,
+    address: address ?? this.address,
+    allergies: allergies ?? this.allergies,
+  );
 }
 
 class DoctorProfile {
@@ -118,22 +117,21 @@ class ClinicalPathwayStep {
     String? actionRoute,
     String? completedTime,
     int? etaMinutes,
-  }) =>
-      ClinicalPathwayStep(
-        stepNumber: stepNumber ?? this.stepNumber,
-        title: title ?? this.title,
-        subtitle: subtitle ?? this.subtitle,
-        location: location ?? this.location,
-        doctorInstruction: doctorInstruction ?? this.doctorInstruction,
-        status: status ?? this.status,
-        actionText: actionText ?? this.actionText,
-        actionRoute: actionRoute ?? this.actionRoute,
-        completedTime: completedTime ?? this.completedTime,
-        etaMinutes: etaMinutes ?? this.etaMinutes,
-      );
+  }) => ClinicalPathwayStep(
+    stepNumber: stepNumber ?? this.stepNumber,
+    title: title ?? this.title,
+    subtitle: subtitle ?? this.subtitle,
+    location: location ?? this.location,
+    doctorInstruction: doctorInstruction ?? this.doctorInstruction,
+    status: status ?? this.status,
+    actionText: actionText ?? this.actionText,
+    actionRoute: actionRoute ?? this.actionRoute,
+    completedTime: completedTime ?? this.completedTime,
+    etaMinutes: etaMinutes ?? this.etaMinutes,
+  );
 }
 
-enum AppointmentStatus { confirmed, completed, cancelled }
+enum AppointmentStatus { awaitingPayment, confirmed, completed, cancelled }
 
 class Appointment {
   const Appointment({
@@ -149,6 +147,7 @@ class Appointment {
     required this.status,
     required this.fee,
     this.ticketNumber,
+    this.patientId,
   });
 
   final String id;
@@ -163,21 +162,24 @@ class Appointment {
   final AppointmentStatus status;
   final int fee;
   final String? ticketNumber;
+  final String? patientId;
 
-  Appointment copyWith({AppointmentStatus? status}) => Appointment(
-    id: id,
-    doctorId: doctorId,
-    doctorName: doctorName,
-    specialty: specialty,
-    location: location,
-    dateTime: dateTime,
-    patientName: patientName,
-    reason: reason,
-    insuranceApplied: insuranceApplied,
-    status: status ?? this.status,
-    fee: fee,
-    ticketNumber: ticketNumber,
-  );
+  Appointment copyWith({AppointmentStatus? status, DateTime? dateTime}) =>
+      Appointment(
+        id: id,
+        doctorId: doctorId,
+        doctorName: doctorName,
+        specialty: specialty,
+        location: location,
+        dateTime: dateTime ?? this.dateTime,
+        patientName: patientName,
+        reason: reason,
+        insuranceApplied: insuranceApplied,
+        status: status ?? this.status,
+        fee: fee,
+        ticketNumber: ticketNumber,
+        patientId: patientId,
+      );
 }
 
 class AppointmentDraft {
@@ -187,6 +189,10 @@ class AppointmentDraft {
     required this.patientName,
     required this.reason,
     required this.useInsurance,
+    this.packageId = 'pass-std',
+    this.packageTitle = 'Gói Tiêu Chuẩn',
+    this.packagePriceDelta = 0,
+    this.priorityLevel = 0,
   });
 
   final DoctorProfile doctor;
@@ -194,6 +200,10 @@ class AppointmentDraft {
   final String patientName;
   final String reason;
   final bool useInsurance;
+  final String packageId;
+  final String packageTitle;
+  final int packagePriceDelta;
+  final int priorityLevel;
 }
 
 class AppNotification {
@@ -236,10 +246,12 @@ class MedicalRecord {
     this.diagnosisCode = 'I10',
     this.icd10Name = 'Tăng huyết áp nguyên phát',
     this.differentialDiagnosis,
-    this.physicalExamNotes = 'Tim đều T1, T2 rõ. Phổi thông khí tốt, không rale. Bụng mềm.',
+    this.physicalExamNotes =
+        'Tim đều T1, T2 rõ. Phổi thông khí tốt, không rale. Bụng mềm.',
     this.labSummary,
     this.xrayFindings,
-    this.doctorInstructions = 'Uống thuốc đúng giờ, hạn chế ăn mặn, tái khám đúng hẹn.',
+    this.doctorInstructions =
+        'Uống thuốc đúng giờ, hạn chế ăn mặn, tái khám đúng hẹn.',
     this.digitalSignatureToken = 'EMR-SHA256-VN-MEDCARE-VALIDATED',
     this.riskLevel = 'Theo dõi định kỳ',
     this.prescribedMedicinesSummary,
@@ -369,6 +381,7 @@ class MedicineScheduleItem {
   MedicineScheduleItem copyWith({
     bool? isTaken,
     DateTime? takenAt,
+    bool clearTakenAt = false,
   }) => MedicineScheduleItem(
     id: id,
     medicineName: medicineName,
@@ -377,7 +390,7 @@ class MedicineScheduleItem {
     period: period,
     instruction: instruction,
     isTaken: isTaken ?? this.isTaken,
-    takenAt: takenAt ?? this.takenAt,
+    takenAt: clearTakenAt ? null : (takenAt ?? this.takenAt),
   );
 }
 
@@ -461,6 +474,10 @@ class HealthArticle {
     required this.summary,
     required this.content,
     required this.date,
+    this.sourceUrl,
+    this.sourceName,
+    this.imageUrl,
+    this.isExternal = false,
   });
 
   final String id;
@@ -471,6 +488,40 @@ class HealthArticle {
   final String summary;
   final String content;
   final String date;
+  final String? sourceUrl;
+  final String? sourceName;
+  final String? imageUrl;
+  final bool isExternal;
+
+  factory HealthArticle.fromJson(Map<String, Object?> json) => HealthArticle(
+    id: json['id'] as String? ?? '',
+    title: json['title'] as String? ?? '',
+    category: json['category'] as String? ?? 'Tin bệnh viện',
+    author: json['author'] as String? ?? 'MedCare News',
+    readTime: json['readTime'] as String? ?? '3 phút đọc',
+    summary: json['summary'] as String? ?? '',
+    content: json['content'] as String? ?? '',
+    date: json['date'] as String? ?? '',
+    sourceUrl: json['sourceUrl'] as String?,
+    sourceName: json['sourceName'] as String?,
+    imageUrl: json['imageUrl'] as String?,
+    isExternal: json['isExternal'] == true,
+  );
+
+  Map<String, Object?> toJson() => {
+    'id': id,
+    'title': title,
+    'category': category,
+    'author': author,
+    'readTime': readTime,
+    'summary': summary,
+    'content': content,
+    'date': date,
+    'sourceUrl': sourceUrl,
+    'sourceName': sourceName,
+    'imageUrl': imageUrl,
+    'isExternal': isExternal,
+  };
 }
 
 // ── Thanh toán viện phí ─────────────────────────────────────────────────────
@@ -509,20 +560,36 @@ class PaymentTransaction {
   final String? receiptCode;
 
   String get methodLabel => switch (method) {
-        PaymentMethod.vietQr => 'VietQR / Napas247',
-        PaymentMethod.momo => 'Ví MoMo',
-        PaymentMethod.zalopay => 'Ví ZaloPay',
-        PaymentMethod.vnpay => 'Ví VNPay',
-        PaymentMethod.bankCard => 'Thẻ ngân hàng',
-        PaymentMethod.kiosk => 'Kiosk quầy thu',
-      };
+    PaymentMethod.vietQr => 'VietQR / Napas247',
+    PaymentMethod.momo => 'Ví MoMo',
+    PaymentMethod.zalopay => 'Ví ZaloPay',
+    PaymentMethod.vnpay => 'Ví VNPay',
+    PaymentMethod.bankCard => 'Thẻ ngân hàng',
+    PaymentMethod.kiosk => 'Kiosk quầy thu',
+  };
 
   String get statusLabel => switch (status) {
-        PaymentStatus.pending => 'Chờ thanh toán',
-        PaymentStatus.success => 'Thành công',
-        PaymentStatus.failed => 'Thất bại',
-        PaymentStatus.refunded => 'Đã hoàn tiền',
-      };
+    PaymentStatus.pending => 'Chờ thanh toán',
+    PaymentStatus.success => 'Thành công',
+    PaymentStatus.failed => 'Thất bại',
+    PaymentStatus.refunded => 'Đã hoàn tiền',
+  };
+
+  PaymentTransaction copyWith({PaymentStatus? status, String? receiptCode}) =>
+      PaymentTransaction(
+        id: id,
+        visitCode: visitCode,
+        description: description,
+        grossAmount: grossAmount,
+        insuranceAmount: insuranceAmount,
+        netAmount: netAmount,
+        method: method,
+        status: status ?? this.status,
+        timestamp: timestamp,
+        walletName: walletName,
+        invoiceEmail: invoiceEmail,
+        receiptCode: receiptCode ?? this.receiptCode,
+      );
 }
 
 // ── Quản lý slot đặt khám (Admin) ──────────────────────────────────────────
@@ -531,8 +598,8 @@ class PaymentTransaction {
 class SlotConfig {
   SlotConfig({
     required this.doctorId,
-    required this.date,   // "2026-09-15"
-    required this.time,   // "09:00"
+    required this.date, // "2026-09-15"
+    required this.time, // "09:00"
     required this.capacity,
     this.booked = 0,
   });
@@ -550,12 +617,12 @@ class SlotConfig {
   String get key => '${doctorId}_${date}_$time';
 
   SlotConfig copyWith({int? capacity, int? booked}) => SlotConfig(
-        doctorId: doctorId,
-        date: date,
-        time: time,
-        capacity: capacity ?? this.capacity,
-        booked: booked ?? this.booked,
-      );
+    doctorId: doctorId,
+    date: date,
+    time: time,
+    capacity: capacity ?? this.capacity,
+    booked: booked ?? this.booked,
+  );
 }
 
 // ── Trụ cột 1: Đa Hồ sơ Gia đình (Family Profiles) ─────────────────────────
@@ -590,11 +657,11 @@ class FamilyMemberProfile {
   final String medicalNotes;
 
   String get relationLabel => switch (relation) {
-        FamilyRelation.self => 'Bản thân',
-        FamilyRelation.child => 'Con cái',
-        FamilyRelation.parent => 'Bố / Mẹ',
-        FamilyRelation.spouse => 'Vợ / Chồng',
-      };
+    FamilyRelation.self => 'Bản thân',
+    FamilyRelation.child => 'Con cái',
+    FamilyRelation.parent => 'Bố / Mẹ',
+    FamilyRelation.spouse => 'Vợ / Chồng',
+  };
 
   FamilyMemberProfile copyWith({
     String? name,
@@ -607,20 +674,19 @@ class FamilyMemberProfile {
     String? phone,
     String? avatarEmoji,
     String? medicalNotes,
-  }) =>
-      FamilyMemberProfile(
-        id: id,
-        name: name ?? this.name,
-        relation: relation ?? this.relation,
-        dateOfBirth: dateOfBirth ?? this.dateOfBirth,
-        gender: gender ?? this.gender,
-        insuranceNumber: insuranceNumber ?? this.insuranceNumber,
-        bloodType: bloodType ?? this.bloodType,
-        allergies: allergies ?? this.allergies,
-        phone: phone ?? this.phone,
-        avatarEmoji: avatarEmoji ?? this.avatarEmoji,
-        medicalNotes: medicalNotes ?? this.medicalNotes,
-      );
+  }) => FamilyMemberProfile(
+    id: id,
+    name: name ?? this.name,
+    relation: relation ?? this.relation,
+    dateOfBirth: dateOfBirth ?? this.dateOfBirth,
+    gender: gender ?? this.gender,
+    insuranceNumber: insuranceNumber ?? this.insuranceNumber,
+    bloodType: bloodType ?? this.bloodType,
+    allergies: allergies ?? this.allergies,
+    phone: phone ?? this.phone,
+    avatarEmoji: avatarEmoji ?? this.avatarEmoji,
+    medicalNotes: medicalNotes ?? this.medicalNotes,
+  );
 }
 
 // ── Trụ cột 2: Khám từ xa Telemedicine ──────────────────────────────────────
@@ -650,16 +716,15 @@ class TelemedicineSession {
     TelemedicineStatus? status,
     int? durationSeconds,
     String? doctorNotes,
-  }) =>
-      TelemedicineSession(
-        id: id,
-        doctor: doctor,
-        patientName: patientName,
-        appointmentTime: appointmentTime,
-        status: status ?? this.status,
-        durationSeconds: durationSeconds ?? this.durationSeconds,
-        doctorNotes: doctorNotes ?? this.doctorNotes,
-      );
+  }) => TelemedicineSession(
+    id: id,
+    doctor: doctor,
+    patientName: patientName,
+    appointmentTime: appointmentTime,
+    status: status ?? this.status,
+    durationSeconds: durationSeconds ?? this.durationSeconds,
+    doctorNotes: doctorNotes ?? this.doctorNotes,
+  );
 }
 
 // ── Trụ cột 3: Giao thuốc tận nhà (Pharmacy Delivery) ──────────────────────
@@ -698,11 +763,11 @@ class PharmacyOrder {
   int get totalPayable => medicineTotal + shippingFee;
 
   String get statusLabel => switch (status) {
-        PharmacyOrderStatus.packing => 'Đang đóng gói thuốc',
-        PharmacyOrderStatus.shipping => 'Đang giao hỏa tốc 2h',
-        PharmacyOrderStatus.delivered => 'Đã giao thành công',
-        PharmacyOrderStatus.cancelled => 'Đã hủy',
-      };
+    PharmacyOrderStatus.packing => 'Đang đóng gói thuốc',
+    PharmacyOrderStatus.shipping => 'Đang giao hỏa tốc 2h',
+    PharmacyOrderStatus.delivered => 'Đã giao thành công',
+    PharmacyOrderStatus.cancelled => 'Đã hủy',
+  };
 }
 
 // ── Trụ cột 4: Xu hướng Xét nghiệm (Lab Trends) ─────────────────────────────
@@ -711,11 +776,11 @@ class LabTrendPoint {
   const LabTrendPoint({
     required this.dateStr,
     required this.timestamp,
-    required this.bloodGlucose,     // mg/dL (chuẩn 70-99)
-    required this.alt,              // U/L (men gan ALT chuẩn < 40)
-    required this.ast,              // U/L (men gan AST chuẩn < 40)
+    required this.bloodGlucose, // mg/dL (chuẩn 70-99)
+    required this.alt, // U/L (men gan ALT chuẩn < 40)
+    required this.ast, // U/L (men gan AST chuẩn < 40)
     required this.cholesterolTotal, // mmol/L (chuẩn < 5.2)
-    required this.uricAcid,         // umol/L (chuẩn 200-420)
+    required this.uricAcid, // umol/L (chuẩn 200-420)
   });
 
   final String dateStr;
@@ -759,22 +824,23 @@ class HospitalKpiData {
     int? completedConsultations,
     double? npsSatisfactionScore,
     int? totalReviews,
-  }) =>
-      HospitalKpiData(
-        todayPatients: todayPatients ?? this.todayPatients,
-        todayRevenue: todayRevenue ?? this.todayRevenue,
-        avgWaitMinutes: avgWaitMinutes ?? this.avgWaitMinutes,
-        occupancyRatePercent: occupancyRatePercent ?? this.occupancyRatePercent,
-        totalDoctorsOnDuty: totalDoctorsOnDuty ?? this.totalDoctorsOnDuty,
-        completedConsultations: completedConsultations ?? this.completedConsultations,
-        npsSatisfactionScore: npsSatisfactionScore ?? this.npsSatisfactionScore,
-        totalReviews: totalReviews ?? this.totalReviews,
-      );
+  }) => HospitalKpiData(
+    todayPatients: todayPatients ?? this.todayPatients,
+    todayRevenue: todayRevenue ?? this.todayRevenue,
+    avgWaitMinutes: avgWaitMinutes ?? this.avgWaitMinutes,
+    occupancyRatePercent: occupancyRatePercent ?? this.occupancyRatePercent,
+    totalDoctorsOnDuty: totalDoctorsOnDuty ?? this.totalDoctorsOnDuty,
+    completedConsultations:
+        completedConsultations ?? this.completedConsultations,
+    npsSatisfactionScore: npsSatisfactionScore ?? this.npsSatisfactionScore,
+    totalReviews: totalReviews ?? this.totalReviews,
+  );
 }
 
 // ── Nâng cấp: Trợ lý AI Diễn giải Xét nghiệm (Lab Explainer) ────────────────
 
 enum LabRiskLevel { normal, warning, critical }
+
 enum LabCategory { hematology, biochemistry }
 
 class LabReportItem {
@@ -804,13 +870,14 @@ class LabReportItem {
   final String dietaryAdvice;
   final String testedAt;
 
-  String get categoryLabel => category == LabCategory.hematology ? 'Huyết học' : 'Sinh hóa máu';
+  String get categoryLabel =>
+      category == LabCategory.hematology ? 'Huyết học' : 'Sinh hóa máu';
 
   String get riskLabel => switch (riskLevel) {
-        LabRiskLevel.normal => 'Bình thường',
-        LabRiskLevel.warning => 'Cảnh báo nhẹ',
-        LabRiskLevel.critical => 'Vượt ngưỡng',
-      };
+    LabRiskLevel.normal => 'Bình thường',
+    LabRiskLevel.warning => 'Cảnh báo nhẹ',
+    LabRiskLevel.critical => 'Vượt ngưỡng',
+  };
 }
 
 // ── Nâng cấp: Cổng Bảo Hiểm & Bảo Lãnh Viện Phí Tư Nhân (Direct Billing) ───
@@ -893,14 +960,14 @@ class FollowUpReminder {
   final bool isCompleted;
 
   FollowUpReminder copyWith({bool? isCompleted}) => FollowUpReminder(
-        id: id,
-        doctorName: doctorName,
-        specialty: specialty,
-        reminderDate: reminderDate,
-        clinicalReason: clinicalReason,
-        doctorInstructions: doctorInstructions,
-        isCompleted: isCompleted ?? this.isCompleted,
-      );
+    id: id,
+    doctorName: doctorName,
+    specialty: specialty,
+    reminderDate: reminderDate,
+    clinicalReason: clinicalReason,
+    doctorInstructions: doctorInstructions,
+    isCompleted: isCompleted ?? this.isCompleted,
+  );
 }
 
 class DoctorReview {
@@ -957,10 +1024,10 @@ class SecurityAuditLog {
   final String statusDescription;
 
   String get severityLabel => switch (severity) {
-        SecuritySeverity.info => 'Hợp lệ',
-        SecuritySeverity.warning => 'Chú ý',
-        SecuritySeverity.danger => 'Cảnh báo',
-      };
+    SecuritySeverity.info => 'Hợp lệ',
+    SecuritySeverity.warning => 'Chú ý',
+    SecuritySeverity.danger => 'Cảnh báo',
+  };
 }
 
 class ActiveSessionInfo {
@@ -982,6 +1049,36 @@ class ActiveSessionInfo {
 }
 
 // ── Nâng cấp: Gói Đăng Ký Thời Gian Khám Bệnh (Appointment Pass) ────────────
+
+class BackendSyncState {
+  const BackendSyncState({
+    required this.pendingChanges,
+    this.lastLocalChangeAt,
+    this.lastSyncedAt,
+    this.lastError,
+  });
+
+  final int pendingChanges;
+  final DateTime? lastLocalChangeAt;
+  final DateTime? lastSyncedAt;
+  final String? lastError;
+
+  bool get hasPendingChanges => pendingChanges > 0;
+  bool get hasError => lastError != null && lastError!.trim().isNotEmpty;
+
+  BackendSyncState copyWith({
+    int? pendingChanges,
+    DateTime? lastLocalChangeAt,
+    DateTime? lastSyncedAt,
+    String? lastError,
+    bool clearLastError = false,
+  }) => BackendSyncState(
+    pendingChanges: pendingChanges ?? this.pendingChanges,
+    lastLocalChangeAt: lastLocalChangeAt ?? this.lastLocalChangeAt,
+    lastSyncedAt: lastSyncedAt ?? this.lastSyncedAt,
+    lastError: clearLastError ? null : (lastError ?? this.lastError),
+  );
+}
 
 class AppointmentPassPackage {
   const AppointmentPassPackage({
@@ -1022,4 +1119,3 @@ class HospitalWalletTransaction {
   final bool isDebit; // true: trừ tiền, false: cộng tiền / hoàn tiền
   final String description;
 }
-
