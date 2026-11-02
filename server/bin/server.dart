@@ -57,7 +57,8 @@ void main(List<String> args) async {
   final server = await HttpServer.bind(config.host, config.port);
   print('MedCare backend listening on http://${config.host}:${config.port}');
   print('SQLite database: ${config.databasePath}');
-  print('Email OTP: ${config.emailSmtpUsername.isNotEmpty && config.emailSmtpPassword.isNotEmpty ? 'configured' : 'not configured'}');
+  print(
+      'Email OTP: ${config.emailSmtpUsername.isNotEmpty && config.emailSmtpPassword.isNotEmpty ? 'configured' : 'not configured'}');
 
   await for (final request in server) {
     unawaited(app.handle(request));
@@ -350,6 +351,19 @@ class ApiServer {
       if (method == 'GET' && path == '/payments') {
         _requireRole(user, 'admin');
         await _json(request, 200, {'payments': db.listPayments()});
+        return;
+      }
+      if (method == 'GET' && path == '/wallet') {
+        await _json(request, 200, {'wallet': db.wallet(user)});
+        return;
+      }
+      if (method == 'POST' && path == '/wallet/charge') {
+        final body = await _readJson(request);
+        final charge = db.chargeWallet(user, body);
+        db.audit(user, 'WALLET_CHARGE', 'wallet/${charge['id']}',
+            charge['description'] as String? ?? 'charge');
+        await _json(
+            request, 201, {'transaction': charge, 'wallet': db.wallet(user)});
         return;
       }
       if (method == 'POST' && path == '/appointments') {
@@ -1074,10 +1088,12 @@ class ApiServer {
       throw ApiException(400, 'Thông tin đăng ký không hợp lệ');
     }
     if (db.findUserByIdentifier(email) != null) {
-      throw ApiException(409, 'Email này đã được đăng ký. Hãy đăng nhập hoặc dùng email khác.');
+      throw ApiException(409,
+          'Email này đã được đăng ký. Hãy đăng nhập hoặc dùng email khác.');
     }
     if (db.findUserByPhone(phone) != null) {
-      throw ApiException(409, 'Số điện thoại này đã được đăng ký. Hãy dùng số khác hoặc đăng nhập tài khoản cũ.');
+      throw ApiException(409,
+          'Số điện thoại này đã được đăng ký. Hãy dùng số khác hoặc đăng nhập tài khoản cũ.');
     }
     switch (channel) {
       case 'sms':
@@ -1397,6 +1413,25 @@ class MedicalServerDatabase {
         method TEXT NOT NULL,
         status TEXT NOT NULL,
         receipt_code TEXT NOT NULL,
+        purpose TEXT NOT NULL DEFAULT 'appointment',
+        created_at TEXT NOT NULL
+      )
+    ''');
+    database.execute('''
+      CREATE TABLE IF NOT EXISTS wallet_accounts (
+        patient_id TEXT PRIMARY KEY,
+        balance INTEGER NOT NULL DEFAULT 0,
+        updated_at TEXT NOT NULL
+      )
+    ''');
+    database.execute('''
+      CREATE TABLE IF NOT EXISTS wallet_transactions (
+        id TEXT PRIMARY KEY,
+        patient_id TEXT NOT NULL,
+        type TEXT NOT NULL,
+        amount INTEGER NOT NULL,
+        description TEXT NOT NULL,
+        source_payment_id TEXT,
         created_at TEXT NOT NULL
       )
     ''');
@@ -1486,6 +1521,19 @@ class MedicalServerDatabase {
     _seedUser(
         'admin-short', 'admin', '123456', 'admin', 'Quan tri MedCare', null);
     _seedDoctors();
+    database.execute('''
+      UPDATE appointments
+      SET doctor_id = (
+        SELECT account_id FROM doctors
+        WHERE doctors.id = appointments.doctor_id
+      )
+      WHERE doctor_id LIKE 'doc-%'
+        AND EXISTS (
+          SELECT 1 FROM doctors
+          WHERE doctors.id = appointments.doctor_id
+            AND doctors.account_id IS NOT NULL
+        )
+    ''');
 
     final queueExists = database.select(
       'SELECT id FROM queue_state WHERE id = ?',
@@ -1540,6 +1588,26 @@ class MedicalServerDatabase {
     for (final raw in rows) {
       final fields = raw.split('|');
       if (fields.length != 11) continue;
+      final doctorId = fields[0];
+      final doctorNumber = int.tryParse(doctorId.replaceFirst('doc-', '')) ?? 0;
+      final accountId = switch (doctorNumber) {
+        1 => 'doctor-001',
+        2 => 'doctor-002',
+        _ => 'doctor-${doctorNumber.toString().padLeft(3, '0')}',
+      };
+      final identifier = switch (doctorNumber) {
+        1 => 'doctor@medcare.vn',
+        2 => 'bacsi@medcare.vn',
+        _ => 'doctor${doctorNumber.toString().padLeft(2, '0')}@medcare.vn',
+      };
+      _seedUser(
+        accountId,
+        identifier,
+        '123456',
+        'doctor',
+        fields[1],
+        null,
+      );
       database.execute(
         '''INSERT OR IGNORE INTO doctors
            (id, account_id, name, specialty, experience, rating, price,
@@ -1547,12 +1615,8 @@ class MedicalServerDatabase {
             image_url, active, created_at, updated_at)
            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NULL, 1, ?, ?)''',
         [
-          fields[0],
-          fields[0] == 'doc-01'
-              ? 'doctor-001'
-              : fields[0] == 'doc-02'
-                  ? 'doctor-002'
-                  : null,
+          doctorId,
+          accountId,
           fields[1],
           fields[2],
           fields[3],
@@ -1566,6 +1630,10 @@ class MedicalServerDatabase {
           now,
           now,
         ],
+      );
+      database.execute(
+        'UPDATE doctors SET account_id = ? WHERE id = ? AND (account_id IS NULL OR account_id = ?)',
+        [accountId, doctorId, ''],
       );
     }
   }
@@ -1987,6 +2055,12 @@ class MedicalServerDatabase {
         !paymentColumns.any((row) => row['name'] == 'appointment_id')) {
       database.execute('ALTER TABLE payments ADD COLUMN appointment_id TEXT');
     }
+    if (paymentColumns.isNotEmpty &&
+        !paymentColumns.any((row) => row['name'] == 'purpose')) {
+      database.execute(
+        "ALTER TABLE payments ADD COLUMN purpose TEXT NOT NULL DEFAULT 'appointment'",
+      );
+    }
   }
 
   AuthUser? findUserById(String id) {
@@ -2097,6 +2171,17 @@ class MedicalServerDatabase {
             .map((item) => Map<String, Object?>.from(item))
             .toList(growable: false)
         : const <Map<String, Object?>>[];
+    final medicineTotal = medicines.fold<int>(0, (total, medicine) {
+      final price = (medicine['price'] as num?)?.toInt() ?? 0;
+      final quantityText = medicine['quantity']?.toString() ?? '';
+      final quantity = int.tryParse(
+            RegExp(r'\d+').firstMatch(quantityText)?.group(0) ?? '1',
+          ) ??
+          1;
+      return total + price * quantity;
+    });
+    record['prescribedMedicines'] = medicines;
+    record['medicineTotal'] = medicineTotal;
     final now = _now();
     final recordId = _id('emr');
     final prescriptionId = _id('rx');
@@ -2133,6 +2218,14 @@ class MedicalServerDatabase {
     database.execute(
       "UPDATE appointments SET status = 'completed' WHERE id = ?",
       [appointmentId],
+    );
+    database.execute(
+      '''UPDATE feature_records
+         SET status = 'completed', updated_at = ?
+         WHERE feature_type = 'queue_ticket'
+           AND json_extract(payload_json, '\$.appointmentId') = ?
+           AND status NOT IN ('completed', 'skipped')''',
+      [_now(), appointmentId],
     );
     _notifyPatient(
       patientId,
@@ -2255,6 +2348,16 @@ class MedicalServerDatabase {
         item['createdAt'],
       ],
     );
+    _notifyPatient(
+      patientId,
+      title: 'Đã ghi nhận đăng ký lịch khám',
+      body:
+          '${item['doctorName']} • ${item['specialty']} • Mã lịch ${item['ticketNumber']}. '
+          '${fee > 0 ? 'Vui lòng gửi yêu cầu thanh toán để admin duyệt.' : 'Lịch khám đã được xác nhận.'}',
+      type: 'appointment_created',
+      appointmentId: id,
+      sourceId: id,
+    );
     return item;
   }
 
@@ -2354,6 +2457,16 @@ class MedicalServerDatabase {
       ''',
       [status, appointmentTime, id],
     );
+    if (status == 'completed') {
+      database.execute(
+        '''UPDATE feature_records
+           SET status = 'completed', updated_at = ?
+           WHERE feature_type = 'queue_ticket'
+             AND json_extract(payload_json, '\$.appointmentId') = ?
+             AND status NOT IN ('completed', 'skipped')''',
+        [_now(), id],
+      );
+    }
     final rows = database
         .select('SELECT * FROM appointments WHERE id = ? LIMIT 1', [id]);
     if (rows.isEmpty) throw ApiException(404, 'Appointment not found');
@@ -2419,13 +2532,16 @@ class MedicalServerDatabase {
     }
 
     final id = _id('payment');
+    final purpose = (body['purpose'] as String?)?.trim().isNotEmpty == true
+        ? (body['purpose'] as String).trim()
+        : 'appointment';
     const receipt = '';
     database.execute(
       '''
       INSERT INTO payments (
         id, patient_id, client_transaction_id, amount, method, status,
-        appointment_id, receipt_code, created_at
-      ) VALUES (?, ?, ?, ?, ?, 'pending', ?, ?, ?)
+        appointment_id, receipt_code, purpose, created_at
+      ) VALUES (?, ?, ?, ?, ?, 'pending', ?, ?, ?, ?)
       ''',
       [
         id,
@@ -2435,6 +2551,7 @@ class MedicalServerDatabase {
         body['method'] as String? ?? 'manual',
         appointmentId,
         receipt,
+        purpose,
         _now(),
       ],
     );
@@ -2444,6 +2561,7 @@ class MedicalServerDatabase {
       'amount': amount.toInt(),
       'method': body['method'] as String? ?? 'manual',
       'appointmentId': appointmentId,
+      'purpose': purpose,
       'status': 'pending',
       'receiptCode': receipt,
       'createdAt': _now(),
@@ -2522,16 +2640,34 @@ class MedicalServerDatabase {
           [appointmentId],
         );
       }
+      if ((updated['purpose'] as String? ?? '') == 'wallet_topup') {
+        _creditWalletFromPayment(updated);
+      }
     }
     if (previousStatus != status) {
       final patientId = updated['patient_id'] as String;
       if (status == 'success') {
+        final isWalletTopUp =
+            (updated['purpose'] as String? ?? '') == 'wallet_topup';
+        final isPharmacyOrder =
+            (updated['purpose'] as String? ?? '') == 'pharmacy_order';
         _notifyPatient(
           patientId,
-          title: 'Thanh toán đã được admin duyệt',
-          body:
-              'Viện phí đã được xác nhận${receiptCode.isEmpty ? '' : ' • Biên lai: $receiptCode'}. Lịch khám đã mở mã QR check-in và nhận số thứ tự.',
-          type: 'payment_approved',
+          title: isWalletTopUp
+              ? 'Nạp ví MedCare Pay đã được admin duyệt'
+              : isPharmacyOrder
+                  ? 'Thanh toán đơn thuốc đã được admin duyệt'
+                  : 'Thanh toán đã được admin duyệt',
+          body: isWalletTopUp
+              ? 'Số dư ví đã được cộng ${updated['amount']}đ${receiptCode.isEmpty ? '' : ' • Biên lai: $receiptCode'}.'
+              : isPharmacyOrder
+                  ? 'Thanh toán đơn thuốc/giao thuốc đã được xác nhận${receiptCode.isEmpty ? '' : ' • Biên lai: $receiptCode'}. Vui lòng theo dõi trạng thái giao thuốc.'
+                  : 'Viện phí đã được xác nhận${receiptCode.isEmpty ? '' : ' • Biên lai: $receiptCode'}. Lịch khám đã mở mã QR check-in và nhận số thứ tự.',
+          type: isWalletTopUp
+              ? 'wallet_topup_approved'
+              : isPharmacyOrder
+                  ? 'pharmacy_payment_approved'
+                  : 'payment_approved',
           appointmentId: updated['appointment_id'] as String?,
           sourceId: updated['id'] as String?,
         );
@@ -2569,6 +2705,116 @@ class MedicalServerDatabase {
       'clientTransactionId': clientTransactionId,
     });
   }
+
+  Map<String, Object?> wallet(AuthUser user) {
+    final patientId = user.patientId ?? user.id;
+    database.execute(
+      '''INSERT OR IGNORE INTO wallet_accounts (patient_id, balance, updated_at)
+         VALUES (?, 0, ?)''',
+      [patientId, _now()],
+    );
+    final account = database.select(
+      'SELECT * FROM wallet_accounts WHERE patient_id = ? LIMIT 1',
+      [patientId],
+    ).first;
+    final rows = database.select(
+      '''SELECT * FROM wallet_transactions WHERE patient_id = ?
+         ORDER BY created_at DESC LIMIT 100''',
+      [patientId],
+    );
+    return {
+      'patientId': patientId,
+      'balance': account['balance'],
+      'transactions': rows.map(_walletTransactionFromRow).toList(),
+    };
+  }
+
+  void _creditWalletFromPayment(Row payment) {
+    final patientId = payment['patient_id'] as String;
+    final paymentId = payment['id'] as String;
+    final exists = database.select(
+      '''SELECT id FROM wallet_transactions
+         WHERE source_payment_id = ? LIMIT 1''',
+      [paymentId],
+    );
+    if (exists.isNotEmpty) return;
+    database.execute(
+      '''INSERT OR IGNORE INTO wallet_accounts (patient_id, balance, updated_at)
+         VALUES (?, 0, ?)''',
+      [patientId, _now()],
+    );
+    final txId = _id('wallet');
+    database.execute(
+      '''INSERT INTO wallet_transactions
+         (id, patient_id, type, amount, description, source_payment_id, created_at)
+         VALUES (?, ?, 'credit', ?, ?, ?, ?)''',
+      [
+        txId,
+        patientId,
+        payment['amount'],
+        'Nạp ví MedCare Pay đã được duyệt',
+        paymentId,
+        _now()
+      ],
+    );
+    database.execute(
+      'UPDATE wallet_accounts SET balance = balance + ?, updated_at = ? WHERE patient_id = ?',
+      [payment['amount'], _now(), patientId],
+    );
+  }
+
+  Map<String, Object?> chargeWallet(AuthUser user, Map<String, Object?> body) {
+    final patientId = user.patientId ?? user.id;
+    final amount = (body['amount'] as num?)?.toInt() ?? 0;
+    final description = _required(body, 'description');
+    if (amount <= 0) throw ApiException(400, 'amount must be positive');
+    database.execute(
+      '''INSERT OR IGNORE INTO wallet_accounts (patient_id, balance, updated_at)
+         VALUES (?, 0, ?)''',
+      [patientId, _now()],
+    );
+    final account = database.select(
+      'SELECT balance FROM wallet_accounts WHERE patient_id = ? LIMIT 1',
+      [patientId],
+    ).first;
+    if ((account['balance'] as int) < amount) {
+      throw ApiException(409, 'Số dư ví không đủ để thanh toán');
+    }
+    final id = _id('wallet');
+    database.execute(
+      '''UPDATE wallet_accounts SET balance = balance - ?, updated_at = ?
+         WHERE patient_id = ? AND balance >= ?''',
+      [amount, _now(), patientId, amount],
+    );
+    database.execute(
+      '''INSERT INTO wallet_transactions
+         (id, patient_id, type, amount, description, source_payment_id, created_at)
+         VALUES (?, ?, 'debit', ?, ?, NULL, ?)''',
+      [id, patientId, amount, description, _now()],
+    );
+    _notifyPatient(patientId,
+        title: 'Đã thanh toán bằng ví MedCare Pay',
+        body: '$description • ${amount}đ',
+        type: 'wallet_charge',
+        sourceId: id);
+    return {
+      'id': id,
+      'patientId': patientId,
+      'amount': amount,
+      'description': description,
+      'type': 'debit',
+      'createdAt': _now()
+    };
+  }
+
+  Map<String, Object?> _walletTransactionFromRow(Row row) => {
+        'id': row['id'],
+        'type': row['type'],
+        'amount': row['amount'],
+        'description': row['description'],
+        'sourcePaymentId': row['source_payment_id'],
+        'createdAt': row['created_at'],
+      };
 
   Map<String, Object?> createSupportRequest(
     AuthUser user,
@@ -2947,7 +3193,26 @@ class MedicalServerDatabase {
       [user.id, appointmentId],
     );
     if (rows.isEmpty) throw ApiException(404, 'Queue ticket not found');
-    return _featureFromRow(rows.first);
+    final ticket = _featureFromRow(rows.first);
+    final payload = ticket['payload'] is Map
+        ? Map<String, Object?>.from(ticket['payload'] as Map)
+        : <String, Object?>{};
+    // currentNumber phải lấy từ queue_state vì ticket được tạo trước khi
+    // bác sĩ gọi số tiếp theo.
+    final queueId = payload['queueId']?.toString() ?? 'main';
+    final liveQueue = queueState(queueId);
+    payload['currentNumber'] = liveQueue['currentNumber'];
+    payload['department'] = liveQueue['department'];
+    payload['room'] = liveQueue['room'];
+    payload['doctorName'] = liveQueue['doctorName'];
+    final patientNumber = (payload['patientNumber'] as num?)?.toInt();
+    if (patientNumber != null) {
+      payload['estimatedMinutes'] =
+          ((patientNumber - (liveQueue['currentNumber'] as int)) * 4)
+              .clamp(0, 240);
+    }
+    ticket['payload'] = payload;
+    return ticket;
   }
 
   Map<String, Object?> createFeatureRecord(
@@ -3188,8 +3453,10 @@ class MedicalServerDatabase {
   }
 
   List<Map<String, Object?>> listNotifications(AuthUser user) {
+    // patient_notification thuộc tài khoản bệnh nhân; staff không đọc nhầm
+    // danh sách này thành thông báo cá nhân của bác sĩ/admin.
     if (user.role == 'admin' || user.role == 'doctor') {
-      return listFeatureRecords('patient_notification', user);
+      return listFeatureRecords('staff_notification', user);
     }
     _backfillClinicalNotifications(user);
     return database
@@ -4062,23 +4329,34 @@ class MedicalServerDatabase {
         'active': (row['active'] as int? ?? 1) == 1,
       };
 
-  Map<String, Object?> _doctorFromRow(Row row) => {
-        'id': row['id'],
-        'accountId': row['account_id'],
-        'name': row['name'],
-        'specialty': row['specialty'],
-        'experience': row['experience'],
-        'rating': row['rating'],
-        'price': row['price'],
-        'location': row['location'],
-        'availability': row['availability'],
-        'education': row['education'],
-        'workingDays': row['working_days'],
-        'totalPatients': row['total_patients'],
-        'imageUrl': row['image_url'],
-        'active': (row['active'] as int? ?? 1) == 1,
-        'updatedAt': row['updated_at'],
-      };
+  Map<String, Object?> _doctorFromRow(Row row) {
+    final accountId = row['account_id'] as String?;
+    final accountRows = accountId == null || accountId.isEmpty
+        ? const <Row>[]
+        : database.select(
+            'SELECT identifier FROM users WHERE id = ? LIMIT 1',
+            [accountId],
+          );
+    return {
+      'id': row['id'],
+      'accountId': accountId,
+      'loginIdentifier':
+          accountRows.isEmpty ? null : accountRows.first['identifier'],
+      'name': row['name'],
+      'specialty': row['specialty'],
+      'experience': row['experience'],
+      'rating': row['rating'],
+      'price': row['price'],
+      'location': row['location'],
+      'availability': row['availability'],
+      'education': row['education'],
+      'workingDays': row['working_days'],
+      'totalPatients': row['total_patients'],
+      'imageUrl': row['image_url'],
+      'active': (row['active'] as int? ?? 1) == 1,
+      'updatedAt': row['updated_at'],
+    };
+  }
 
   List<Map<String, Object?>> listPayments() => database
       .select('SELECT * FROM payments ORDER BY created_at DESC')
@@ -4109,6 +4387,7 @@ class MedicalServerDatabase {
       'packageTitle': packageTitle,
       'method': row['method'],
       'status': row['status'],
+      'purpose': row['purpose'] ?? 'appointment',
       'receiptCode': row['receipt_code'],
       'createdAt': row['created_at'],
     };

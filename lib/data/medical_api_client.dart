@@ -210,12 +210,15 @@ class MedicalApiClient {
     required int amount,
     required String method,
     String? appointmentId,
+    String purpose = 'appointment',
+    String? clientTransactionIdOverride,
     String? bearerToken,
   }) async {
     final body = await _postJson(_apiUri('payments/confirm'), {
-      'clientTransactionId': clientTransactionId,
+      'clientTransactionId': clientTransactionIdOverride ?? clientTransactionId,
       'amount': amount,
       'method': method,
+      'purpose': purpose,
       ...?appointmentId == null
           ? null
           : <String, Object?>{'appointmentId': appointmentId},
@@ -227,6 +230,23 @@ class MedicalApiClient {
       );
     }
     return payment;
+  }
+
+  Future<Map<String, Object?>> fetchWallet({String? bearerToken}) async {
+    final body = await _getJson(_apiUri('wallet'), bearerToken: bearerToken);
+    return _mapField(body, 'wallet', 'API ví không trả về wallet.');
+  }
+
+  Future<Map<String, Object?>> chargeWallet({
+    required int amount,
+    required String description,
+    String? bearerToken,
+  }) async {
+    final body = await _postJson(_apiUri('wallet/charge'), {
+      'amount': amount,
+      'description': description,
+    }, bearerToken: bearerToken);
+    return body;
   }
 
   Future<Map<String, Object?>> fetchPaymentStatus({

@@ -34,7 +34,7 @@ class _PaymentPageState extends State<PaymentPage>
   PaymentMethod _method = PaymentMethod.vietQr;
   bool _invoiceRequested = true;
   bool _privateGuarantee = false;
-  String _email = 'vu@example.com';
+  String _email = '';
 
   // QR countdown
   _PaymentStep _step = _PaymentStep.bill;
@@ -47,6 +47,15 @@ class _PaymentPageState extends State<PaymentPage>
   void initState() {
     super.initState();
     _tabCtrl = TabController(length: 2, vsync: this);
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (_email.isEmpty) {
+      final storeEmail = MedicalScope.of(context).profile.email;
+      _email = storeEmail.isNotEmpty ? storeEmail : 'benhnhan@example.com';
+    }
   }
 
   @override
@@ -948,8 +957,12 @@ class _PaymentPageState extends State<PaymentPage>
   // ── Bottom bar thanh toán ───────────────────────────────────────────────
 
   PaymentTransaction? _activePendingBill(MedicalStore store) {
+    final profile = store.profile;
     for (final tx in store.transactions) {
-      if (tx.status == PaymentStatus.pending) return tx;
+      if (tx.status == PaymentStatus.pending &&
+          (tx.patientId == null || tx.patientId == profile.id)) {
+        return tx;
+      }
     }
     return null;
   }
@@ -1509,7 +1522,10 @@ class _PaymentPageState extends State<PaymentPage>
   // ── Tab lịch sử giao dịch ─────────────────────────────────────────────
 
   Widget _historyTab(MedicalStore store) {
-    final txList = store.transactions;
+    final profile = store.profile;
+    final txList = store.transactions
+        .where((t) => t.patientId == null || t.patientId == profile.id)
+        .toList();
     final thisYear = DateTime.now().year;
     final spent = store.yearlyNetSpend(thisYear);
 

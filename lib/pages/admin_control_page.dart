@@ -142,9 +142,12 @@ class _AdminControlPageState extends State<AdminControlPage>
     String status,
   ) async {
     final id = appointment['id']?.toString() ?? '';
+    final store = MedicalScope.of(context);
     try {
-      await MedicalScope.of(context)
-          .updateAdminAppointmentOnline(id: id, status: status);
+      if (status == 'cancelled') {
+        store.adminCancelAppointment(id);
+      }
+      await store.updateAdminAppointmentOnline(id: id, status: status);
       if (!mounted) return;
       _message(
         status == 'cancelled' ? 'Đã hủy lịch hẹn.' : 'Đã cập nhật lịch hẹn.',
@@ -514,7 +517,8 @@ class _AdminControlPageState extends State<AdminControlPage>
         ),
         subtitle: Text(
           '${doctor['specialty'] ?? 'Chưa phân khoa'} • ${doctor['location'] ?? 'Chưa có phòng'}\n'
-          'Phí khám: ${doctor['price'] ?? 0}đ • ${active ? 'Đang nhận lịch' : 'Đang khóa'}',
+          'Phí khám: ${doctor['price'] ?? 0}đ • ${active ? 'Đang nhận lịch' : 'Đang khóa'}\n'
+          'Đăng nhập: ${doctor['loginIdentifier'] ?? 'Chưa cấp'} • Mật khẩu test: 123456',
         ),
         isThreeLine: true,
         trailing: Wrap(

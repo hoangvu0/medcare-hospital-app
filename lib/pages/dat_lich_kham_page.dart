@@ -171,7 +171,11 @@ class _AppointmentPageState extends State<AppointmentPage> {
                 Text(
                   _isSelf
                       ? store.profile.name
-                      : 'Người thân (cần bổ sung hồ sơ)',
+                      : (store.activeFamilyMember.relation != FamilyRelation.self
+                          ? '${store.activeFamilyMember.name} (${store.activeFamilyMember.relationLabel})'
+                          : (store.familyMembers.any((m) => m.relation != FamilyRelation.self)
+                              ? '${store.familyMembers.firstWhere((m) => m.relation != FamilyRelation.self).name} (${store.familyMembers.firstWhere((m) => m.relation != FamilyRelation.self).relationLabel})'
+                              : 'Người thân (cần bổ sung hồ sơ)')),
                   style: TextStyle(color: Colors.grey.shade700),
                 ),
                 SwitchListTile(
@@ -668,7 +672,14 @@ class _AppointmentPageState extends State<AppointmentPage> {
         int.parse(parts[0]),
         int.parse(parts[1]),
       ),
-      patientName: _isSelf ? store.profile.name : 'Người thân',
+      patientName: _isSelf
+          ? store.profile.name
+          : (store.activeFamilyMember.name.isNotEmpty &&
+                  store.activeFamilyMember.relation != FamilyRelation.self
+              ? store.activeFamilyMember.name
+              : (store.familyMembers.any((m) => m.relation != FamilyRelation.self)
+                  ? store.familyMembers.firstWhere((m) => m.relation != FamilyRelation.self).name
+                  : 'Người thân')),
       reason: finalReason,
       useInsurance: _useInsurance,
       packageId: pass.id,

@@ -20,7 +20,10 @@ class _MedicationTrackerPageState extends State<MedicationTrackerPage> {
 
   Future<void> _scheduleReminders() async {
     final store = MedicalScope.of(context);
-    for (final item in store.medicineSchedule) {
+    final patientId = store.profile.id;
+    final patientSchedule = store.medicineSchedule
+        .where((m) => m.patientId == null || m.patientId == patientId);
+    for (final item in patientSchedule) {
       try {
         await LocalNotificationService.instance.scheduleMedication(
           id: item.id,
@@ -37,10 +40,13 @@ class _MedicationTrackerPageState extends State<MedicationTrackerPage> {
   @override
   Widget build(BuildContext context) {
     final store = MedicalScope.of(context);
-    final schedule = store.medicineSchedule;
-    final adherence = store.medicineAdherenceRate;
+    final patientId = store.profile.id;
+    final schedule = store.medicineSchedule
+        .where((m) => m.patientId == null || m.patientId == patientId)
+        .toList();
     final takenCount = schedule.where((m) => m.isTaken).length;
     final totalCount = schedule.length;
+    final adherence = totalCount > 0 ? takenCount / totalCount : 0.0;
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return Scaffold(

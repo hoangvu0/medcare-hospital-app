@@ -73,7 +73,13 @@ class _TelemedicinePageState extends State<TelemedicinePage> {
   @override
   Widget build(BuildContext context) {
     final store = MedicalScope.of(context);
-    final doctor = store.doctors.first;
+    final apptDoctorId = store.activeClinicalAppointment?.doctorId;
+    final matchedDoc = apptDoctorId != null
+        ? store.doctors.where((d) => d.id == apptDoctorId)
+        : null;
+    final doctor = (matchedDoc != null && matchedDoc.isNotEmpty)
+        ? matchedDoc.first
+        : store.doctors.first;
     final patient = store.activeFamilyMember;
 
     return Scaffold(

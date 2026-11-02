@@ -243,6 +243,9 @@ class MedicalRecord {
     required this.prescriptionCode,
     required this.totalFee,
     required this.insuranceCovered,
+    this.patientId,
+    this.patientName,
+    this.appointmentId,
     this.diagnosisCode = 'I10',
     this.icd10Name = 'Tăng huyết áp nguyên phát',
     this.differentialDiagnosis,
@@ -268,6 +271,13 @@ class MedicalRecord {
   final String prescriptionCode;
   final int totalFee;
   final int insuranceCovered;
+
+  /// ID bệnh nhân chủ sở hữu hồ sơ này — dùng để lọc theo tài khoản đăng nhập.
+  final String? patientId;
+
+  /// Tên bệnh nhân tại thời điểm khám.
+  final String? patientName;
+  final String? appointmentId;
   final String diagnosisCode;
   final String icd10Name;
   final String? differentialDiagnosis;
@@ -308,6 +318,8 @@ class MedicineItem {
     required this.quantity,
     required this.instruction,
     this.warning,
+    this.patientId,
+    this.price = 0,
   });
 
   final String name;
@@ -316,6 +328,32 @@ class MedicineItem {
   final String quantity;
   final String instruction;
   final String? warning;
+  final String? patientId;
+  final int price;
+
+  int get totalPrice => price;
+
+  MedicineItem copyWith({
+    String? name,
+    String? category,
+    String? dosage,
+    String? quantity,
+    String? instruction,
+    String? warning,
+    String? patientId,
+    int? price,
+  }) {
+    return MedicineItem(
+      name: name ?? this.name,
+      category: category ?? this.category,
+      dosage: dosage ?? this.dosage,
+      quantity: quantity ?? this.quantity,
+      instruction: instruction ?? this.instruction,
+      warning: warning ?? this.warning,
+      patientId: patientId ?? this.patientId,
+      price: price ?? this.price,
+    );
+  }
 }
 
 class VitalSignRecord {
@@ -328,6 +366,7 @@ class VitalSignRecord {
     required this.weightKg,
     required this.heightCm,
     this.note,
+    this.patientId,
   });
 
   final DateTime timestamp;
@@ -338,6 +377,29 @@ class VitalSignRecord {
   final double weightKg;
   final double heightCm;
   final String? note;
+  final String? patientId;
+
+  VitalSignRecord copyWith({
+    DateTime? timestamp,
+    int? systolic,
+    int? diastolic,
+    int? heartRate,
+    double? bloodGlucose,
+    double? weightKg,
+    double? heightCm,
+    String? note,
+    String? patientId,
+  }) => VitalSignRecord(
+    timestamp: timestamp ?? this.timestamp,
+    systolic: systolic ?? this.systolic,
+    diastolic: diastolic ?? this.diastolic,
+    heartRate: heartRate ?? this.heartRate,
+    bloodGlucose: bloodGlucose ?? this.bloodGlucose,
+    weightKg: weightKg ?? this.weightKg,
+    heightCm: heightCm ?? this.heightCm,
+    note: note ?? this.note,
+    patientId: patientId ?? this.patientId,
+  );
 
   double get bmi => weightKg / ((heightCm / 100) * (heightCm / 100));
 
@@ -365,6 +427,7 @@ class MedicineScheduleItem {
     required this.timeSlot,
     required this.period,
     required this.instruction,
+    this.patientId,
     this.isTaken = false,
     this.takenAt,
   });
@@ -375,6 +438,7 @@ class MedicineScheduleItem {
   final String timeSlot;
   final String period;
   final String instruction;
+  final String? patientId;
   final bool isTaken;
   final DateTime? takenAt;
 
@@ -389,6 +453,7 @@ class MedicineScheduleItem {
     timeSlot: timeSlot,
     period: period,
     instruction: instruction,
+    patientId: patientId,
     isTaken: isTaken ?? this.isTaken,
     takenAt: clearTakenAt ? null : (takenAt ?? this.takenAt),
   );
@@ -541,6 +606,7 @@ class PaymentTransaction {
     required this.method,
     required this.status,
     required this.timestamp,
+    this.patientId,
     this.walletName,
     this.invoiceEmail,
     this.receiptCode,
@@ -555,6 +621,7 @@ class PaymentTransaction {
   final PaymentMethod method;
   final PaymentStatus status;
   final DateTime timestamp;
+  final String? patientId;
   final String? walletName;
   final String? invoiceEmail;
   final String? receiptCode;
@@ -575,21 +642,25 @@ class PaymentTransaction {
     PaymentStatus.refunded => 'Đã hoàn tiền',
   };
 
-  PaymentTransaction copyWith({PaymentStatus? status, String? receiptCode}) =>
-      PaymentTransaction(
-        id: id,
-        visitCode: visitCode,
-        description: description,
-        grossAmount: grossAmount,
-        insuranceAmount: insuranceAmount,
-        netAmount: netAmount,
-        method: method,
-        status: status ?? this.status,
-        timestamp: timestamp,
-        walletName: walletName,
-        invoiceEmail: invoiceEmail,
-        receiptCode: receiptCode ?? this.receiptCode,
-      );
+  PaymentTransaction copyWith({
+    PaymentStatus? status,
+    String? receiptCode,
+    String? patientId,
+  }) => PaymentTransaction(
+    id: id,
+    visitCode: visitCode,
+    description: description,
+    grossAmount: grossAmount,
+    insuranceAmount: insuranceAmount,
+    netAmount: netAmount,
+    method: method,
+    status: status ?? this.status,
+    timestamp: timestamp,
+    patientId: patientId ?? this.patientId,
+    walletName: walletName,
+    invoiceEmail: invoiceEmail,
+    receiptCode: receiptCode ?? this.receiptCode,
+  );
 }
 
 // ── Quản lý slot đặt khám (Admin) ──────────────────────────────────────────
@@ -745,6 +816,7 @@ class PharmacyOrder {
     required this.status,
     required this.orderedAt,
     this.estimatedMinutes = 45,
+    this.patientId,
   });
 
   final String id;
@@ -759,6 +831,37 @@ class PharmacyOrder {
   final PharmacyOrderStatus status;
   final DateTime orderedAt;
   final int estimatedMinutes;
+  final String? patientId;
+
+  PharmacyOrder copyWith({
+    String? id,
+    String? prescriptionId,
+    String? patientName,
+    String? phone,
+    String? deliveryAddress,
+    String? pharmacyName,
+    int? itemsCount,
+    int? medicineTotal,
+    int? shippingFee,
+    PharmacyOrderStatus? status,
+    DateTime? orderedAt,
+    int? estimatedMinutes,
+    String? patientId,
+  }) => PharmacyOrder(
+    id: id ?? this.id,
+    prescriptionId: prescriptionId ?? this.prescriptionId,
+    patientName: patientName ?? this.patientName,
+    phone: phone ?? this.phone,
+    deliveryAddress: deliveryAddress ?? this.deliveryAddress,
+    pharmacyName: pharmacyName ?? this.pharmacyName,
+    itemsCount: itemsCount ?? this.itemsCount,
+    medicineTotal: medicineTotal ?? this.medicineTotal,
+    shippingFee: shippingFee ?? this.shippingFee,
+    status: status ?? this.status,
+    orderedAt: orderedAt ?? this.orderedAt,
+    estimatedMinutes: estimatedMinutes ?? this.estimatedMinutes,
+    patientId: patientId ?? this.patientId,
+  );
 
   int get totalPayable => medicineTotal + shippingFee;
 
@@ -910,6 +1013,32 @@ class InsurancePolicy {
   final String logoEmoji;
 
   int get remainingOutpatient => outpatientLimit - usedAmount;
+
+  InsurancePolicy copyWith({
+    String? id,
+    String? providerName,
+    String? policyNumber,
+    String? cardHolderName,
+    int? outpatientLimit,
+    int? inpatientLimit,
+    int? usedAmount,
+    String? expireDate,
+    int? coveragePercent,
+    String? logoEmoji,
+  }) {
+    return InsurancePolicy(
+      id: id ?? this.id,
+      providerName: providerName ?? this.providerName,
+      policyNumber: policyNumber ?? this.policyNumber,
+      cardHolderName: cardHolderName ?? this.cardHolderName,
+      outpatientLimit: outpatientLimit ?? this.outpatientLimit,
+      inpatientLimit: inpatientLimit ?? this.inpatientLimit,
+      usedAmount: usedAmount ?? this.usedAmount,
+      expireDate: expireDate ?? this.expireDate,
+      coveragePercent: coveragePercent ?? this.coveragePercent,
+      logoEmoji: logoEmoji ?? this.logoEmoji,
+    );
+  }
 }
 
 class CashlessClaimRequest {
@@ -936,6 +1065,30 @@ class CashlessClaimRequest {
   final CashlessClaimStatus status;
   final DateTime requestedAt;
   final String? approvalCode;
+
+  CashlessClaimRequest copyWith({
+    String? id,
+    String? policyNumber,
+    String? providerName,
+    String? hospitalBillId,
+    int? totalBill,
+    int? coveredAmount,
+    int? patientCoPay,
+    CashlessClaimStatus? status,
+    DateTime? requestedAt,
+    String? approvalCode,
+  }) => CashlessClaimRequest(
+    id: id ?? this.id,
+    policyNumber: policyNumber ?? this.policyNumber,
+    providerName: providerName ?? this.providerName,
+    hospitalBillId: hospitalBillId ?? this.hospitalBillId,
+    totalBill: totalBill ?? this.totalBill,
+    coveredAmount: coveredAmount ?? this.coveredAmount,
+    patientCoPay: patientCoPay ?? this.patientCoPay,
+    status: status ?? this.status,
+    requestedAt: requestedAt ?? this.requestedAt,
+    approvalCode: approvalCode ?? this.approvalCode,
+  );
 }
 
 // ── Nâng cấp: Tự động nhắc Tái khám & Đánh giá Bác sĩ ───────────────────────

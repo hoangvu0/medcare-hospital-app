@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../config/app_config.dart';
 import '../models/medical_models.dart';
 import '../routes/app_routes.dart';
 import '../state/medical_store.dart';
@@ -30,10 +31,23 @@ class _EPrescriptionPageState extends State<EPrescriptionPage> {
   Widget build(BuildContext context) {
     final store = MedicalScope.of(context);
     final profile = store.profile;
-    final medicines = store.medicines;
-    final latestRecord = store.medicalRecords.isNotEmpty
-        ? store.medicalRecords.first
+    final medicines = store.medicines
+        .where((m) => m.patientId == null || m.patientId == profile.id)
+        .toList();
+    final patientRecords = store.medicalRecords
+        .where(
+          (r) =>
+              r.patientId == null ||
+              r.patientId == profile.id ||
+              r.patientId!.isEmpty,
+        )
+        .toList();
+    final latestRecord = patientRecords.isNotEmpty
+        ? patientRecords.first
         : null;
+    final pharmacyOrders = store.pharmacyOrders
+        .where((o) => o.patientId == profile.id || o.patientId == null)
+        .toList();
     if (medicines.isEmpty) {
       return Scaffold(
         backgroundColor: Theme.of(context).scaffoldBackgroundColor,
@@ -103,12 +117,13 @@ class _EPrescriptionPageState extends State<EPrescriptionPage> {
               instruction: medicines[i].instruction,
               note: medicines[i].warning,
               warning: medicines[i].warning != null,
+              price: medicines[i].price,
             ),
           ],
           const SizedBox(height: 4),
           _adviceAndFollowUp(latestRecord),
           const SizedBox(height: 14),
-          _costSummary(latestRecord, medicines.length),
+          _costSummary(latestRecord, medicines),
           const SizedBox(height: 18),
           FilledButton.icon(
             onPressed: () => _showOrderDeliveryModal(
@@ -125,7 +140,91 @@ class _EPrescriptionPageState extends State<EPrescriptionPage> {
             icon: const Icon(Icons.picture_as_pdf_outlined),
             label: const Text('Tải đơn PDF có chữ ký số Bộ Y Tế'),
           ),
+          if (pharmacyOrders.isNotEmpty) ...[
+            const SizedBox(height: 20),
+            Wrap(
+              spacing: 8,
+              runSpacing: 6,
+              crossAxisAlignment: WrapCrossAlignment.center,
+              children: [
+                const Text(
+                  'Đơn thuốc đang giao tận nhà',
+                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                ),
+                Chip(label: Text('${pharmacyOrders.length} đơn')),
+              ],
+            ),
+            const SizedBox(height: 8),
+            for (final order in pharmacyOrders)
+              _pharmacyOrderCard(context, order),
+          ],
         ],
+      ),
+    );
+  }
+
+  Widget _pharmacyOrderCard(BuildContext context, PharmacyOrder order) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 10),
+      decoration: BoxDecoration(
+        color: Theme.of(context).cardColor,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: Colors.grey.withValues(alpha: 0.2)),
+      ),
+      child: ListTile(
+        contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+        leading: const CircleAvatar(
+          backgroundColor: Color(0xFFEFF6FF),
+          child: Icon(Icons.local_shipping, color: _primary),
+        ),
+        title: Row(
+          children: [
+            Expanded(
+              child: Text(
+                order.id,
+                style: const TextStyle(
+                  fontWeight: FontWeight.bold,
+                  fontSize: 13,
+                ),
+              ),
+            ),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+              decoration: BoxDecoration(
+                color: _success.withValues(alpha: 0.12),
+                borderRadius: BorderRadius.circular(6),
+              ),
+              child: Text(
+                order.statusLabel,
+                style: const TextStyle(
+                  color: _success,
+                  fontSize: 11,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ),
+          ],
+        ),
+        subtitle: Padding(
+          padding: const EdgeInsets.only(top: 4),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'Nhà thuốc: ${order.pharmacyName} • ${order.itemsCount} loại thuốc',
+                style: const TextStyle(fontSize: 12),
+              ),
+              Text(
+                'Địa chỉ: ${order.deliveryAddress}',
+                style: const TextStyle(fontSize: 11, color: Colors.grey),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+              ),
+            ],
+          ),
+        ),
+        trailing: const Icon(Icons.chevron_right, color: Colors.grey),
+        onTap: () => _showOrderTrackingDialog(context, order),
       ),
     );
   }
@@ -256,7 +355,7 @@ class _EPrescriptionPageState extends State<EPrescriptionPage> {
                       ),
                     ),
                     Text(
-                      '${profile.gender} • 24 tuổi • Mã BN: ${profile.id} • BHYT: ${profile.insuranceNumber}',
+                      '${profile.gender}${_formatAge(profile.dateOfBirth)} • Mã BN: ${profile.id} • BHYT: ${profile.insuranceNumber}',
                       style: const TextStyle(
                         color: Colors.black54,
                         fontSize: 12,
@@ -425,6 +524,7 @@ class _EPrescriptionPageState extends State<EPrescriptionPage> {
     required String instruction,
     String? note,
     bool warning = false,
+    int price = 0,
   }) => Card(
     margin: const EdgeInsets.only(bottom: 12),
     elevation: 1,
@@ -505,6 +605,18 @@ class _EPrescriptionPageState extends State<EPrescriptionPage> {
                 ),
               ),
             ),
+          if (price > 0)
+            Padding(
+              padding: const EdgeInsets.only(top: 8),
+              child: Text(
+                'Đơn giá: ${_money(price)} • Thành tiền: ${_money(price * _quantityNumber(quantity))}',
+                style: const TextStyle(
+                  color: _primary,
+                  fontWeight: FontWeight.w600,
+                  fontSize: 12,
+                ),
+              ),
+            ),
         ],
       ),
     ),
@@ -554,37 +666,38 @@ class _EPrescriptionPageState extends State<EPrescriptionPage> {
     ),
   );
 
-  Widget _costSummary(MedicalRecord? record, int medicineCount) => Card(
-    elevation: 1,
-    child: Padding(
-      padding: const EdgeInsets.all(16),
-      child: Column(
-        children: [
-          _SummaryRow(
-            'Tổng chi phí đợt khám/đơn thuốc ($medicineCount loại)',
-            _money(record?.totalFee ?? 0),
-          ),
-          const SizedBox(height: 8),
-          _SummaryRow(
-            'BHYT/nguồn chi trả',
-            '-${_money(record?.insuranceCovered ?? 0)}',
-            success: true,
-          ),
-          const Divider(height: 22),
-          _SummaryRow(
-            'Số tiền bệnh nhân cùng chi trả',
-            _money(
-              ((record?.totalFee ?? 0) - (record?.insuranceCovered ?? 0)).clamp(
-                0,
-                999999999,
-              ),
+  Widget _costSummary(MedicalRecord? record, List<MedicineItem> medicines) {
+    final medicineTotal = medicines.fold<int>(
+      0,
+      (total, medicine) =>
+          total + medicine.price * _quantityNumber(medicine.quantity),
+    );
+    return Card(
+      elevation: 1,
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          children: [
+            _SummaryRow(
+              'Tổng tiền thuốc (${medicines.length} loại)',
+              _money(medicineTotal),
             ),
-            bold: true,
-          ),
-        ],
+            const SizedBox(height: 8),
+            _SummaryRow('BHYT/nguồn chi trả', '-${_money(0)}', success: true),
+            const Divider(height: 22),
+            _SummaryRow(
+              'Số tiền bệnh nhân cùng chi trả',
+              _money(medicineTotal.clamp(0, 999999999)),
+              bold: true,
+            ),
+          ],
+        ),
       ),
-    ),
-  );
+    );
+  }
+
+  int _quantityNumber(String quantity) =>
+      int.tryParse(RegExp(r'\d+').firstMatch(quantity)?.group(0) ?? '') ?? 1;
 
   void _showBarcodeDialog(String prescriptionCode) => showDialog<void>(
     context: context,
@@ -629,15 +742,17 @@ class _EPrescriptionPageState extends State<EPrescriptionPage> {
     String? prescriptionCode,
   ) {
     final activeMember = store.activeFamilyMember;
-    var medicineTotal = 0;
-    for (final record in store.medicalRecords) {
-      if (record.prescriptionCode == prescriptionCode) {
-        medicineTotal = (record.totalFee - record.insuranceCovered)
-            .clamp(0, record.totalFee)
-            .toInt();
-        break;
-      }
-    }
+    final medicineTotal = store.medicines
+        .where(
+          (medicine) =>
+              medicine.patientId == null ||
+              medicine.patientId == store.profile.id,
+        )
+        .fold<int>(
+          0,
+          (total, medicine) =>
+              total + medicine.price * _quantityNumber(medicine.quantity),
+        );
     const deliveryFee = 25000;
     final payableTotal = medicineTotal + deliveryFee;
     final addrCtrl = TextEditingController(
@@ -831,24 +946,40 @@ class _EPrescriptionPageState extends State<EPrescriptionPage> {
                     width: double.infinity,
                     height: 50,
                     child: FilledButton.icon(
-                      onPressed: () {
+                      onPressed: () async {
                         try {
+                          await store.chargeWalletOnline(
+                            amount: payableTotal,
+                            description:
+                                'Thanh toán đơn thuốc ${prescriptionCode ?? ''} và phí giao thuốc',
+                          );
+                          if (!context.mounted) return;
                           final order = store.createPharmacyOrder(
                             prescriptionId: prescriptionCode ?? '',
                             deliveryAddress: addrCtrl.text.trim(),
                             pharmacyName: selectedPharmacy,
-                            itemsCount: store.medicines.length,
+                            itemsCount: store.medicines
+                                .where(
+                                  (m) =>
+                                      m.patientId == null ||
+                                      m.patientId == store.profile.id,
+                                )
+                                .length,
                             medicineTotal: medicineTotal,
                           );
                           Navigator.pop(ctx);
                           _showOrderTrackingDialog(context, order);
                         } on StateError catch (error) {
-                          _message(error.message);
+                          if (context.mounted) _message(error.message);
+                        } on Exception catch (error) {
+                          if (context.mounted) {
+                            _message('Không thể thanh toán đơn thuốc: $error');
+                          }
                         }
                       },
-                      icon: const Icon(Icons.check_circle_outline),
+                      icon: const Icon(Icons.account_balance_wallet_outlined),
                       label: const Text(
-                        'Xác nhận đặt giao ngay',
+                        'Thanh toán ví & đặt giao ngay',
                         style: TextStyle(fontSize: 15),
                       ),
                       style: FilledButton.styleFrom(
@@ -857,6 +988,61 @@ class _EPrescriptionPageState extends State<EPrescriptionPage> {
                           borderRadius: BorderRadius.circular(12),
                         ),
                       ),
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  SizedBox(
+                    width: double.infinity,
+                    child: OutlinedButton.icon(
+                      onPressed: () async {
+                        try {
+                          final payment = await store
+                              .requestPharmacyPaymentOnline(
+                                amount: payableTotal,
+                                prescriptionId: prescriptionCode ?? '',
+                              );
+                          if (!context.mounted) return;
+                          final transactionId =
+                              payment['clientTransactionId']?.toString() ?? '';
+                          final qrUrl =
+                              'https://img.vietqr.io/image/${AppConfig.paymentBankCode}-${AppConfig.paymentBankAccount}-compact2.png?amount=$payableTotal&addInfo=${Uri.encodeComponent(transactionId)}&accountName=${Uri.encodeComponent(AppConfig.paymentBankName)}';
+                          await showDialog<void>(
+                            context: context,
+                            builder: (dialogContext) => AlertDialog(
+                              title: const Text('Chuyển khoản chờ Admin duyệt'),
+                              content: SingleChildScrollView(
+                                child: Column(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    Image.network(qrUrl, height: 190),
+                                    Text('Số tiền: ${_money(payableTotal)}'),
+                                    const SizedBox(height: 6),
+                                    Text('Nội dung: $transactionId'),
+                                    const SizedBox(height: 8),
+                                    const Text(
+                                      'Chuyển khoản xong, Admin sẽ kiểm tra và duyệt giao dịch. Đơn thuốc chưa được giao trước khi duyệt.',
+                                      textAlign: TextAlign.center,
+                                      style: TextStyle(fontSize: 12),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                              actions: [
+                                FilledButton(
+                                  onPressed: () => Navigator.pop(dialogContext),
+                                  child: const Text('Đã chuyển khoản'),
+                                ),
+                              ],
+                            ),
+                          );
+                        } catch (error) {
+                          if (context.mounted) {
+                            _message('Không thể tạo thanh toán: $error');
+                          }
+                        }
+                      },
+                      icon: const Icon(Icons.qr_code_2),
+                      label: const Text('Chuyển khoản / QR - Chờ Admin duyệt'),
                     ),
                   ),
                 ],
@@ -1032,4 +1218,23 @@ class _SummaryRow extends StatelessWidget {
       ),
     ],
   );
+}
+
+String _formatAge(String dob) {
+  if (dob.isEmpty) return '';
+  final parts = dob.split('/');
+  if (parts.length == 3) {
+    final y = int.tryParse(parts[2]);
+    if (y != null && y > 1900 && y <= DateTime.now().year) {
+      return ' • ${DateTime.now().year - y} tuổi';
+    }
+  }
+  final dashParts = dob.split('-');
+  if (dashParts.length == 3) {
+    final y = int.tryParse(dashParts[0]);
+    if (y != null && y > 1900 && y <= DateTime.now().year) {
+      return ' • ${DateTime.now().year - y} tuổi';
+    }
+  }
+  return '';
 }

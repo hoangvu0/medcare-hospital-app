@@ -17,7 +17,16 @@ class _VitalsTrackerPageState extends State<VitalsTrackerPage> {
   @override
   Widget build(BuildContext context) {
     final store = MedicalScope.of(context);
-    final vitals = store.vitals;
+    final activeMember = store.activeFamilyMember;
+    final vitals = store.vitals
+        .where(
+          (v) =>
+              v.patientId == activeMember.id ||
+              (v.patientId == null &&
+                  (activeMember.relation == FamilyRelation.self ||
+                      activeMember.id == store.profile.id)),
+        )
+        .toList();
     final latest = vitals.isNotEmpty ? vitals.first : null;
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
@@ -731,6 +740,7 @@ class _AddVitalSheetState extends State<_AddVitalSheet> {
         weightKg: double.tryParse(_weight.text) ?? 68.0,
         heightCm: double.tryParse(_height.text) ?? 174.0,
         note: _note.text.trim().isEmpty ? null : _note.text.trim(),
+        patientId: widget.store.activeFamilyMember.id,
       ),
     );
     Navigator.pop(context);

@@ -136,7 +136,7 @@ class _FamilyProfilesPageState extends State<FamilyProfilesPage> {
               member: m,
               isActive: isActive,
               onSelect: () => store.switchFamilyProfile(m.id),
-              onDelete: m.id == 'fam-01'
+              onDelete: m.relation == FamilyRelation.self
                   ? null
                   : () => _confirmDelete(context, store, m),
             );

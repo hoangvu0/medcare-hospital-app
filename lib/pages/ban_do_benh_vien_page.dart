@@ -13,6 +13,23 @@ class _HospitalMapPageState extends State<HospitalMapPage> {
   String _destPoint = 'Phòng 204: Khám Tiêu hóa (Tầng 2 Tòa A)';
   bool _isNavigating = false;
 
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    final args = ModalRoute.of(context)?.settings.arguments;
+    if (args is String && args.trim().isNotEmpty) {
+      _destPoint = args.trim();
+      final lower = _destPoint.toLowerCase();
+      if (lower.contains('tòa b') || lower.contains('khu b')) {
+        _selectedBuilding = 'B';
+      } else if (lower.contains('tòa c') || lower.contains('khu c')) {
+        _selectedBuilding = 'C';
+      } else {
+        _selectedBuilding = 'A';
+      }
+    }
+  }
+
   Widget _buildIndoorRoutingCard(bool isDark) {
     return Container(
       padding: const EdgeInsets.all(16),

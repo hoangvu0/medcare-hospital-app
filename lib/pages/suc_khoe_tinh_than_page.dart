@@ -2,6 +2,8 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 
+import '../state/medical_store.dart';
+
 class MentalHealthPage extends StatefulWidget {
   const MentalHealthPage({super.key});
 
@@ -426,6 +428,13 @@ class _MentalHealthPageState extends State<MentalHealthPage>
       color = const Color(0xFFEF4444);
       advice = 'Khuyến nghị đến ngay Khoa Tâm lý - Thần kinh Bệnh viện MedCare để được bác sĩ chuyên khoa thăm khám.';
     }
+
+    try {
+      MedicalScope.of(context).pushNotification(
+        title: 'Kết quả đánh giá tâm lý PHQ-9: $level',
+        body: '$advice\nĐường dây nóng hỗ trợ tâm lý 24/7: 1900 6868 (Miễn phí).',
+      );
+    } catch (_) {}
 
     showDialog<void>(
       context: context,

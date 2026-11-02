@@ -8,6 +8,7 @@ class VaccinationPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final store = MedicalScope.of(context);
+    final profile = store.activeFamilyMember;
     final vaccines = store.vaccineRecords;
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
@@ -50,7 +51,7 @@ class VaccinationPage extends StatelessWidget {
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Text(
-                              'Hộ chiếu Vắc-xin: ${store.profile.name}',
+                              'Hộ chiếu Vắc-xin: ${profile.name}',
                               style: const TextStyle(
                                 fontWeight: FontWeight.bold,
                                 fontSize: 14,
@@ -58,7 +59,7 @@ class VaccinationPage extends StatelessWidget {
                             ),
                             const SizedBox(height: 2),
                             Text(
-                              'Mã BN: ${store.profile.id} • Đã tiêm ${vaccines.length} mũi phòng bệnh',
+                              'Mã BN: ${profile.id} • Đã tiêm ${vaccines.length} mũi phòng bệnh',
                               style: const TextStyle(
                                 fontSize: 12,
                                 color: Colors.grey,

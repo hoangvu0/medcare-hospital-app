@@ -45,6 +45,7 @@ class _DoctorPortalPageState extends State<DoctorPortalPage>
   final _medDosageCtrl = TextEditingController();
   final _medQuantityCtrl = TextEditingController();
   final _medInstructionCtrl = TextEditingController();
+  final _medPriceCtrl = TextEditingController();
   final _specialtyField1Ctrl = TextEditingController();
   final _specialtyField2Ctrl = TextEditingController();
   final _specialtyField3Ctrl = TextEditingController();
@@ -53,6 +54,16 @@ class _DoctorPortalPageState extends State<DoctorPortalPage>
   final String _selectedRiskLevel = 'Theo dõi định kỳ';
 
   final List<MedicineItem> _consultationMedicines = [];
+
+  String _formatCurrency(int value) {
+    final text = value.toString();
+    final groups = <String>[];
+    for (var end = text.length; end > 0; end -= 3) {
+      final start = (end - 3).clamp(0, end);
+      groups.insert(0, text.substring(start, end));
+    }
+    return '${groups.join('.')}đ';
+  }
 
   @override
   void initState() {
@@ -85,6 +96,7 @@ class _DoctorPortalPageState extends State<DoctorPortalPage>
     _physicalExamCtrl.dispose();
     _adviceCtrl.dispose();
     _labSummaryCtrl.dispose();
+    _medPriceCtrl.dispose();
     _bpSysCtrl.dispose();
     _bpDiaCtrl.dispose();
     _hrCtrl.dispose();
@@ -614,17 +626,37 @@ class _DoctorPortalPageState extends State<DoctorPortalPage>
     BuildContext context,
     MedicalStore store,
   ) {
+    final docId = store.activeDoctorUser.id;
+    final docName = store.activeDoctorUser.name;
     final appointments = store.appointments
         .where(
           (item) =>
-              (item.doctorId == store.activeDoctorUser.id ||
-                  item.doctorId == store.backendUserId) &&
-              item.patientId != null &&
-              item.status != AppointmentStatus.cancelled,
+              item.status != AppointmentStatus.cancelled &&
+              (item.doctorId == docId ||
+                  item.doctorName == docName ||
+                  item.doctorId == store.backendUserId ||
+                  !store.appointments.any(
+                    (a) =>
+                        a.status != AppointmentStatus.cancelled &&
+                        (a.doctorId == docId || a.doctorName == docName),
+                  )),
         )
         .toList(growable: false);
-    final selectedId = store.activeClinicalAppointmentId;
-    final hasSelected = appointments.any((item) => item.id == selectedId);
+    final activeId = store.activeClinicalAppointmentId;
+    final selectedId =
+        (activeId != null && appointments.any((item) => item.id == activeId))
+        ? activeId
+        : (appointments.isNotEmpty ? appointments.first.id : null);
+    final hasSelected = selectedId != null;
+
+    if (store.activeClinicalAppointmentId == null && appointments.isNotEmpty) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (store.activeClinicalAppointmentId == null) {
+          store.selectClinicalAppointment(appointments.first);
+        }
+      });
+    }
+
     return Material(
       color: const Color(0xFFEFF6FF),
       child: Padding(
@@ -649,7 +681,7 @@ class _DoctorPortalPageState extends State<DoctorPortalPage>
                               (item) => DropdownMenuItem<String>(
                                 value: item.id,
                                 child: Text(
-                                  '${item.patientName} (${item.patientId}) • ${item.reason}',
+                                  '${item.patientName} (${item.ticketNumber ?? item.id}) • ${item.reason}',
                                   overflow: TextOverflow.ellipsis,
                                 ),
                               ),
@@ -685,10 +717,35 @@ class _DoctorPortalPageState extends State<DoctorPortalPage>
     LiveQueueInfo queue,
     bool isDark,
   ) {
-    if (store.hasBackendSession && store.activeClinicalAppointmentId == null) {
+    final selectedAppt =
+        store.activeClinicalAppointment ??
+        (store.appointments.isNotEmpty ? store.appointments.first : null);
+    if (store.hasBackendSession &&
+        store.activeClinicalAppointmentId == null &&
+        selectedAppt == null) {
       return _buildNoClinicalCase(context, store);
     }
     final patient = store.profile;
+    final patientName = selectedAppt?.patientName ?? patient.name;
+    Map<String, Object?>? selectedQueueTicket;
+    if (selectedAppt != null) {
+      for (final item in store.queueTickets) {
+        final payload = item['payload'];
+        if (payload is Map &&
+            payload['appointmentId']?.toString() == selectedAppt.id) {
+          selectedQueueTicket = Map<String, Object?>.from(payload);
+          break;
+        }
+      }
+    }
+    final ticketNumber = selectedQueueTicket?['patientNumber'];
+    final currentTicket = ticketNumber is num
+        ? '#${ticketNumber.toInt()}'
+        : queue.ticketCode;
+    final currentNumber = queue.currentNumber;
+    final currentRoom = (selectedAppt?.location.isNotEmpty == true)
+        ? selectedAppt!.location
+        : queue.room;
     return ListView(
       padding: const EdgeInsets.all(16),
       children: [
@@ -746,7 +803,7 @@ class _DoctorPortalPageState extends State<DoctorPortalPage>
                             ),
                           ),
                           Text(
-                            '#${queue.currentNumber}',
+                            '#$currentNumber',
                             style: const TextStyle(
                               fontSize: 28,
                               fontWeight: FontWeight.w900,
@@ -762,14 +819,14 @@ class _DoctorPortalPageState extends State<DoctorPortalPage>
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
-                            'Bệnh nhân vào khám: ${patient.name}',
+                            'Bệnh nhân vào khám: $patientName',
                             style: const TextStyle(
                               fontSize: 14,
                               fontWeight: FontWeight.bold,
                             ),
                           ),
                           Text(
-                            'Phòng: ${queue.room} • Mã lượt: ${queue.ticketCode}',
+                            'Phòng: $currentRoom • Mã lượt: $currentTicket',
                             style: const TextStyle(
                               fontSize: 12,
                               color: Colors.grey,
@@ -1792,6 +1849,44 @@ class _DoctorPortalPageState extends State<DoctorPortalPage>
             ),
           ),
         ),
+        const SizedBox(height: 10),
+        SizedBox(
+          width: double.infinity,
+          child: OutlinedButton.icon(
+            onPressed: () async {
+              final form = await _showDetailForm(
+                context,
+                title: 'Trả kết quả xét nghiệm về bệnh nhân',
+                fields: const [
+                  'Tên xét nghiệm / chỉ số',
+                  'Kết quả',
+                  'Đơn vị',
+                  'Khoảng tham chiếu',
+                  'Nhận xét bác sĩ',
+                ],
+              );
+              if (form == null) return;
+              final value = form['Kết quả']!.trim();
+              final normalRange = form['Khoảng tham chiếu']!.trim();
+              store.doctorOrderLabTest(
+                name: form['Tên xét nghiệm / chỉ số']!.trim(),
+                value: value,
+                unit: form['Đơn vị']!.trim(),
+                normalRange: normalRange,
+                isAbnormal: form['Nhận xét bác sĩ']!.toLowerCase().contains(
+                  'bất thường',
+                ),
+                note: form['Nhận xét bác sĩ']!.trim(),
+              );
+              _showSnack(
+                context,
+                '🧪 Đã lưu và gửi kết quả xét nghiệm cho bệnh nhân.',
+              );
+            },
+            icon: const Icon(Icons.assignment_turned_in_outlined),
+            label: const Text('Trả kết quả xét nghiệm thủ công'),
+          ),
+        ),
         const SizedBox(height: 16),
 
         Card(
@@ -1930,6 +2025,37 @@ class _DoctorPortalPageState extends State<DoctorPortalPage>
                       icon: const Icon(Icons.favorite_rounded, size: 16),
                       label: const Text('19. Siêu Âm Tim Doppler'),
                     ),
+                    ElevatedButton.icon(
+                      onPressed: () async {
+                        final form = await _showDetailForm(
+                          context,
+                          title: '20. Chỉ định nội soi dạ dày / tiêu hóa',
+                          fields: const [
+                            'Loại nội soi (Dạ dày / Đại tràng)',
+                            'Mức độ ưu tiên',
+                          ],
+                          initial: const {
+                            'Loại nội soi (Dạ dày / Đại tràng)': 'Nội soi thực quản - dạ dày - tá tràng gây mê (không đau)',
+                            'Mức độ ưu tiên': 'Bình thường',
+                          },
+                        );
+                        if (form == null) return;
+                        store.doctorCreateClinicalOrder(
+                          orderType: 'IMAGING_ENDOSCOPY',
+                          title: form['Loại nội soi (Dạ dày / Đại tràng)']!,
+                          details: {
+                            'requestedBy': 'doctor',
+                            'priority': form['Mức độ ưu tiên']!,
+                          },
+                        );
+                        _showSnack(
+                          context,
+                          '🔬 Đã gửi chỉ định nội soi tiêu hóa và cập nhật kết quả EMR.',
+                        );
+                      },
+                      icon: const Icon(Icons.biotech_outlined, size: 16),
+                      label: const Text('20. Nội Soi Dạ Dày / Tiêu Hóa'),
+                    ),
                   ],
                 ),
                 const SizedBox(height: 12),
@@ -1939,7 +2065,7 @@ class _DoctorPortalPageState extends State<DoctorPortalPage>
                     onPressed: () async {
                       final form = await _showDetailForm(
                         context,
-                        title: '20. Tải ảnh phim và kết luận vào EMR',
+                        title: '21. Tải ảnh phim và kết luận vào EMR',
                         fields: const [
                           'Loại thăm dò / vùng chụp',
                           'Kết luận của bác sĩ chẩn đoán hình ảnh',
@@ -1947,10 +2073,12 @@ class _DoctorPortalPageState extends State<DoctorPortalPage>
                       );
                       if (form == null) return;
                       try {
-                        final uploaded = await store.doctorPickAndPushImagingResult(
-                          modality: form['Loại thăm dò / vùng chụp']!,
-                          findings: form['Kết luận của bác sĩ chẩn đoán hình ảnh']!,
-                        );
+                        final uploaded = await store
+                            .doctorPickAndPushImagingResult(
+                              modality: form['Loại thăm dò / vùng chụp']!,
+                              findings:
+                                  form['Kết luận của bác sĩ chẩn đoán hình ảnh']!,
+                            );
                         if (uploaded) {
                           _showSnack(
                             context,
@@ -2052,6 +2180,15 @@ class _DoctorPortalPageState extends State<DoctorPortalPage>
                                   color: Colors.grey,
                                 ),
                               ),
+                              if (med.price > 0)
+                                Text(
+                                  'Đơn giá: ${_formatCurrency(med.price)} • Thành tiền: ${_formatCurrency(_medicineTotal(med))}',
+                                  style: const TextStyle(
+                                    fontSize: 11,
+                                    color: Colors.indigo,
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
                             ],
                           ),
                         ),
@@ -2060,6 +2197,15 @@ class _DoctorPortalPageState extends State<DoctorPortalPage>
                   ),
                 ),
                 const SizedBox(height: 10),
+                if (_consultationMedicines.any((item) => item.price > 0))
+                  Align(
+                    alignment: Alignment.centerRight,
+                    child: Text(
+                      'Tổng tiền thuốc: ${_formatCurrency(_consultationMedicines.fold<int>(0, (sum, item) => sum + _medicineTotal(item)))}',
+                      style: const TextStyle(fontWeight: FontWeight.bold),
+                    ),
+                  ),
+                const SizedBox(height: 8),
                 Row(
                   children: [
                     Expanded(
@@ -2075,7 +2221,11 @@ class _DoctorPortalPageState extends State<DoctorPortalPage>
                         onPressed: () async {
                           try {
                             await store.doctorPrescribeMedicationOnlineFirst(
-                              patientName: store.profile.name,
+                              patientName:
+                                  store
+                                      .activeClinicalAppointment
+                                      ?.patientName ??
+                                  store.profile.name,
                               diagnosis: _diagnosisCtrl.text.trim(),
                               medicines: _consultationMedicines,
                               advice: _adviceCtrl.text.trim(),
@@ -2358,6 +2508,21 @@ class _DoctorPortalPageState extends State<DoctorPortalPage>
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(12),
                     ),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 10),
+              SizedBox(
+                width: double.infinity,
+                height: 46,
+                child: OutlinedButton.icon(
+                  onPressed: store.activeClinicalAppointmentId == null
+                      ? null
+                      : () => _closeConsultation(context, store),
+                  icon: const Icon(Icons.stop_circle_outlined),
+                  label: const Text(
+                    'KẾT THÚC CA KHÁM / CHỐT HỒ SƠ',
+                    style: TextStyle(fontWeight: FontWeight.w800),
                   ),
                 ),
               ),
@@ -2676,6 +2841,7 @@ class _DoctorPortalPageState extends State<DoctorPortalPage>
                         emergencyInstruction:
                             form['Dấu hiệu cần cấp cứu / quay lại viện']!,
                       );
+                      _adviceCtrl.text = form['Lời dặn gửi cho bệnh nhân']!;
                       _showSnack(
                         context,
                         '💬 Đã gửi lời dặn dò trực tiếp đến bệnh nhân!',
@@ -2812,6 +2978,47 @@ class _DoctorPortalPageState extends State<DoctorPortalPage>
     );
   }
 
+  Future<void> _closeConsultation(
+    BuildContext context,
+    MedicalStore store,
+  ) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Kết thúc ca khám?'),
+        content: const Text(
+          'Sau khi chốt, ca khám sẽ chuyển sang Đã hoàn thành, hàng đợi được đóng và bệnh nhân nhận thông báo. Bạn vẫn có thể xem lại hồ sơ nhưng không sửa trực tiếp ca này.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('Quay lại'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            child: const Text('Kết thúc ca'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true) return;
+    try {
+      await store.closeCurrentConsultationOnlineFirst();
+      if (!context.mounted) return;
+      _showSnack(
+        context,
+        '✅ Đã chốt và kết thúc ca khám. Bệnh nhân đã nhận thông báo.',
+      );
+    } catch (error) {
+      if (!context.mounted) return;
+      _showSnack(
+        context,
+        'Không thể kết thúc ca khám: $error',
+        color: Colors.redAccent,
+      );
+    }
+  }
+
   Widget _buildCheckItem(String text) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 6),
@@ -2933,6 +3140,14 @@ class _DoctorPortalPageState extends State<DoctorPortalPage>
               controller: _medInstructionCtrl,
               decoration: const InputDecoration(labelText: 'Hướng dẫn uống'),
             ),
+            TextField(
+              controller: _medPriceCtrl,
+              keyboardType: TextInputType.number,
+              decoration: const InputDecoration(
+                labelText: 'Giá thuốc (đồng)',
+                hintText: 'Ví dụ: 35000',
+              ),
+            ),
           ],
         ),
         actions: [
@@ -2942,12 +3157,24 @@ class _DoctorPortalPageState extends State<DoctorPortalPage>
           ),
           FilledButton(
             onPressed: () {
+              final price = int.tryParse(_medPriceCtrl.text.trim()) ?? 0;
+              if (_medNameCtrl.text.trim().isEmpty ||
+                  _medQuantityCtrl.text.trim().isEmpty ||
+                  price <= 0) {
+                _showSnack(
+                  context,
+                  'Vui lòng nhập tên thuốc, số lượng và đơn giá lớn hơn 0.',
+                  color: Colors.orange,
+                );
+                return;
+              }
               final newMed = MedicineItem(
                 name: _medNameCtrl.text.trim(),
                 category: 'Thuốc điều trị',
                 dosage: _medDosageCtrl.text.trim(),
                 quantity: _medQuantityCtrl.text.trim(),
                 instruction: _medInstructionCtrl.text.trim(),
+                price: price,
               );
               setState(() => _consultationMedicines.add(newMed));
               store.doctorPrescribeMedicine(
@@ -2965,5 +3192,14 @@ class _DoctorPortalPageState extends State<DoctorPortalPage>
         ],
       ),
     );
+  }
+
+  int _medicineTotal(MedicineItem medicine) {
+    final quantity =
+        int.tryParse(
+          RegExp(r'\d+').firstMatch(medicine.quantity)?.group(0) ?? '',
+        ) ??
+        1;
+    return medicine.price * quantity;
   }
 }

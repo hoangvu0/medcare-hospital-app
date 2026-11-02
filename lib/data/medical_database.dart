@@ -131,7 +131,8 @@ class MedicalDatabase {
             blood_glucose REAL NOT NULL,
             weight_kg REAL NOT NULL,
             height_cm REAL NOT NULL,
-            note TEXT
+            note TEXT,
+            patient_id TEXT
           )
         ''');
     await db.execute('''
@@ -273,7 +274,8 @@ class MedicalDatabase {
             shipping_fee INTEGER NOT NULL,
             status TEXT NOT NULL,
             ordered_at TEXT NOT NULL,
-            estimated_minutes INTEGER NOT NULL
+            estimated_minutes INTEGER NOT NULL,
+            patient_id TEXT
           )
         ''');
     await db.execute('''
@@ -760,6 +762,7 @@ class MedicalDatabase {
     'weight_kg': value.weightKg,
     'height_cm': value.heightCm,
     'note': value.note,
+    'patient_id': value.patientId,
   };
 
   VitalSignRecord _vitalFromRow(Map<String, Object?> row) => VitalSignRecord(
@@ -771,6 +774,7 @@ class MedicalDatabase {
     weightKg: (row['weight_kg'] as num).toDouble(),
     heightCm: (row['height_cm'] as num).toDouble(),
     note: row['note'] as String?,
+    patientId: row['patient_id'] as String?,
   );
 
   Map<String, Object?> _medicineScheduleToRow(MedicineScheduleItem value) => {
@@ -965,6 +969,7 @@ class MedicalDatabase {
     'quantity': value.quantity,
     'instruction': value.instruction,
     'warning': value.warning,
+    'patient_id': value.patientId,
   };
 
   MedicineItem _medicineItemFromRow(Map<String, Object?> row) => MedicineItem(
@@ -974,6 +979,7 @@ class MedicalDatabase {
     quantity: row['quantity'] as String,
     instruction: row['instruction'] as String,
     warning: row['warning'] as String?,
+    patientId: row['patient_id'] as String?,
   );
 
   Map<String, Object?> _notificationToRow(AppNotification value) => {
@@ -1051,6 +1057,7 @@ class MedicalDatabase {
     'status': value.status.name,
     'ordered_at': value.orderedAt.toIso8601String(),
     'estimated_minutes': value.estimatedMinutes,
+    'patient_id': value.patientId,
   };
 
   PharmacyOrder _pharmacyOrderFromRow(Map<String, Object?> row) =>
@@ -1067,6 +1074,7 @@ class MedicalDatabase {
         status: _pharmacyStatusByName(row['status'] as String?),
         orderedAt: DateTime.parse(row['ordered_at'] as String),
         estimatedMinutes: row['estimated_minutes'] as int,
+        patientId: row['patient_id'] as String?,
       );
 
   PharmacyOrderStatus _pharmacyStatusByName(String? name) {

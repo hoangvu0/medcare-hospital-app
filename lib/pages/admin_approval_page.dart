@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../models/medical_models.dart';
 import '../state/medical_store.dart';
 
 const _approvalBlue = Color(0xFF0D6EFD);
@@ -54,16 +55,92 @@ class _AdminApprovalPageState extends State<AdminApprovalPage>
         store.fetchCashlessClaimsOnline(),
       ]);
       if (!mounted) return;
+      var payments = result[0];
+      if (payments.isEmpty && store.transactions.isNotEmpty) {
+        payments = store.transactions
+            .map(
+              (tx) => {
+                'id': tx.id,
+                'clientTransactionId': tx.id,
+                'amount': tx.netAmount,
+                'status': switch (tx.status) {
+                  PaymentStatus.success => 'success',
+                  PaymentStatus.failed => 'failed',
+                  PaymentStatus.refunded => 'refunded',
+                  _ => 'pending',
+                },
+                'method': tx.method.name,
+                'packageTitle': tx.description,
+                'appointmentId': tx.visitCode,
+              },
+            )
+            .toList();
+      }
+      var claims = result[1];
+      if (claims.isEmpty && store.cashlessClaims.isNotEmpty) {
+        claims = store.cashlessClaims
+            .map(
+              (c) => {
+                'id': c.id,
+                'policyNumber': c.policyNumber,
+                'providerName': c.providerName,
+                'hospitalBillId': c.hospitalBillId,
+                'totalBill': c.totalBill,
+                'coveredAmount': c.coveredAmount,
+                'patientCoPay': c.patientCoPay,
+                'status': c.status.name,
+                'requestedAt': c.requestedAt.toIso8601String(),
+                'approvalCode': c.approvalCode,
+              },
+            )
+            .toList();
+      }
       setState(() {
-        _payments = result[0];
-        _claims = result[1];
+        _payments = payments;
+        _claims = claims;
         _loading = false;
       });
     } catch (error) {
       if (!mounted) return;
+      final localPayments = store.transactions
+          .map(
+            (tx) => {
+              'id': tx.id,
+              'clientTransactionId': tx.id,
+              'amount': tx.netAmount,
+              'status': switch (tx.status) {
+                PaymentStatus.success => 'success',
+                PaymentStatus.failed => 'failed',
+                PaymentStatus.refunded => 'refunded',
+                _ => 'pending',
+              },
+              'method': tx.method.name,
+              'packageTitle': tx.description,
+              'appointmentId': tx.visitCode,
+            },
+          )
+          .toList();
+      final localClaims = store.cashlessClaims
+          .map(
+            (c) => {
+              'id': c.id,
+              'policyNumber': c.policyNumber,
+              'providerName': c.providerName,
+              'hospitalBillId': c.hospitalBillId,
+              'totalBill': c.totalBill,
+              'coveredAmount': c.coveredAmount,
+              'patientCoPay': c.patientCoPay,
+              'status': c.status.name,
+              'requestedAt': c.requestedAt.toIso8601String(),
+              'approvalCode': c.approvalCode,
+            },
+          )
+          .toList();
       setState(() {
+        _payments = localPayments;
+        _claims = localClaims;
         _loading = false;
-        _error = '$error';
+        _error = localPayments.isEmpty && localClaims.isEmpty ? '$error' : null;
       });
     }
   }
@@ -300,6 +377,22 @@ class _AdminApprovalPageState extends State<AdminApprovalPage>
             Text(
               'Giao dịch: ${payment['clientTransactionId'] ?? payment['id']}',
             ),
+            if (payment['purpose']?.toString() == 'wallet_topup')
+              const Text(
+                'Loại: Nạp ví MedCare Pay (duyệt thủ công)',
+                style: TextStyle(
+                  color: _approvalBlue,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+            if (payment['purpose']?.toString() == 'pharmacy_order')
+              const Text(
+                'Loại: Thanh toán đơn thuốc / giao thuốc',
+                style: TextStyle(
+                  color: _approvalBlue,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
             Text('Phương thức: ${payment['method'] ?? 'Không rõ'}'),
             if ((payment['packageTitle']?.toString() ?? '').isNotEmpty)
               Text('Gói khám: ${payment['packageTitle']}'),

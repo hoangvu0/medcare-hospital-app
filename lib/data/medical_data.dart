@@ -314,37 +314,34 @@ abstract final class MedicalData {
   /// Thông báo ban đầu rỗng: chỉ sinh ra từ nghiệp vụ thật.
   static List<AppNotification> get initialNotifications => [];
 
-  /// Danh sách chỉ số sinh hiệu thực tế của bệnh nhân Nguyễn Hoàng Vũ
+  /// Sinh hiệu ban đầu của bệnh nhân mặc định (dành cho demo và unit test).
   static List<VitalSignRecord> get initialVitals => [
     VitalSignRecord(
-      timestamp: DateTime.now().subtract(const Duration(hours: 2)),
+      timestamp: DateTime.now().subtract(const Duration(days: 1)),
       systolic: 118,
       diastolic: 78,
-      heartRate: 74,
-      bloodGlucose: 94.5,
+      heartRate: 72,
+      bloodGlucose: 95.0,
       weightKg: 68.0,
       heightCm: 174.0,
-      note: 'Đo sau ăn sáng 2 giờ, thể trạng ổn định.',
     ),
     VitalSignRecord(
-      timestamp: DateTime.now().subtract(const Duration(days: 2)),
+      timestamp: DateTime.now().subtract(const Duration(days: 4)),
       systolic: 122,
       diastolic: 80,
-      heartRate: 78,
-      bloodGlucose: 98.0,
+      heartRate: 75,
+      bloodGlucose: 102.0,
       weightKg: 68.2,
       heightCm: 174.0,
-      note: 'Đo tại phòng khám sàng lọc Tòa B.',
     ),
     VitalSignRecord(
       timestamp: DateTime.now().subtract(const Duration(days: 7)),
       systolic: 125,
       diastolic: 82,
-      heartRate: 82,
-      bloodGlucose: 102.0,
+      heartRate: 78,
+      bloodGlucose: 108.0,
       weightKg: 68.5,
       heightCm: 174.0,
-      note: 'Hơi mệt do đau dạ dày thượng vị.',
     ),
   ];
 
@@ -573,21 +570,20 @@ abstract final class MedicalData {
     return slots;
   }
 
-  /// Danh sách Thành viên Gia đình mặc định.
-  /// Tài khoản mới chỉ có hồ sơ bệnh nhân đang đăng nhập; người thân phải được thêm thủ công.
+  /// Danh sách Thành viên Gia đình ban đầu (mặc định có thành viên Bản thân).
   static List<FamilyMemberProfile> get initialFamilyMembers => [
-    const FamilyMemberProfile(
+    FamilyMemberProfile(
       id: 'fam-01',
-      name: 'Nguyễn Hoàng Vũ',
+      name: defaultPatient.name,
       relation: FamilyRelation.self,
-      dateOfBirth: '15/08/2002',
-      gender: 'Nam',
-      insuranceNumber: 'DN4010123456789',
-      bloodType: 'O+',
-      allergies: 'Penicillin, Phấn hoa',
-      phone: '0901 234 567',
-      avatarEmoji: '👨‍💼',
-      medicalNotes: 'Tiền sử đau dạ dày do vi khuẩn Hp',
+      dateOfBirth: defaultPatient.dateOfBirth,
+      gender: defaultPatient.gender,
+      insuranceNumber: defaultPatient.insuranceNumber,
+      bloodType: defaultPatient.bloodType,
+      allergies: defaultPatient.allergies,
+      phone: defaultPatient.phone,
+      avatarEmoji: '👨',
+      medicalNotes: '',
     ),
   ];
 

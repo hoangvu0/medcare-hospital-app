@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:url_launcher/url_launcher.dart';
 
+import '../models/medical_models.dart';
 import '../state/medical_store.dart';
 
 class EmergencySosPage extends StatefulWidget {
@@ -434,11 +435,20 @@ class _EmergencySosPageState extends State<EmergencySosPage>
                   _idRow('Dị ứng đặc biệt', profile.allergies, isDanger: true),
                   _idRow(
                     'Bệnh lý mạn tính',
-                    'Tăng huyết áp vô căn (Đang điều trị)',
+                    profile.medicalNotes.isNotEmpty
+                        ? profile.medicalNotes
+                        : (store.medicalRecords.isNotEmpty
+                            ? store.medicalRecords.first.diagnosis
+                            : 'Không có ghi nhận mạn tính'),
                   ),
                   _idRow(
                     'Người liên hệ khẩn cấp',
-                    'Mẹ: Nguyễn Thị Mai (0987 654 321)',
+                    store.familyMembers
+                                .where((m) => m.relation != FamilyRelation.self)
+                                .firstOrNull !=
+                            null
+                        ? '${store.familyMembers.firstWhere((m) => m.relation != FamilyRelation.self).relationLabel}: ${store.familyMembers.firstWhere((m) => m.relation != FamilyRelation.self).name}${store.familyMembers.firstWhere((m) => m.relation != FamilyRelation.self).phone.isNotEmpty ? ' (${store.familyMembers.firstWhere((m) => m.relation != FamilyRelation.self).phone})' : ''}'
+                        : 'Chưa thiết lập (vào Hồ sơ gia đình để thêm)',
                   ),
                 ],
               ),

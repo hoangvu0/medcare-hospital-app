@@ -55,7 +55,26 @@ class _PatientRecordsPageState extends State<PatientRecordsPage> {
   Widget build(BuildContext context) {
     final store = MedicalScope.of(context);
     final settings = AppSettingsScope.of(context);
-    final profile = store.profile;
+    final activeMember = store.activeFamilyMember;
+    final isSelf =
+        activeMember.relation == FamilyRelation.self ||
+        activeMember.id == store.profile.id;
+    final profile = isSelf
+        ? store.profile
+        : PatientProfile(
+            id: activeMember.id,
+            name: activeMember.name,
+            gender: activeMember.gender,
+            dateOfBirth: activeMember.dateOfBirth,
+            phone: activeMember.phone.isNotEmpty
+                ? activeMember.phone
+                : store.profile.phone,
+            email: store.profile.email,
+            address: store.profile.address,
+            insuranceNumber: activeMember.insuranceNumber,
+            bloodType: activeMember.bloodType,
+            allergies: activeMember.allergies,
+          );
 
     return Scaffold(
       backgroundColor: Theme.of(context).scaffoldBackgroundColor,
@@ -101,7 +120,16 @@ class _PatientRecordsPageState extends State<PatientRecordsPage> {
           ),
           const SizedBox(height: 16),
           if (selectedTab == 0)
-            _history(store.medicalRecords)
+            _history(
+              store.medicalRecords.where((r) {
+                if (isSelf) {
+                  return r.patientId == null ||
+                      r.patientId == store.profile.id ||
+                      r.patientId == activeMember.id;
+                }
+                return r.patientId == activeMember.id;
+              }).toList(),
+            )
           else if (selectedTab == 1)
             _labResults(store.labTests)
           else if (selectedTab == 2)
@@ -215,7 +243,7 @@ class _PatientRecordsPageState extends State<PatientRecordsPage> {
                     ),
                     const SizedBox(height: 4),
                     Text(
-                      'Mã BN: ${profile.id} • ${profile.gender} • 24 tuổi',
+                      'Mã BN: ${profile.id} • ${profile.gender}${_formatAge(profile.dateOfBirth)}',
                       style: const TextStyle(
                         color: Color(0xFF0057CD),
                         fontSize: 12,
@@ -335,35 +363,81 @@ class _PatientRecordsPageState extends State<PatientRecordsPage> {
     );
   }
 
-  Widget _history(List<MedicalRecord> records) => Column(
-    crossAxisAlignment: CrossAxisAlignment.start,
-    children: [
-      Wrap(
-        spacing: 8,
-        runSpacing: 6,
-        alignment: WrapAlignment.spaceBetween,
-        crossAxisAlignment: WrapCrossAlignment.center,
-        children: [
-          const Text(
-            'Các đợt khám bệnh gần đây',
-            style: TextStyle(fontSize: 17, fontWeight: FontWeight.bold),
-          ),
-          Chip(
-            label: Text('${records.length} đợt khám'),
-            backgroundColor: const Color(0xFFE2E7FF),
-          ),
-        ],
-      ),
-      const SizedBox(height: 12),
-      if (records.isEmpty)
-        _emptyRecordsState()
-      else ...[
-        for (final item in records) ...[
-          _recordCard(item),
-          const SizedBox(height: 14),
+  Widget _history(List<MedicalRecord> records) {
+    final groups = <String, List<MedicalRecord>>{};
+    for (final record in records) {
+      final key = record.appointmentId?.isNotEmpty == true
+          ? record.appointmentId!
+          : record.date.length >= 10
+          ? record.date.substring(0, 10)
+          : record.date;
+      groups.putIfAbsent(key, () => <MedicalRecord>[]).add(record);
+    }
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Wrap(
+          spacing: 8,
+          runSpacing: 6,
+          alignment: WrapAlignment.spaceBetween,
+          crossAxisAlignment: WrapCrossAlignment.center,
+          children: [
+            const Text(
+              'Các đợt khám bệnh gần đây',
+              style: TextStyle(fontSize: 17, fontWeight: FontWeight.bold),
+            ),
+            Chip(
+              label: Text('${records.length} đợt khám'),
+              backgroundColor: const Color(0xFFE2E7FF),
+            ),
+          ],
+        ),
+        const SizedBox(height: 12),
+        if (records.isEmpty)
+          _emptyRecordsState()
+        else ...[
+          for (final group in groups.entries) ...[
+            _visitGroupHeader(group.value.first),
+            ...group.value.map(
+              (item) => Padding(
+                padding: const EdgeInsets.only(bottom: 14),
+                child: _recordCard(item),
+              ),
+            ),
+          ],
         ],
       ],
-    ],
+    );
+  }
+
+  Widget _visitGroupHeader(MedicalRecord record) => Padding(
+    padding: const EdgeInsets.only(top: 4, bottom: 8),
+    child: Row(
+      children: [
+        const Icon(
+          Icons.event_note_outlined,
+          size: 18,
+          color: Color(0xFF0057CD),
+        ),
+        const SizedBox(width: 6),
+        Expanded(
+          child: Text(
+            'CA KHÁM • ${_displayDate(record.date)}',
+            style: const TextStyle(
+              color: Color(0xFF0057CD),
+              fontWeight: FontWeight.w800,
+              fontSize: 12,
+            ),
+          ),
+        ),
+        if (record.appointmentId != null)
+          Text(
+            record.appointmentId!,
+            style: const TextStyle(fontSize: 10, color: Colors.black45),
+            overflow: TextOverflow.ellipsis,
+          ),
+      ],
+    ),
   );
 
   Widget _emptyRecordsState() => Card(
@@ -432,7 +506,7 @@ class _PatientRecordsPageState extends State<PatientRecordsPage> {
                     ),
                     const SizedBox(height: 2),
                     Text(
-                      'Ngày khám: ${record.date} • Mã: ${record.id}',
+                      'Ngày khám: ${_displayDate(record.date)} • Mã: ${record.id}',
                       style: const TextStyle(
                         color: Colors.black54,
                         fontSize: 12,
@@ -512,6 +586,42 @@ class _PatientRecordsPageState extends State<PatientRecordsPage> {
                   '• Khám thực thể: ${record.physicalExamNotes}',
                   style: const TextStyle(fontSize: 12, color: Colors.black87),
                 ),
+                if (record.differentialDiagnosis != null &&
+                    record.differentialDiagnosis!.isNotEmpty) ...[
+                  const SizedBox(height: 4),
+                  Text(
+                    '• Chẩn đoán phân biệt: ${record.differentialDiagnosis}',
+                    style: const TextStyle(
+                      fontSize: 12,
+                      color: Color(0xFF4338CA),
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                ],
+                if (record.labSummary != null &&
+                    record.labSummary!.isNotEmpty) ...[
+                  const SizedBox(height: 4),
+                  Text(
+                    '• Xét nghiệm / Cận lâm sàng: ${record.labSummary}',
+                    style: const TextStyle(
+                      fontSize: 12,
+                      color: Color(0xFF7E22CE),
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                ],
+                if (record.xrayFindings != null &&
+                    record.xrayFindings!.isNotEmpty) ...[
+                  const SizedBox(height: 4),
+                  Text(
+                    '• Chẩn đoán hình ảnh: ${record.xrayFindings}',
+                    style: const TextStyle(
+                      fontSize: 12,
+                      color: Color(0xFFC2410C),
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                ],
                 if (record.prescribedMedicinesSummary != null) ...[
                   const SizedBox(height: 4),
                   Text(
@@ -580,8 +690,11 @@ class _PatientRecordsPageState extends State<PatientRecordsPage> {
             children: [
               Expanded(
                 child: OutlinedButton.icon(
-                  onPressed: () =>
-                      Navigator.pushNamed(context, AppRoutes.prescription),
+                  onPressed: () => Navigator.pushNamed(
+                    context,
+                    AppRoutes.prescriptionDetail,
+                    arguments: record.appointmentId,
+                  ),
                   icon: const Icon(Icons.medication_outlined, size: 16),
                   label: const Text(
                     'Xem đơn thuốc',
@@ -680,64 +793,67 @@ class _PatientRecordsPageState extends State<PatientRecordsPage> {
                 ),
               ),
               for (final test in items) ...[
-                Padding(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 16,
-                    vertical: 12,
-                  ),
-                  child: Row(
-                    children: [
-                      Expanded(
-                        flex: 4,
-                        child: Text(
-                          test.name,
-                          style: TextStyle(
-                            fontSize: 13,
-                            fontWeight: test.isAbnormal
-                                ? FontWeight.bold
-                                : FontWeight.normal,
-                            color: test.isAbnormal
-                                ? Colors.red
-                                : Colors.black87,
-                          ),
-                        ),
-                      ),
-                      Expanded(
-                        flex: 3,
-                        child: Row(
-                          children: [
-                            Text(
-                              test.value,
-                              style: TextStyle(
-                                fontSize: 13,
-                                fontWeight: FontWeight.bold,
-                                color: test.isAbnormal
-                                    ? Colors.red
-                                    : const Color(0xFF006C49),
-                              ),
+                InkWell(
+                  onTap: () => _showLabDetail(context, test),
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 16,
+                      vertical: 12,
+                    ),
+                    child: Row(
+                      children: [
+                        Expanded(
+                          flex: 4,
+                          child: Text(
+                            test.name,
+                            style: TextStyle(
+                              fontSize: 13,
+                              fontWeight: test.isAbnormal
+                                  ? FontWeight.bold
+                                  : FontWeight.normal,
+                              color: test.isAbnormal
+                                  ? Colors.red
+                                  : Colors.black87,
                             ),
-                            if (test.isAbnormal) ...[
-                              const SizedBox(width: 4),
-                              const Icon(
-                                Icons.arrow_upward,
-                                size: 14,
-                                color: Colors.red,
-                              ),
-                            ],
-                          ],
-                        ),
-                      ),
-                      Expanded(
-                        flex: 3,
-                        child: Text(
-                          '${test.normalRange} ${test.unit}',
-                          style: const TextStyle(
-                            fontSize: 11,
-                            color: Colors.black54,
                           ),
                         ),
-                      ),
-                    ],
+                        Expanded(
+                          flex: 3,
+                          child: Row(
+                            children: [
+                              Text(
+                                test.value,
+                                style: TextStyle(
+                                  fontSize: 13,
+                                  fontWeight: FontWeight.bold,
+                                  color: test.isAbnormal
+                                      ? Colors.red
+                                      : const Color(0xFF006C49),
+                                ),
+                              ),
+                              if (test.isAbnormal) ...[
+                                const SizedBox(width: 4),
+                                const Icon(
+                                  Icons.arrow_upward,
+                                  size: 14,
+                                  color: Colors.red,
+                                ),
+                              ],
+                            ],
+                          ),
+                        ),
+                        Expanded(
+                          flex: 3,
+                          child: Text(
+                            '${test.normalRange} ${test.unit}',
+                            style: const TextStyle(
+                              fontSize: 11,
+                              color: Colors.black54,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
                 ),
                 const Divider(height: 1),
@@ -787,6 +903,7 @@ class _PatientRecordsPageState extends State<PatientRecordsPage> {
           return Card(
             margin: const EdgeInsets.only(bottom: 10),
             child: ListTile(
+              onTap: () => _showImagingDetail(context, item),
               leading: leading,
               title: Text(
                 item['modality']?.toString() ?? 'Chẩn đoán hình ảnh',
@@ -803,6 +920,129 @@ class _PatientRecordsPageState extends State<PatientRecordsPage> {
         }),
     ],
   );
+
+  void _showLabDetail(BuildContext context, LabTestItem test) {
+    showDialog<void>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: Row(
+          children: [
+            const Icon(Icons.science_outlined, color: Color(0xFF0369A1)),
+            const SizedBox(width: 8),
+            Expanded(child: Text(test.name)),
+          ],
+        ),
+        content: SingleChildScrollView(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              _detailRow('Kết quả', '${test.value} ${test.unit}'),
+              _detailRow('Khoảng tham chiếu', test.normalRange),
+              _detailRow(
+                'Đánh giá',
+                test.isAbnormal
+                    ? 'Bất thường – cần bác sĩ theo dõi'
+                    : 'Trong giới hạn bình thường',
+              ),
+              if (test.note != null && test.note!.trim().isNotEmpty)
+                _detailRow('Nhận xét bác sĩ/xét nghiệm', test.note!),
+              const SizedBox(height: 8),
+              const Text(
+                'Dữ liệu được chuyển từ kết quả cận lâm sàng của ca khám. Không tự thay đổi thuốc hoặc chẩn đoán nếu chưa trao đổi với bác sĩ.',
+                style: TextStyle(fontSize: 12, color: Colors.black54),
+              ),
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('Đóng'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showImagingDetail(BuildContext context, Map<String, Object?> item) {
+    final encoded = item['imageBase64']?.toString() ?? '';
+    Widget? image;
+    if (encoded.isNotEmpty) {
+      try {
+        image = Padding(
+          padding: const EdgeInsets.only(bottom: 12),
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(12),
+            child: Image.memory(base64Decode(encoded), fit: BoxFit.contain),
+          ),
+        );
+      } catch (_) {}
+    }
+    showDialog<void>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: Text(item['modality']?.toString() ?? 'Kết quả cận lâm sàng'),
+        content: SingleChildScrollView(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              if (image != null) image,
+              _detailRow('Trạng thái', item['status']?.toString() ?? ''),
+              _detailRow(
+                'Kết luận/nhận xét',
+                item['findings']?.toString() ?? '',
+              ),
+              if ((item['fileName']?.toString() ?? '').isNotEmpty)
+                _detailRow('Tệp đính kèm', item['fileName']!.toString()),
+              if (item['createdAt'] is DateTime)
+                _detailRow(
+                  'Thời gian',
+                  _formatDateTime(item['createdAt'] as DateTime),
+                ),
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('Đóng'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _detailRow(String label, String value) => Padding(
+    padding: const EdgeInsets.only(bottom: 10),
+    child: Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          label,
+          style: const TextStyle(fontSize: 12, color: Colors.black54),
+        ),
+        const SizedBox(height: 2),
+        Text(
+          value.isEmpty ? 'Chưa có dữ liệu' : value,
+          style: const TextStyle(fontWeight: FontWeight.w600),
+        ),
+      ],
+    ),
+  );
+
+  String _displayDate(String raw) {
+    final parsed = DateTime.tryParse(raw);
+    if (parsed == null) return raw;
+    final value = parsed.toLocal();
+    String two(int v) => v.toString().padLeft(2, '0');
+    return '${two(value.day)}/${two(value.month)}/${value.year} ${two(value.hour)}:${two(value.minute)}';
+  }
+
+  String _formatDateTime(DateTime value) {
+    final local = value.toLocal();
+    String two(int v) => v.toString().padLeft(2, '0');
+    return '${two(local.day)}/${two(local.month)}/${local.year} ${two(local.hour)}:${two(local.minute)}';
+  }
 
   Widget _emptyClinicalDataCard({
     required IconData icon,
@@ -1141,11 +1381,11 @@ class _PatientRecordsPageState extends State<PatientRecordsPage> {
             onPressed: () {
               Navigator.pop(ctx);
               ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(
+                SnackBar(
                   content: Text(
-                    'Đã tải xuống file: Benh_an_MedCare_MC-89241.pdf',
+                    'Đã tải xuống file: Benh_an_MedCare_${profile.id}.pdf',
                   ),
-                  backgroundColor: Color(0xFF10B981),
+                  backgroundColor: const Color(0xFF10B981),
                   behavior: SnackBarBehavior.floating,
                 ),
               );
@@ -1250,5 +1490,24 @@ class _PatientRecordsPageState extends State<PatientRecordsPage> {
         ],
       ),
     );
+  }
+
+  static String _formatAge(String dob) {
+    if (dob.isEmpty) return '';
+    final parts = dob.split('/');
+    if (parts.length == 3) {
+      final y = int.tryParse(parts[2]);
+      if (y != null && y > 1900 && y <= DateTime.now().year) {
+        return ' • ${DateTime.now().year - y} tuổi';
+      }
+    }
+    final dashParts = dob.split('-');
+    if (dashParts.length == 3) {
+      final y = int.tryParse(dashParts[0]);
+      if (y != null && y > 1900 && y <= DateTime.now().year) {
+        return ' • ${DateTime.now().year - y} tuổi';
+      }
+    }
+    return '';
   }
 }

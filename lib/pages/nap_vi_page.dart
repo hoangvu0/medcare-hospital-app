@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
+import '../config/app_config.dart';
 import '../state/medical_store.dart';
 
 enum _TopUpStep { amount, method, review, success }
@@ -25,11 +26,21 @@ class _WalletTopUpPageState extends State<WalletTopUpPage> {
   int? _amount = 500000;
   bool _accepted = false;
   bool _processing = false;
+  String? _clientTransactionId;
 
   @override
   void dispose() {
     _customAmountController.dispose();
     super.dispose();
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    _clientTransactionId = 'WALLET-${DateTime.now().millisecondsSinceEpoch}';
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) MedicalScope.of(context).refreshWalletFromBackend();
+    });
   }
 
   @override
@@ -109,6 +120,15 @@ class _WalletTopUpPageState extends State<WalletTopUpPage> {
     children: [
       _balanceCard(store),
       const SizedBox(height: 22),
+      SizedBox(
+        width: double.infinity,
+        child: OutlinedButton.icon(
+          onPressed: () => _showWalletChargeDialog(store),
+          icon: const Icon(Icons.payments_outlined),
+          label: const Text('Thanh toán chi phí khác bằng ví'),
+        ),
+      ),
+      const SizedBox(height: 18),
       const Text(
         'Bạn muốn nạp bao nhiêu?',
         style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
@@ -235,6 +255,10 @@ class _WalletTopUpPageState extends State<WalletTopUpPage> {
         icon: Icons.info_outline,
         text: 'Yêu cầu sẽ được gửi đến cổng thanh toán. Số dư chỉ thay đổi sau khi có xác nhận giao dịch hợp lệ.',
       ),
+      if (_method == _TopUpMethod.vietQr) ...[
+        const SizedBox(height: 16),
+        _vietQrPreview(),
+      ],
     ],
   );
 
@@ -257,8 +281,8 @@ class _WalletTopUpPageState extends State<WalletTopUpPage> {
         style: TextStyle(fontSize: 23, fontWeight: FontWeight.bold),
       ),
       const SizedBox(height: 8),
-      Text(
-        'Đã cộng ${_formatMoney(_amount ?? 0)} vào ví MedCare Pay.',
+      const Text(
+        'Yêu cầu đang chờ admin kiểm tra và duyệt. Số dư chưa thay đổi.',
         textAlign: TextAlign.center,
         style: const TextStyle(color: Colors.black54),
       ),
@@ -277,9 +301,7 @@ class _WalletTopUpPageState extends State<WalletTopUpPage> {
               const SizedBox(height: 12),
               _summaryRow(
                 'Mã giao dịch',
-                store.walletTransactions.isEmpty
-                    ? 'Đang cập nhật'
-                    : store.walletTransactions.first.id,
+                _clientTransactionId ?? 'Đang cập nhật',
               ),
             ],
           ),
@@ -491,7 +513,21 @@ class _WalletTopUpPageState extends State<WalletTopUpPage> {
     }
     setState(() => _processing = true);
     final method = _methodLabel(_method);
-    store.requestWalletTopUp(amount: _amount!, method: method);
+    try {
+      final payment = await store.requestWalletTopUpOnline(
+        amount: _amount!,
+        method: method,
+        clientTransactionId: _clientTransactionId,
+      );
+      _clientTransactionId = payment['clientTransactionId']?.toString();
+    } catch (error) {
+      if (!mounted) return;
+      setState(() => _processing = false);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Không thể tạo yêu cầu nạp ví: $error')),
+      );
+      return;
+    }
     if (!mounted) return;
     setState(() {
       _processing = false;
@@ -512,5 +548,95 @@ class _WalletTopUpPageState extends State<WalletTopUpPage> {
       (_) => '.',
     );
     return '$formattedđ';
+  }
+
+  Widget _vietQrPreview() {
+    final amount = _amount ?? 0;
+    final content = 'NAPVI-${_clientTransactionId ?? 'MEDCARE'}';
+    final url =
+        'https://img.vietqr.io/image/${AppConfig.paymentBankCode}-${AppConfig.paymentBankAccount}-compact2.png?amount=$amount&addInfo=${Uri.encodeComponent(content)}&accountName=${Uri.encodeComponent(AppConfig.paymentBankName)}';
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(14),
+        child: Column(
+          children: [
+            const Text(
+              'Quét QR để chuyển đúng số tiền nạp ví',
+              style: TextStyle(fontWeight: FontWeight.bold),
+            ),
+            const SizedBox(height: 10),
+            Image.network(url, height: 210, width: 210, fit: BoxFit.contain),
+            const SizedBox(height: 6),
+            Text(
+              'Nội dung: $content',
+              style: const TextStyle(fontSize: 12, color: Colors.black54),
+            ),
+            Text(
+              '${AppConfig.paymentBankDisplayName} • ${AppConfig.paymentBankAccount}',
+              style: const TextStyle(fontSize: 12),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Future<void> _showWalletChargeDialog(MedicalStore store) async {
+    final amountCtrl = TextEditingController();
+    final descriptionCtrl = TextEditingController(
+      text: 'Thanh toán dịch vụ MedCare',
+    );
+    final submit = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Thanh toán bằng ví MedCare Pay'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            TextField(
+              controller: amountCtrl,
+              keyboardType: TextInputType.number,
+              inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+              decoration: const InputDecoration(labelText: 'Số tiền (đồng)'),
+            ),
+            TextField(
+              controller: descriptionCtrl,
+              decoration: const InputDecoration(labelText: 'Nội dung chi phí'),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('Hủy'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            child: const Text('Thanh toán'),
+          ),
+        ],
+      ),
+    );
+    if (submit != true) {
+      amountCtrl.dispose();
+      descriptionCtrl.dispose();
+      return;
+    }
+    final amount = int.tryParse(amountCtrl.text.trim()) ?? 0;
+    final description = descriptionCtrl.text.trim();
+    amountCtrl.dispose();
+    descriptionCtrl.dispose();
+    try {
+      await store.chargeWalletOnline(amount: amount, description: description);
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Đã thanh toán và trừ tiền khỏi ví.')),
+      );
+    } catch (error) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Không thể thanh toán: $error')));
+    }
   }
 }

@@ -4,6 +4,7 @@ import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:qr_flutter/qr_flutter.dart';
 
+import '../models/medical_models.dart';
 import '../state/app_settings_store.dart';
 import '../state/medical_store.dart';
 
@@ -81,7 +82,26 @@ class _DigitalCardPageState extends State<DigitalCardPage>
 
   @override
   Widget build(BuildContext context) {
-    final profile = MedicalScope.of(context).profile;
+    final store = MedicalScope.of(context);
+    final activeMember = store.activeFamilyMember;
+    final isSelf = activeMember.relation == FamilyRelation.self ||
+        activeMember.id == store.profile.id;
+    final profile = isSelf
+        ? store.profile
+        : PatientProfile(
+            id: activeMember.id,
+            name: activeMember.name,
+            gender: activeMember.gender,
+            dateOfBirth: activeMember.dateOfBirth,
+            phone: activeMember.phone.isNotEmpty
+                ? activeMember.phone
+                : store.profile.phone,
+            email: store.profile.email,
+            address: store.profile.address,
+            insuranceNumber: activeMember.insuranceNumber,
+            bloodType: activeMember.bloodType,
+            allergies: activeMember.allergies,
+          );
     final settings = AppSettingsScope.of(context);
     final isDark = Theme.of(context).brightness == Brightness.dark;
 

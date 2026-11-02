@@ -1144,7 +1144,7 @@ class _CleanLoginPageState extends State<LoginPage> {
           keyboardType: TextInputType.emailAddress,
           textInputAction: TextInputAction.next,
           decoration: const InputDecoration(
-            hintText: '0987xxx hoặc MC-89241',
+            hintText: 'Số điện thoại hoặc Mã bệnh nhân',
             prefixIcon: Icon(Icons.badge_outlined),
           ),
         ),
@@ -1536,7 +1536,7 @@ class _LoginPageState extends State<LegacyLoginPage> {
                       controller: _identifierController,
                       keyboardType: TextInputType.emailAddress,
                       decoration: InputDecoration(
-                        hintText: 'vu@example.com hoặc 0901...',
+                        hintText: 'Email hoặc số điện thoại...',
                         hintStyle: TextStyle(
                           fontSize: 13,
                           color: isDark ? Colors.white30 : Colors.black38,
@@ -4351,28 +4351,43 @@ class _PatientProfilePageState extends State<PatientProfilePage> {
     final name = TextEditingController(text: profile.name);
     final phone = TextEditingController(text: profile.phone);
     final email = TextEditingController(text: profile.email);
+    final dob = TextEditingController(text: profile.dateOfBirth);
+    final address = TextEditingController(text: profile.address);
     showDialog<void>(
       context: context,
       builder: (dialogContext) => AlertDialog(
         title: const Text('Chỉnh sửa thông tin'),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            TextField(
-              controller: name,
-              decoration: const InputDecoration(labelText: 'Họ và tên'),
-            ),
-            TextField(
-              controller: phone,
-              keyboardType: TextInputType.phone,
-              decoration: const InputDecoration(labelText: 'Số điện thoại'),
-            ),
-            TextField(
-              controller: email,
-              keyboardType: TextInputType.emailAddress,
-              decoration: const InputDecoration(labelText: 'Email'),
-            ),
-          ],
+        content: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              TextField(
+                controller: name,
+                decoration: const InputDecoration(labelText: 'Họ và tên'),
+              ),
+              TextField(
+                controller: phone,
+                keyboardType: TextInputType.phone,
+                decoration: const InputDecoration(labelText: 'Số điện thoại'),
+              ),
+              TextField(
+                controller: email,
+                keyboardType: TextInputType.emailAddress,
+                decoration: const InputDecoration(labelText: 'Email'),
+              ),
+              TextField(
+                controller: dob,
+                decoration: const InputDecoration(
+                  labelText: 'Ngày sinh (DD/MM/YYYY)',
+                  hintText: '15/08/2002',
+                ),
+              ),
+              TextField(
+                controller: address,
+                decoration: const InputDecoration(labelText: 'Địa chỉ'),
+              ),
+            ],
+          ),
         ),
         actions: [
           TextButton(
@@ -4390,6 +4405,8 @@ class _PatientProfilePageState extends State<PatientProfilePage> {
                 name: name.text.trim(),
                 phone: phone.text.trim(),
                 email: email.text.trim(),
+                dateOfBirth: dob.text.trim(),
+                address: address.text.trim(),
               );
               Navigator.pop(dialogContext);
             },
@@ -4404,26 +4421,40 @@ class _PatientProfilePageState extends State<PatientProfilePage> {
 class LabResultsPage extends StatelessWidget {
   const LabResultsPage({super.key});
   @override
-  Widget build(BuildContext context) => Scaffold(
-    appBar: AppBar(title: const Text('Kết quả xét nghiệm')),
-    body: ListView(
-      padding: const EdgeInsets.all(16),
-      children: [
-        ListTile(
-          title: const Text('Công thức máu'),
-          subtitle: const Text('18/10/2024 • Bình thường'),
-          trailing: const Icon(Icons.chevron_right),
-          onTap: () => Navigator.pushNamed(context, AppRoutes.labDetail),
-        ),
-        ListTile(
-          title: const Text('Xét nghiệm nước tiểu'),
-          subtitle: const Text('02/08/2024 • Đã có kết quả'),
-          trailing: const Icon(Icons.chevron_right),
-          onTap: () => Navigator.pushNamed(context, AppRoutes.labDetail),
-        ),
-      ],
-    ),
-  );
+  Widget build(BuildContext context) {
+    final store = MedicalScope.of(context);
+    final tests = store.labTests;
+    return Scaffold(
+      appBar: AppBar(title: const Text('Kết quả xét nghiệm')),
+      body: tests.isEmpty
+          ? const Center(
+              child: Padding(
+                padding: EdgeInsets.all(32),
+                child: Text(
+                  'Chưa có kết quả xét nghiệm mới.\nKết quả sẽ hiển thị tại đây sau khi bác sĩ chỉ định cận lâm sàng.',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(color: Colors.black54),
+                ),
+              ),
+            )
+          : ListView.builder(
+              padding: const EdgeInsets.all(16),
+              itemCount: tests.length,
+              itemBuilder: (context, index) {
+                final test = tests[index];
+                return ListTile(
+                  title: Text(test.name),
+                  subtitle: Text(
+                    '${test.value} ${test.unit} (Chuẩn: ${test.normalRange})',
+                  ),
+                  trailing: const Icon(Icons.chevron_right),
+                  onTap: () =>
+                      Navigator.pushNamed(context, AppRoutes.labDetail),
+                );
+              },
+            ),
+    );
+  }
 }
 
 class LabResultDetailPage extends StatelessWidget {
@@ -4451,13 +4482,65 @@ class LabResultDetailPage extends StatelessWidget {
 class PrescriptionDetailPage extends StatelessWidget {
   const PrescriptionDetailPage({super.key});
   @override
-  Widget build(BuildContext context) => const _FeaturePage(
-    title: 'Chi tiết đơn thuốc',
-    icon: Icons.medication,
-    message: 'Hapacol 250mg • 1 gói/lần\nAugmentin 250mg • 5 ml, ngày 2 lần\nProspan • 2.5 ml, ngày 3 lần',
-    actionText: 'Mở đơn thuốc đầy đủ',
-    actionRoute: AppRoutes.prescription,
-  );
+  Widget build(BuildContext context) {
+    final store = MedicalScope.of(context);
+    final appointmentId = ModalRoute.of(context)?.settings.arguments as String?;
+    final prescriptions = store.backendPrescriptions
+        .where((item) {
+          return appointmentId == null ||
+              item['appointmentId']?.toString() == appointmentId;
+        })
+        .toList(growable: false);
+    final prescription = prescriptions.isNotEmpty ? prescriptions.first : null;
+    final medicines = prescription?['medicines'] is List
+        ? (prescription!['medicines'] as List)
+        : const <Object?>[];
+    return Scaffold(
+      appBar: AppBar(title: const Text('Chi tiết đơn thuốc')),
+      body: prescription == null
+          ? const Center(child: Text('Chưa có đơn thuốc của ca khám này.'))
+          : ListView(
+              padding: const EdgeInsets.all(16),
+              children: [
+                Card(
+                  child: Padding(
+                    padding: const EdgeInsets.all(16),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Chẩn đoán: ${prescription['diagnosis'] ?? 'Chưa cập nhật'}',
+                          style: const TextStyle(fontWeight: FontWeight.bold),
+                        ),
+                        const SizedBox(height: 6),
+                        Text('Mã đơn: ${prescription['id'] ?? '--'}'),
+                        Text('Ngày kê: ${prescription['createdAt'] ?? '--'}'),
+                      ],
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 12),
+                for (final raw in medicines.whereType<Map>())
+                  Card(
+                    child: ListTile(
+                      leading: const Icon(
+                        Icons.medication_outlined,
+                        color: Colors.teal,
+                      ),
+                      title: Text(
+                        '${raw['name'] ?? ''} ${raw['dosage'] ?? ''}',
+                      ),
+                      subtitle: Text(
+                        '${raw['quantity'] ?? ''}\n${raw['instruction'] ?? ''}',
+                      ),
+                      isThreeLine: true,
+                      trailing: Text('${raw['price'] ?? 0}đ'),
+                    ),
+                  ),
+              ],
+            ),
+    );
+  }
 }
 
 class NotificationsPage extends StatefulWidget {
@@ -4484,80 +4567,370 @@ class _NotificationsPageState extends State<NotificationsPage> {
   Widget build(BuildContext context) {
     final store = MedicalScope.of(context);
     final items = store.notifications;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
     return Scaffold(
-      appBar: AppBar(title: const Text('Thông báo')),
+      appBar: AppBar(
+        title: const Text('Thông báo y tế'),
+        actions: [
+          if (items.isNotEmpty)
+            TextButton(
+              onPressed: () => store.markAllNotificationsRead(),
+              child: const Text('Đọc tất cả'),
+            ),
+        ],
+      ),
       body: RefreshIndicator(
         onRefresh: _reload,
         child: items.isEmpty
             ? ListView(
                 children: const [
-                  SizedBox(height: 260),
-                  Center(child: Text('Bạn chưa có thông báo mới.')),
-                ],
-              )
-            : ListView(
-                children: items
-                    .map(
-                      (item) => ListTile(
-                        leading: Icon(
-                          Icons.notifications_outlined,
-                          color: item.read ? Colors.grey : _primary,
+                  SizedBox(height: 220),
+                  Center(
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(
+                          Icons.notifications_off_outlined,
+                          size: 64,
+                          color: Colors.black26,
                         ),
-                        title: Text(
-                          item.title,
+                        SizedBox(height: 14),
+                        Text(
+                          'Chưa có thông báo nào.',
                           style: TextStyle(
-                            fontWeight: item.read
-                                ? FontWeight.normal
-                                : FontWeight.bold,
+                            fontSize: 16,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.black54,
                           ),
                         ),
-                        subtitle: Text(item.body),
-                        onTap: () {
-                          store.markNotificationRead(item.id);
-                          _showNotificationDetail(context, item);
-                        },
+                        SizedBox(height: 6),
+                        Text(
+                          'Các thông báo về lịch khám, kết quả xét nghiệm, CĐHA\nvà đơn thuốc điện tử sẽ hiển thị tại đây.',
+                          textAlign: TextAlign.center,
+                          style: TextStyle(fontSize: 12, color: Colors.black45),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              )
+            : ListView.builder(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 14,
+                  vertical: 12,
+                ),
+                itemCount: items.length,
+                itemBuilder: (context, index) {
+                  final item = items[index];
+                  final (iconData, iconColor, category) = _getNotificationStyle(
+                    item,
+                  );
+                  return Card(
+                    elevation: item.read ? 0.5 : 2,
+                    margin: const EdgeInsets.only(bottom: 12),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(16),
+                      side: BorderSide(
+                        color: item.read
+                            ? (isDark
+                                  ? Colors.white12
+                                  : const Color(0xFFE2E8F0))
+                            : iconColor.withValues(alpha: 0.5),
+                        width: item.read ? 1 : 1.5,
                       ),
-                    )
-                    .toList(),
+                    ),
+                    color: item.read
+                        ? (isDark ? const Color(0xFF1E293B) : Colors.white)
+                        : (isDark
+                              ? const Color(0xFF1E293B)
+                              : iconColor.withValues(alpha: 0.04)),
+                    child: InkWell(
+                      borderRadius: BorderRadius.circular(16),
+                      onTap: () {
+                        store.markNotificationRead(item.id);
+                        _showNotificationDetail(context, item);
+                      },
+                      child: Padding(
+                        padding: const EdgeInsets.all(14),
+                        child: Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            CircleAvatar(
+                              radius: 22,
+                              backgroundColor: iconColor.withValues(
+                                alpha: 0.14,
+                              ),
+                              child: Icon(iconData, color: iconColor, size: 22),
+                            ),
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Row(
+                                    children: [
+                                      Container(
+                                        padding: const EdgeInsets.symmetric(
+                                          horizontal: 8,
+                                          vertical: 2,
+                                        ),
+                                        decoration: BoxDecoration(
+                                          color: iconColor.withValues(
+                                            alpha: 0.12,
+                                          ),
+                                          borderRadius: BorderRadius.circular(
+                                            12,
+                                          ),
+                                        ),
+                                        child: Text(
+                                          category,
+                                          style: TextStyle(
+                                            color: iconColor,
+                                            fontSize: 10,
+                                            fontWeight: FontWeight.bold,
+                                          ),
+                                        ),
+                                      ),
+                                      const Spacer(),
+                                      Text(
+                                        _formatNotificationTime(item.createdAt),
+                                        style: const TextStyle(
+                                          fontSize: 11,
+                                          color: Colors.black45,
+                                        ),
+                                      ),
+                                      if (!item.read) ...[
+                                        const SizedBox(width: 6),
+                                        Container(
+                                          width: 8,
+                                          height: 8,
+                                          decoration: BoxDecoration(
+                                            color: iconColor,
+                                            shape: BoxShape.circle,
+                                          ),
+                                        ),
+                                      ],
+                                    ],
+                                  ),
+                                  const SizedBox(height: 6),
+                                  Text(
+                                    item.title,
+                                    style: TextStyle(
+                                      fontSize: 14,
+                                      fontWeight: item.read
+                                          ? FontWeight.w600
+                                          : FontWeight.bold,
+                                      color: isDark
+                                          ? Colors.white
+                                          : Colors.black87,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 4),
+                                  Text(
+                                    item.body,
+                                    maxLines: 3,
+                                    overflow: TextOverflow.ellipsis,
+                                    style: TextStyle(
+                                      fontSize: 12,
+                                      height: 1.4,
+                                      color: isDark
+                                          ? Colors.white70
+                                          : Colors.black87,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  );
+                },
               ),
       ),
     );
   }
 
+  static (IconData, Color, String) _getNotificationStyle(AppNotification item) {
+    final t = '${item.title} ${item.body}'.toLowerCase();
+    if (t.contains('x-quang') ||
+        t.contains('siêu âm') ||
+        t.contains('nội soi') ||
+        t.contains('cđha') ||
+        t.contains('ecg')) {
+      return (
+        Icons.image_search_rounded,
+        const Color(0xFF7C3AED),
+        'CĐHA / Thăm dò',
+      );
+    }
+    if (t.contains('xét nghiệm') ||
+        t.contains('cbc') ||
+        t.contains('sinh hóa')) {
+      return (Icons.biotech_rounded, const Color(0xFF0D9488), 'Xét nghiệm');
+    }
+    if (t.contains('đơn thuốc') ||
+        t.contains('uống thuốc') ||
+        t.contains('dược')) {
+      return (Icons.medication_rounded, const Color(0xFF059669), 'Đơn thuốc');
+    }
+    if (t.contains('emr') ||
+        t.contains('bệnh án') ||
+        t.contains('khám bệnh') ||
+        t.contains('hoàn tất ca khám')) {
+      return (
+        Icons.medical_information_rounded,
+        const Color(0xFF0057CD),
+        'Hồ sơ EMR',
+      );
+    }
+    if (t.contains('tái khám') ||
+        t.contains('lịch hẹn') ||
+        t.contains('phòng khám')) {
+      return (
+        Icons.calendar_month_rounded,
+        const Color(0xFFD97706),
+        'Lịch khám',
+      );
+    }
+    if (t.contains('thanh toán') ||
+        t.contains('viện phí') ||
+        t.contains('hóa đơn')) {
+      return (Icons.payments_rounded, const Color(0xFF2563EB), 'Viện phí');
+    }
+    return (
+      Icons.notifications_rounded,
+      const Color(0xFF0057CD),
+      'Thông báo y tế',
+    );
+  }
+
   void _showNotificationDetail(BuildContext context, AppNotification item) {
+    final (iconData, iconColor, category) = _getNotificationStyle(item);
+    final text = '${item.title} ${item.body}'.toLowerCase();
+
     showDialog<void>(
       context: context,
       builder: (ctx) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
         title: Row(
-          children: [
-            Icon(
-              item.read
-                  ? Icons.notifications_none_outlined
-                  : Icons.notifications_active_outlined,
-              color: _primary,
-            ),
-            const SizedBox(width: 10),
-            Expanded(child: Text(item.title)),
-          ],
-        ),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(item.body, style: const TextStyle(fontSize: 14, height: 1.45)),
-            const SizedBox(height: 14),
-            Text(
-              'Thời gian: ${_formatNotificationTime(item.createdAt)}',
-              style: const TextStyle(fontSize: 12, color: Colors.black54),
+            CircleAvatar(
+              radius: 18,
+              backgroundColor: iconColor.withValues(alpha: 0.15),
+              child: Icon(iconData, color: iconColor, size: 20),
+            ),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 7,
+                      vertical: 2,
+                    ),
+                    decoration: BoxDecoration(
+                      color: iconColor.withValues(alpha: 0.12),
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: Text(
+                      category,
+                      style: TextStyle(
+                        color: iconColor,
+                        fontSize: 10,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    item.title,
+                    style: const TextStyle(
+                      fontSize: 15,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ],
+              ),
             ),
           ],
+        ),
+        content: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: iconColor.withValues(alpha: 0.05),
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: iconColor.withValues(alpha: 0.2)),
+                ),
+                child: Text(
+                  item.body,
+                  style: const TextStyle(fontSize: 13, height: 1.5),
+                ),
+              ),
+              const SizedBox(height: 12),
+              Row(
+                children: [
+                  const Icon(
+                    Icons.access_time_rounded,
+                    size: 14,
+                    color: Colors.black45,
+                  ),
+                  const SizedBox(width: 6),
+                  Text(
+                    'Thời gian: ${_formatNotificationTime(item.createdAt)}',
+                    style: const TextStyle(fontSize: 11, color: Colors.black54),
+                  ),
+                ],
+              ),
+            ],
+          ),
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx),
             child: const Text('Đóng'),
           ),
+          if (text.contains('emr') ||
+              text.contains('bệnh án') ||
+              text.contains('x-quang') ||
+              text.contains('nội soi') ||
+              text.contains('xét nghiệm'))
+            FilledButton.icon(
+              onPressed: () {
+                Navigator.pop(ctx);
+                Navigator.pushNamed(context, AppRoutes.records);
+              },
+              icon: const Icon(Icons.description_outlined, size: 16),
+              label: const Text('Mở Hồ sơ EMR'),
+            )
+          else if (text.contains('thuốc'))
+            FilledButton.icon(
+              onPressed: () {
+                Navigator.pop(ctx);
+                Navigator.pushNamed(context, AppRoutes.prescription);
+              },
+              icon: const Icon(Icons.medication_outlined, size: 16),
+              label: const Text('Xem đơn thuốc'),
+            )
+          else if (text.contains('lịch') || text.contains('tái khám'))
+            FilledButton.icon(
+              onPressed: () {
+                Navigator.pop(ctx);
+                Navigator.pushNamed(context, AppRoutes.myAppointments);
+              },
+              icon: const Icon(Icons.calendar_month_outlined, size: 16),
+              label: const Text('Xem lịch khám'),
+            ),
         ],
       ),
     );
